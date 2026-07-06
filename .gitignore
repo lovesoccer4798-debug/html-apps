@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.idea/
+*.swp
+
+# 秘密情報（絶対にコミットしない）
+.env
+.env.*
+!.env.example
+*.local
+secrets/
+
+# 依存・ビルド成果物（スタック採用時に追記）
+node_modules/
+dist/
+build/
+
+# ログ・一時ファイル
+*.log
+tmp/
