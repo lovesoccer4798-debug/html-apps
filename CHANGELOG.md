@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- 思想層（`docs/philosophy/`）: Story・Manifesto・Vision・Brand Book・Design Principles・Journey の6文書＋玄関README（NEST Phase 0）
+
+### Changed
+
+- AGENTS.md に価値判断の最上位（憲法・定規）への参照を追加
+
 ## [1.0.0] - 2026-07-07
 
 ### Added

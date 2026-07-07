@@ -27,6 +27,7 @@ AIに再開させる場合は [`prompts/resume-work.md`](prompts/resume-work.md)
 ├── CHANGELOG.md           # ワークスペース基盤の変更履歴（各アプリの履歴はアプリ側に同梱）
 ├── .github/workflows/     # 最小CI（秘密情報スキャン・リンク切れチェック）
 ├── docs/                  # ワークスペース共通ドキュメント
+│   ├── philosophy/            # 思想層: Story・Manifesto・Vision・Brand Book・Design Principles・Journey
 │   ├── ai-tools.md            # AIツール別セットアップ（ベンダー知識の検疫所）
 │   ├── development-flow.md    # 開発フロー
 │   ├── git-workflow.md        # Git運用ルール
@@ -68,6 +69,7 @@ AIに再開させる場合は [`prompts/resume-work.md`](prompts/resume-work.md)
 
 | ドキュメント | 内容 |
 |---|---|
+| [思想層（Philosophy）](docs/philosophy/README.md) | NESTの憲法・定規・地図。すべての判断の最上位基準 |
 | [開発フロー](docs/development-flow.md) | アプリ作成→仕様→タスク→実装→レビュー→リリースの流れ |
 | [Git運用ルール](docs/git-workflow.md) | ブランチ戦略・コミット規約・マージ方式 |
 | [コーディング規約](docs/coding-standards.md) | 言語共通の原則と言語別規約 |
