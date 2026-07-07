@@ -58,6 +58,11 @@
     .cta { font-size: 15px; padding: 12px 22px; }
     .logo { font-size: 36px; }
   }
+  @media print {
+    .cta, .bridge, details, footer img { display: none; }
+    body { background: #fff; color: #000; }
+    .card, .strip a { box-shadow: none; }
+  }
 
   /* セクション共通 */
   section { margin: 36px 0; }
@@ -111,8 +116,8 @@
   <div class="logo"><span class="egg">🪺</span>NEST</div>
   <p class="philosophy">「安心して創造し、共に育てる。」</p>
   <p class="for-visitors">プログラミング未経験でも、AIと一緒にアプリを作れるようになる場所です。</p>
-  <a class="cta" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/START_HERE.md">🚀 はじめての方はこちら（10分）</a>
-  <p class="bridge">※ ボタンの先は GitHub というサイトです。英語の画面でも、読むのは真ん中の文章だけで大丈夫。</p>
+  <a class="cta" href="../../START_HERE.html">🚀 はじめての方はこちら（10分）</a>
+  <p class="bridge">※ 読みものは、すべてこのサイトの中で開きます。編集したくなったら、いちばん下のGitHub（保管庫サイト）からどうぞ。</p>
 </header>
 
 <main>
@@ -128,28 +133,28 @@
         <details><summary>これは何？</summary><p>NESTで生まれたアプリの一覧です。このページのすぐ下にあります。アプリはたまご🥚から巣立ち🕊まで、少しずつ育ちます。</p></details>
       </div>
       <div class="card">
-        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/docs/README.md">
+        <a class="place" href="../../docs/">
           <span class="name">📖 Handbook</span>
           <p class="desc">使い方とルールの説明書</p>
         </a>
         <details><summary>これは何？</summary><p>ものづくりの流れやGitの使い方など、正式な説明書の表紙です。全部読む必要はなく、必要な章だけで大丈夫です。</p></details>
       </div>
       <div class="card">
-        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/knowledge/README.md">
+        <a class="place" href="../../knowledge/">
           <span class="name">💡 Knowledge</span>
           <p class="desc">みんなの気づきメモ。転んだ記録と立ち上がり方</p>
         </a>
         <details><summary>これは何？</summary><p>誰かが一度困って解決したことの記録です。困ったらまずここ。先輩も同じ場所で転んでいます。</p></details>
       </div>
       <div class="card">
-        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/tasks/STATUS.md">
+        <a class="place" href="../../tasks/STATUS.html">
           <span class="name">📍 STATUS</span>
           <p class="desc">いま、なにしてる？の現在地メモ</p>
         </a>
         <details><summary>これは何？</summary><p>NESTの「いまどこまで進んでいるか」がいつも書いてあるメモです。2回目以降の人は、まずここを見ると続きから始められます。</p></details>
       </div>
       <div class="card">
-        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/prompts/README.md">
+        <a class="place" href="../../prompts/">
           <span class="name">🤖 AIと始める</span>
           <p class="desc">コピペで使えるAIへの声かけ集</p>
         </a>
@@ -177,13 +182,14 @@
   <section>
     <h2>自分の現在地を知る</h2>
     <div class="strip">
-      <a href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/docs/philosophy/journey.md">🗺 Journey — 成長の地図（Level 0〜7）</a>
-      <a href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/docs/philosophy/README.md">🧠 NESTの考え方（思想層）</a>
+      <a href="../../docs/philosophy/journey.html">🗺 Journey — 成長の地図（Level 0〜7）</a>
+      <a href="../../docs/philosophy/">🧠 NESTの考え方（思想層）</a>
     </div>
   </section>
 </main>
 
 <footer>
+  <p><a href="https://github.com/lovesoccer4798-debug/html-apps/actions"><img src="https://github.com/lovesoccer4798-debug/html-apps/actions/workflows/ci.yml/badge.svg" alt="CI（自動検査）の状態"></a></p>
   <p>🪺 Made in NEST</p>
   <p>「安心して創造し、共に育てる。」 — <strong>AT-Labo</strong></p>
   <p><a href="https://github.com/lovesoccer4798-debug/html-apps">GitHubでNESTの中身を見る</a></p>
