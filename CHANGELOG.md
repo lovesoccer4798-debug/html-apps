@@ -9,10 +9,14 @@
 ### Added
 
 - 思想層（`docs/philosophy/`）: Story・Manifesto・Vision・Brand Book・Design Principles・Journey の6文書＋玄関README（NEST Phase 0）
+- 歓迎キット（NEST Phase 1）: `START_HERE.md`（10分の初心者案内）、`prompts/hello-nest.md`（自己完結型の挨拶プロンプト）、`prompts/first-app.md`（はじめてモード）、`docs/vocabulary.md`（共通語彙台帳）
 
 ### Changed
 
 - AGENTS.md に価値判断の最上位（憲法・定規）への参照を追加
+- 思想層v1.0改訂: Version 1系での凍結ルール、VisionにNorth Star（恩恵の循環3指標）、Journeyを円環構造に（承認済みの憲法改正）
+- development-flow.md に「はじめてモード」（最初の1個は仕様書・タスク免除）を条文化
+- README冒頭に来訪者バナーを追加
 
 ## [1.0.0] - 2026-07-07
 
