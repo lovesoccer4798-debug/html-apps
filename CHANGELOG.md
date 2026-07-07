@@ -15,6 +15,8 @@
 
 ### Changed
 
+- NotebookLM同期フローを正式ルール化（対象リスト・検収質問3問・STATUS記録。ai-tools.md）
+- roadmap.md にFuture節（Developer OS→Creator OSの余白、実装も設計もしない宣言）を追加
 - AGENTS.md に価値判断の最上位（憲法・定規）への参照を追加
 - 思想層v1.0改訂: Version 1系での凍結ルール、VisionにNorth Star（恩恵の循環3指標）、Journeyを円環構造に（承認済みの憲法改正）
 - development-flow.md に「はじめてモード」（最初の1個は仕様書・タスク免除）を条文化

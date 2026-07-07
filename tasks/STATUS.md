@@ -29,6 +29,8 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3は
 
 ## 注意点・申し送り
 
+- NotebookLM同期: 未実施（初回はPhase 4完了後。フローは `docs/ai-tools.md` の「NotebookLM運用」参照）
+
 - 価値判断は `docs/philosophy/brand-book.md`（憲法）と `design-principles.md`（定規）が最上位（AGENTS.md §1に明記済み）
 - Journeyの個人進捗はこのSTATUSに一行で記録する方式（例: `Journey: Level 3`）。専用ファイルは作らない
 - 新しいAIツール導入時: スタブ追加＋ `docs/ai-tools.md` 更新／新スタック採用時: `docs/coding-standards.md` 追記
