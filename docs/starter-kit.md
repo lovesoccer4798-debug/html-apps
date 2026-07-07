@@ -12,8 +12,8 @@ Starter Kitは、テンプレートではない。**NESTを再現するための
 
 | | 内容 | 例え |
 |---|---|---|
-| **複製される（DNA）** | 思想層6文書・Journey・START_HERE・AGENTS.md＋スタブ・templates・prompts・CI・語彙台帳・空のapps/とknowledge/ | 育ち方の設計図 |
-| **複製されない（記憶）** | AT-Laboのapps・knowledgeの中身・STATUSの中身・reviews・CHANGELOG履歴・Story※ | その巣が生きた人生 |
+| **複製される（DNA）** | 思想層6文書・Journey・START_HERE・AGENTS.md＋スタブ・templates・prompts・CI・語彙台帳・空のapps/とknowledge/・**レビュー文化**（書式を定めた `docs/reviews/README.md` と初心者テストの規定） | 育ち方の設計図 |
+| **複製されない（記憶）** | AT-Laboのapps・knowledgeの中身・STATUSの中身・レビュー記録の中身（phase-N.md）・CHANGELOG履歴・Story※ | その巣が生きた人生 |
 
 ※ Storyは特別扱い: AT-LaboのStoryは複製せず、代わりに「あなたのStoryを書くための空白ページ」を同梱する。**新しい巣には、新しい生まれた理由がある。**
 

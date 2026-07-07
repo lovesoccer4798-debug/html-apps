@@ -20,6 +20,7 @@
 - [Phase 0 — 思想層](phase-0.md)
 - [Phase 1 — 思想層改訂と歓迎キット](phase-1.md)
 - [Phase 2 — 安心の備蓄](phase-2.md)
+- [Phase 3 — Portal](phase-3.md)
 
 ---
 

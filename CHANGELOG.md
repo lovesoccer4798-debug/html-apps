@@ -11,6 +11,7 @@
 - 思想層（`docs/philosophy/`）: Story・Manifesto・Vision・Brand Book・Design Principles・Journey の6文書＋玄関README（NEST Phase 0）
 - 歓迎キット（NEST Phase 1）: `START_HERE.md`（10分の初心者案内）、`prompts/hello-nest.md`（自己完結型の挨拶プロンプト）、`prompts/first-app.md`（はじめてモード）、`docs/vocabulary.md`（共通語彙台帳）
 - 安心の備蓄（NEST Phase 2）: `knowledge/`（実体験の種まき5件）、`docs/README.md`（Handbook表紙・目次）、`docs/glossary.md`（用語集）、`docs/human-only-operations.md`（人間にしかできない操作リスト）、`docs/reviews/`（フェーズレビュー記録・Phase 0〜2）、`docs/starter-kit.md`（Starter Kit＝NESTのDNAの定義）
+- Portal（NEST Phase 3）: NEST初のアプリ `apps/portal/` を正式フローで開発。ルートに公開用リダイレクト`index.html`。初心者テストを正式文化に追加（review-process.md §3）、Pages有効化手順をhuman-only-operations.mdに追記、Starter Kit DNAにレビュー文化を追加
 
 ### Changed
 

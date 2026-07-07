@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="NEST — プログラミング未経験でも、AIと一緒にアプリを作れるようになる場所。">
+<title>🪺 NEST — 安心して創造し、共に育てる。</title>
+<style>
+  :root {
+    --bg: #faf6ef;
+    --ink: #33312b;
+    --ink-soft: #6b675c;
+    --card: #ffffff;
+    --line: #e8e1d3;
+    --accent: #4c8c4a;
+    --accent-ink: #ffffff;
+    --amber: #b97d1f;
+    --shadow: 0 2px 10px rgba(90, 80, 55, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #23221e;
+      --ink: #ece8dd;
+      --ink-soft: #b8b3a5;
+      --card: #2c2b26;
+      --line: #3d3b33;
+      --accent: #6fae6d;
+      --accent-ink: #1c2b1c;
+      --amber: #d9a24a;
+      --shadow: 0 2px 10px rgba(0, 0, 0, .3);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+  main, header, footer { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  /* ヘッダー */
+  header { padding-top: 56px; padding-bottom: 40px; text-align: center; }
+  .logo { font-size: 44px; font-weight: 800; letter-spacing: .06em; }
+  .logo .egg { font-size: 40px; margin-right: 8px; }
+  .philosophy { margin-top: 10px; font-size: 19px; font-weight: 600; }
+  .for-visitors { margin-top: 14px; color: var(--ink-soft); }
+  .cta {
+    display: inline-block; margin-top: 26px; padding: 14px 34px;
+    background: var(--accent); color: var(--accent-ink);
+    border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 17px;
+    box-shadow: var(--shadow);
+  }
+  .cta:hover { filter: brightness(1.08); }
+  .bridge { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+  @media (max-width: 420px) {
+    .cta { font-size: 15px; padding: 12px 22px; }
+    .logo { font-size: 36px; }
+  }
+
+  /* セクション共通 */
+  section { margin: 36px 0; }
+  h2 { font-size: 20px; margin-bottom: 6px; }
+  .lead { color: var(--ink-soft); font-size: 14px; margin-bottom: 18px; }
+
+  /* 5つの場所カード */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 20px; box-shadow: var(--shadow);
+  }
+  .card a.place { text-decoration: none; color: var(--ink); display: block; }
+  .card .name { font-size: 18px; font-weight: 700; }
+  .card .desc { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+  details { margin-top: 10px; font-size: 14px; }
+  summary { cursor: pointer; color: var(--amber); font-weight: 600; list-style: none; }
+  summary::before { content: "❓ "; }
+  details p { margin-top: 6px; color: var(--ink-soft); }
+
+  /* アプリ一覧 */
+  .app-card { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .badge {
+    font-size: 13px; padding: 2px 12px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap;
+  }
+  .empty {
+    border-style: dashed; text-align: center; color: var(--ink-soft);
+    display: flex; flex-direction: column; justify-content: center; min-height: 96px;
+  }
+
+  /* 現在地ストリップ */
+  .strip { display: flex; gap: 14px; flex-wrap: wrap; }
+  .strip a {
+    flex: 1; min-width: 240px; text-align: center; text-decoration: none;
+    background: var(--card); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 16px; padding: 14px; box-shadow: var(--shadow); font-weight: 600;
+  }
+
+  /* フッター */
+  footer {
+    margin-top: 56px; padding-top: 24px; padding-bottom: 40px;
+    border-top: 1px solid var(--line); text-align: center; color: var(--ink-soft); font-size: 14px;
+  }
+  footer a { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="egg">🪺</span>NEST</div>
+  <p class="philosophy">「安心して創造し、共に育てる。」</p>
+  <p class="for-visitors">プログラミング未経験でも、AIと一緒にアプリを作れるようになる場所です。</p>
+  <a class="cta" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/START_HERE.md">🚀 はじめての方はこちら（10分）</a>
+  <p class="bridge">※ ボタンの先は GitHub というサイトです。英語の画面でも、読むのは真ん中の文章だけで大丈夫。</p>
+</header>
+
+<main>
+  <section>
+    <h2>NESTの中身は、5つだけ</h2>
+    <p class="lead">押したら、必ず何かがわかります。こわれることは何もありません。</p>
+    <div class="grid">
+      <div class="card">
+        <a class="place" href="#apps-section">
+          <span class="name">🌱 Apps</span>
+          <p class="desc">育てているアプリたち</p>
+        </a>
+        <details><summary>これは何？</summary><p>NESTで生まれたアプリの一覧です。このページのすぐ下にあります。アプリはたまご🥚から巣立ち🕊まで、少しずつ育ちます。</p></details>
+      </div>
+      <div class="card">
+        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/docs/README.md">
+          <span class="name">📖 Handbook</span>
+          <p class="desc">使い方とルールの説明書</p>
+        </a>
+        <details><summary>これは何？</summary><p>ものづくりの流れやGitの使い方など、正式な説明書の表紙です。全部読む必要はなく、必要な章だけで大丈夫です。</p></details>
+      </div>
+      <div class="card">
+        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/knowledge/README.md">
+          <span class="name">💡 Knowledge</span>
+          <p class="desc">みんなの気づきメモ。転んだ記録と立ち上がり方</p>
+        </a>
+        <details><summary>これは何？</summary><p>誰かが一度困って解決したことの記録です。困ったらまずここ。先輩も同じ場所で転んでいます。</p></details>
+      </div>
+      <div class="card">
+        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/tasks/STATUS.md">
+          <span class="name">📍 STATUS</span>
+          <p class="desc">いま、なにしてる？の現在地メモ</p>
+        </a>
+        <details><summary>これは何？</summary><p>NESTの「いまどこまで進んでいるか」がいつも書いてあるメモです。2回目以降の人は、まずここを見ると続きから始められます。</p></details>
+      </div>
+      <div class="card">
+        <a class="place" href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/prompts/README.md">
+          <span class="name">🤖 AIと始める</span>
+          <p class="desc">コピペで使えるAIへの声かけ集</p>
+        </a>
+        <details><summary>これは何？</summary><p>AIパートナーに貼るだけで使える文章（プロンプト）の置き場です。はじめての方は「hello-nest」から。</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section id="apps-section">
+    <h2>🌱 育てているアプリ</h2>
+    <p class="lead">成長バッジ: 🥚 たまご（仕様を考え中）→ 🐣 ひな（開発中）→ 🐦 そだち（公開中）→ 🕊 巣立ち（独立）</p>
+    <div class="grid">
+      <div class="card app-card">
+        <span class="name">🏠 Portal</span>
+        <span class="badge">🐦 そだち</span>
+        <p class="desc">このページ自身。NESTの正式な作り方で生まれた、最初のアプリ。</p>
+      </div>
+      <div class="card empty">
+        <p>ここに、あなたの最初のアプリが載ります。</p>
+        <p style="font-size:13px">🤖 AIに「じゃんけんゲーム作りたい」と言うところから始まります</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>自分の現在地を知る</h2>
+    <div class="strip">
+      <a href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/docs/philosophy/journey.md">🗺 Journey — 成長の地図（Level 0〜7）</a>
+      <a href="https://github.com/lovesoccer4798-debug/html-apps/blob/main/docs/philosophy/README.md">🧠 NESTの考え方（思想層）</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>🪺 Made in NEST</p>
+  <p>「安心して創造し、共に育てる。」 — <strong>AT-Labo</strong></p>
+  <p><a href="https://github.com/lovesoccer4798-debug/html-apps">GitHubでNESTの中身を見る</a></p>
+</footer>
+
+</body>
+</html>

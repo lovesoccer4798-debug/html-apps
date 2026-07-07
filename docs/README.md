@@ -37,7 +37,7 @@ flowchart TB
 | 第5章 テストと動作確認 | 何をどこまで確認するか | [testing-policy.md](testing-policy.md) |
 | 第6章 レビューのしかた | セルフレビューとAIクロスレビュー | [review-process.md](review-process.md) |
 | 第7章 AIと働く | AIツールの案内・使い分け | [ai-tools.md](ai-tools.md)＋[AGENTS.md](../AGENTS.md) |
-| 第8章 記録の残し方 | どの情報をどこに書くか | [AGENTS.md §3](../AGENTS.md)＋[knowledge/](../knowledge/README.md)＋[adr/](adr/) |
+| 第8章 記録の残し方 | どの情報をどこに書くか。合言葉は「**ADR＝なぜそう決めたか／Reviews＝あとから振り返る記録／Knowledge＝困った時の助け**」 | [AGENTS.md §3](../AGENTS.md)＋[knowledge/](../knowledge/README.md)＋[adr/](adr/) |
 
 ## 付録
 
