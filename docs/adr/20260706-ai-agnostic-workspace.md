@@ -1,8 +1,8 @@
-# ADR-0002: AI共通ルールをAGENTS.mdに一元化し、ベンダー固有ファイルはスタブとする
+# ADR: AI共通ルールをAGENTS.mdに一元化し、ベンダー固有ファイルはスタブとする
 
 - **日付**: 2026-07-06
 - **ステータス**: 採用
-- **関連**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, ADR-0001
+- **関連**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, [設計判断をADRとして記録する](20260706-record-architecture-decisions.md)
 
 ## 背景（Context）
 
