@@ -1,0 +1,15 @@
+# GitHub Pages（内蔵Jekyll）の設定 — これ1枚で全MarkdownがHTMLページ化される
+# 前提: Pagesでは jekyll-optional-front-matter / jekyll-relative-links /
+#       jekyll-readme-index / jekyll-titles-from-headings が標準で有効
+title: 🪺 NEST
+description: 安心して創造し、共に育てる。 — AT-Labo
+lang: ja
+theme: minima
+
+# ヘッダーのナビに載せるページを明示（指定しないと全ページが並んで爆発する）
+header_pages:
+  - START_HERE.md
+
+exclude:
+  - node_modules
+  - LICENSE

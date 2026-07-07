@@ -13,8 +13,14 @@
 - 安心の備蓄（NEST Phase 2）: `knowledge/`（実体験の種まき5件）、`docs/README.md`（Handbook表紙・目次）、`docs/glossary.md`（用語集）、`docs/human-only-operations.md`（人間にしかできない操作リスト）、`docs/reviews/`（フェーズレビュー記録・Phase 0〜2）、`docs/starter-kit.md`（Starter Kit＝NESTのDNAの定義）
 - Portal（NEST Phase 3）: NEST初のアプリ `apps/portal/` を正式フローで開発。ルートに公開用リダイレクト`index.html`。初心者テストを正式文化に追加（review-process.md §3）、Pages有効化手順をhuman-only-operations.mdに追記、Starter Kit DNAにレビュー文化を追加
 
+### Added
+
+- 廊下（NEST Phase 4）: `_config.yml` によるJekyll有効化 — 全Markdownが自動でHTMLページ化（HTML Handbook実現）。AI切替ガイド（切替タイミング・手順・最終確認日付きAI比較表）をai-tools.mdに追加
+
 ### Changed
 
+- Portal v1.1.0: リンク先をサイト内HTMLへ・CIバッジ・印刷CSS（PDF対応）
+- NotebookLM同期対象をファイル列挙から**フォルダ単位**へ変更（追加漏れの構造的防止）
 - NotebookLM同期フローを正式ルール化（対象リスト・検収質問3問・STATUS記録。ai-tools.md）
 - roadmap.md にFuture節（Developer OS→Creator OSの余白、実装も設計もしない宣言）を追加
 - AGENTS.md に価値判断の最上位（憲法・定規）への参照を追加
