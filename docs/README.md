@@ -43,6 +43,7 @@ flowchart TB
 
 | 付録 | 内容 |
 |---|---|
+| [ロードマップ](roadmap.md) | NESTの育成計画（Workspace OS構想）の正本 |
 | [用語集](glossary.md) | やさしい言葉の辞書 |
 | [人間にしかできない操作リスト](human-only-operations.md) | AIに任せられない操作の一覧と手順 |
 | [共通語彙台帳](vocabulary.md) | 場所の呼び名・絵文字の台帳 |
