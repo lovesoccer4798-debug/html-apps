@@ -5,28 +5,27 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-07-07
-- **更新者メモ**: NEST Phase 2（安心の備蓄）完了。knowledge開設・Handbook表紙・レビュー記録制度を導入
+- **更新者メモ**: NEST Phase 3（Portal）実装完了。GitHub Pages有効化（人間の操作）待ち
 
 ## ワークスペース全体の状態
 
-Workspace v1.0.0 リリース済み。**NEST Phase 0〜2が完了**。思想層6文書はVersion 1系で凍結。初見者動線（バナー→START_HERE→hello-nest→first-app）と困った時の受け皿（knowledge種まき5件・用語集・人間専用操作リスト・Handbook表紙）が揃った。Phase 3のPortal公開の前提条件「空の状態で公開しない」を満たした状態。アプリケーションはまだない。
+Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3はPages有効化のみ残）。思想層は凍結、歓迎キット・安心の備蓄・Portal（NEST初のアプリ、正式フローで開発）が揃った。初心者テストが正式文化になった（review-process.md §3）。
 
 ## プロジェクト索引
 
 | アプリ | 状態 | 一言メモ |
 |---|---|---|
-| （まだなし） | — | Phase 3でPortalが最初のアプリになる予定 |
+| 🏠 [Portal](../apps/portal/README.md) | 🐣→🐦（Pages有効化待ち） | NEST初のアプリ。正式フローのドッグフーディング |
 
 ## 進行中のタスク
 
 （なし — 次はNEST Phase 1）
 
-## 次にやるべきこと — NEST Phase 3「Portal」
+## 次にやるべきこと
 
-1. `apps/portal/`（またはportal/）として最初のアプリを正式フローで開発（仕様書→タスク→実装。NESTのドッグフーディング）
-2. 情報設計は確定済み: 来訪者向け一文＋5枚カード＋成長バッジ＋「はじめての方はこちら」→START_HERE
-3. GitHub Pages有効化（人間の操作。human-only-operations.mdに手順を追記）
-4. 完了条件: URLを送るだけで初見者の体験（Scene 1）が始められること
+1. **【人間の操作】GitHub Pages有効化**（`docs/human-only-operations.md` の手順どおり）→ 公開URL確認でPhase 3完全クローズ
+2. **Phase 4候補**: NotebookLMセットアップ＋手順書化／実用アプリ第1号（Journey Level 3の実演）／Experience Review 2.0（公開後の再シミュレーション）
+3. 機会があり次第: 実際の人間による初心者テスト（結果は docs/reviews/phase-3.md に追記）
 
 ## 注意点・申し送り
 
