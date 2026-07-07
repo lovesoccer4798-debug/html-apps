@@ -24,6 +24,12 @@
 { "contextFileName": "AGENTS.md" }
 ```
 
+### Claude Code（ウェブ版）の既知の制約
+
+- **書き込みにはGitHub Appのインストールが必要。** OAuth承認（Authorized GitHub Apps）だけでは読み取りのみで、pushは403になる。GitHubの Settings → Applications → Claude → Configure で対象リポジトリが **Repository access** に含まれていることを確認する。
+- **タグはpushできない**（ブランチのみ許可）。タグとリリースはGitHubの Releases 画面から作成する。入力済みフォームを開くURLパラメータが便利:
+  `https://github.com/<owner>/<repo>/releases/new?tag=v1.0.0&target=main&title=リリース名`
+
 ### コミットトレーラーについて
 
 ホスト型ツール（Claude Codeのウェブ版など）はコミットに `Co-Authored-By:` 等のトレーラーを自動付与する。これは除去できないため許容している（`docs/git-workflow.md` 参照）。
