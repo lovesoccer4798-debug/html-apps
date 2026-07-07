@@ -24,7 +24,7 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3は
 ## 次にやるべきこと
 
 1. **【人間の操作】GitHub Pages有効化**（`docs/human-only-operations.md` の手順どおり）→ 公開URL確認でPhase 3完全クローズ
-2. **Phase 4候補**: NotebookLMセットアップ＋手順書化／実用アプリ第1号（Journey Level 3の実演）／Experience Review 2.0（公開後の再シミュレーション）
+2. **Phase 4「廊下」**（`docs/roadmap.md` 参照）: Jekyll有効化で全MarkdownをHTML化・Portalリンク差し替え・CIバッジ・印刷CSS
 3. 機会があり次第: 実際の人間による初心者テスト（結果は docs/reviews/phase-3.md に追記）
 
 ## 注意点・申し送り
