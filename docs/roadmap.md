@@ -27,7 +27,7 @@
 | 2 | 安心の備蓄 | knowledge種まき・用語集・人間専用操作・レビュー文化 | 困った人が5分で先輩の跡を発見 | ✅ |
 | 3 | 玄関 | Portal v1（apps/portal/・正式フロー・初心者テスト） | 公開URLでPortalが開く | ✅（Pages有効化待ち） |
 | 4 | 廊下 | Jekyll有効化で全MarkdownをHTML化・Portalリンク差し替え・CIバッジ・印刷CSS | 初心者が**GitHubのUIを見ずに**Handbook/Knowledge/Journeyを読み回れる。ブラウザ印刷でPDF化できる | ✅（Pages上の実表示はオーナー確認待ち） |
-| 5 | ダッシュボード | Portal拡張（Version・STATUS要約・ADR/Reviews/AI切替/NotebookLM入口・一覧の更新漏れ対策） | 主要13項目すべてにPortalから**2クリック以内** | ⬜ |
+| 5 | ダッシュボード | Portal拡張（新機能なし・情報整理のみ。4つの役割の正式定義） | 主要13項目すべてにPortalから**2クリック以内** | ✅（Pages実表示はオーナー確認待ち） |
 | 6 | 最初の住人 | 実用アプリ第1号（オーナーのJourney Level 3体験）＋Experience Review 2.0 | North Star第1指標（公開アプリ）が1になる | ⬜ |
 | 7 | 巣立ちの準備 | Starter Kit実装（`docs/starter-kit.md` のDNA定義に従い `nest-starter` を作成） | 第三者が15分で自分の巣を作れる | ⬜ |
 

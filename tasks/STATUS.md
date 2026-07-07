@@ -5,7 +5,7 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-07-07
-- **更新者メモ**: NEST Phase 4（廊下）実装完了。Jekyll有効化で全MarkdownがHTML化。Pages上の実表示確認待ち
+- **更新者メモ**: NEST Phase 5（ダッシュボード）実装完了。Portal v1.2.0。PagesはOFFと確定判定（API証拠）— 有効化がオーナーの残操作
 
 ## ワークスペース全体の状態
 
@@ -23,9 +23,9 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3は
 
 ## 次にやるべきこと
 
-1. **【人間の操作】GitHub Pages有効化（未実施なら）＋公開URLの表示確認**（Portal・START_HERE・Handbook表紙・knowledge）→ Phase 3・4完全クローズ
-2. **NotebookLM初回同期**（Phase 4完了につき。`docs/ai-tools.md` のフロー参照）
-3. **Phase 5「ダッシュボード」**（`docs/roadmap.md` 参照）: Portal拡張 — 主要13項目へ2クリック以内
+1. **【人間の操作】GitHub Pages有効化**（OFFと確定判定済み。Settings→Pages→main→/(root)→Save）＋公開URLの表示確認 → Phase 3〜5完全クローズ
+2. **NotebookLM初回同期**（`docs/ai-tools.md` のフロー参照）
+3. **Phase 6「最初の住人」**（`docs/roadmap.md` 参照）: 実用アプリ第1号＋Experience Review 2.0
 4. 機会があり次第: 実際の人間による初心者テスト（結果は docs/reviews/ に追記）
 
 ## 注意点・申し送り

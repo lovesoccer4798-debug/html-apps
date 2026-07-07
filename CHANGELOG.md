@@ -19,6 +19,7 @@
 
 ### Changed
 
+- ダッシュボード（NEST Phase 5）: Portal v1.2.0 — 毎日使う人のホーム `dashboard.html` を追加（新機能なし・情報整理のみ、全情報へ2クリック以内）。4つの役割（Portal/Dashboard/Handbook/Knowledge）を語彙台帳に正式定義。docs/adr/ にREADMEを追加（Pages上の404解消）
 - Portal v1.1.0: リンク先をサイト内HTMLへ・CIバッジ・印刷CSS（PDF対応）
 - NotebookLM同期対象をファイル列挙から**フォルダ単位**へ変更（追加漏れの構造的防止）
 - NotebookLM同期フローを正式ルール化（対象リスト・検収質問3問・STATUS記録。ai-tools.md）
