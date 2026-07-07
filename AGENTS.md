@@ -30,6 +30,8 @@
 | 今なにをしているか（進捗・申し送り） | `tasks/`（特に `tasks/STATUS.md`） |
 | ユーザーに見える変更の履歴 | `apps/<アプリ名>/CHANGELOG.md`（ワークスペース基盤の変更はルートの `CHANGELOG.md`） |
 | 恒久的なルール・手順 | `docs/` |
+| 再利用できる気づき・ハマった解決法 | `knowledge/`（冒頭に「状況→結論→理由」の3行サマリ必須） |
+| Phaseごとのレビューと意思決定の記録 | `docs/reviews/` |
 | AIへの定型指示 | `prompts/` |
 | 各種テンプレート | `templates/` |
 

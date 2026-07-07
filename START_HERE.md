@@ -53,7 +53,8 @@ NESTでは、AIが隣に座ってくれます。**どのAIでも構いません*
 | 自分の成長の現在地を知りたい | 🗺 [Journey — 成長の地図](docs/philosophy/journey.md) |
 | ちゃんとした作り方を知りたい | 📖 [Handbook — ものづくりの流れ](docs/development-flow.md) |
 | NESTの考え方を知りたい | [思想層 — 6つの文書](docs/philosophy/README.md) |
-| 困った・つまずいた | まずは 🤖 AIパートナーに、その画面を見せて聞く（💡 Knowledgeは準備中） |
+| 困った・つまずいた | 💡 [Knowledge](knowledge/README.md) で「先輩の転んだ跡」を探す → なければ 🤖 AIパートナーにその画面を見せて聞く |
+| 言葉の意味がわからない | 📖 [用語集](docs/glossary.md) を引く |
 
 ここまで読んだあなたは、もう **Journey Level 1**（NESTを知る）です。🎉
 

@@ -39,6 +39,7 @@ AIに再開させる場合は [`prompts/resume-work.md`](prompts/resume-work.md)
 │   ├── testing-policy.md      # テスト方針
 │   ├── review-process.md      # レビュー手順
 │   └── adr/                   # 設計判断の記録（YYYYMMDD-スラッグ.md）
+├── knowledge/             # 💡 みんなの気づきメモ（転んだ記録と立ち上がり方）
 ├── templates/             # 全テンプレート置き場
 │   ├── spec.md / task.md / adr.md
 │   └── app/                   # 新規アプリの雛形（README・CHANGELOG・specs/）
