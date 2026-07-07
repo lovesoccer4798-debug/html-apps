@@ -1,5 +1,7 @@
 # html-apps
 
+> 🪺 **はじめての方へ** — ここはNEST。プログラミング未経験でも、AIと一緒にアプリを作れるようになる場所です。まずは **[START_HERE.md](START_HERE.md)** からどうぞ（10分で読めます）。
+
 AIに依存しない開発ワークスペース。**リポジトリが唯一の正しい情報源（Single Source of Truth）** であり、Claude Code / Codex / Gemini CLI / Cursor / Windsurf など、どのAIツールに切り替えても同じ品質・同じルールで開発を継続できることを目的とする。
 
 ## 🚀 30分で開発を再開する手順
@@ -20,6 +22,7 @@ AIに再開させる場合は [`prompts/resume-work.md`](prompts/resume-work.md)
 ```
 .
 ├── README.md              # 入口。全体像と再開手順
+├── START_HERE.md          # はじめての方向け・10分の案内
 ├── AGENTS.md              # AI共通ルール（全AIツール向け・唯一のルールファイル）
 ├── CLAUDE.md / GEMINI.md  # 各AIツール用スタブ（AGENTS.mdへの参照のみ）
 ├── .windsurf/rules/       # Windsurf用スタブ（同上）
@@ -28,6 +31,7 @@ AIに再開させる場合は [`prompts/resume-work.md`](prompts/resume-work.md)
 ├── .github/workflows/     # 最小CI（秘密情報スキャン・リンク切れチェック）
 ├── docs/                  # ワークスペース共通ドキュメント
 │   ├── philosophy/            # 思想層: Story・Manifesto・Vision・Brand Book・Design Principles・Journey
+│   ├── vocabulary.md          # 共通語彙台帳（場所の呼び名・絵文字はここから引用）
 │   ├── ai-tools.md            # AIツール別セットアップ（ベンダー知識の検疫所）
 │   ├── development-flow.md    # 開発フロー
 │   ├── git-workflow.md        # Git運用ルール
