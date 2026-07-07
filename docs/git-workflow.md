@@ -52,10 +52,11 @@
 git checkout main && git pull
 git checkout -b feature/xxx
 # ...作業...
-git add -p                 # 変更を確認しながらステージ
+git add <変更したファイル>  # 変更をステージ
+git diff --staged          # ステージした内容を確認してからコミット
 git commit -m "feat: ..."
 git push -u origin feature/xxx
-# → PRを作成（またはローカル運用ならmainにマージ）
+# → PRを作成してsquashマージ（ローカル運用なら git merge --squash でmainへ取り込む）
 ```
 
 ## 禁止事項

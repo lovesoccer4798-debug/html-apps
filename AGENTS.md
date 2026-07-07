@@ -47,7 +47,7 @@
 - コミットメッセージは Conventional Commits 形式（`feat:` / `fix:` / `docs:` / `refactor:` / `test:` / `chore:`）。
 - コミットの**タイトル・本文**に使用したAIツール名やモデル名を書かない（ツールが自動付与するトレーラーは許容）。
 - main へ直接コミットせず、作業ブランチを切る。featureブランチはsquashマージが基本。
-- push前にテストを実行する（`docs/testing-policy.md` 参照）。
+- push前にテストを実行する。テストがないプロジェクトでは手動での動作確認でよい（`docs/testing-policy.md` 参照）。
 
 ## 6. コーディング（詳細は `docs/coding-standards.md`）
 
