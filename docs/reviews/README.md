@@ -22,6 +22,7 @@
 - [Phase 2 — 安心の備蓄](phase-2.md)
 - [Phase 3 — Portal](phase-3.md)
 - [Phase 4 — 廊下（HTML Handbook）](phase-4.md)
+- [Phase 5 — ダッシュボード](phase-5.md)
 
 ---
 

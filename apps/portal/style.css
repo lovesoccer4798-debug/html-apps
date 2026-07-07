@@ -1,0 +1,118 @@
+/* NEST Portal 共通スタイル（index.html / dashboard.html） */
+:root {
+  --bg: #faf6ef;
+  --ink: #33312b;
+  --ink-soft: #6b675c;
+  --card: #ffffff;
+  --line: #e8e1d3;
+  --accent: #4c8c4a;
+  --accent-ink: #ffffff;
+  --amber: #b97d1f;
+  --shadow: 0 2px 10px rgba(90, 80, 55, .08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #23221e;
+    --ink: #ece8dd;
+    --ink-soft: #b8b3a5;
+    --card: #2c2b26;
+    --line: #3d3b33;
+    --accent: #6fae6d;
+    --accent-ink: #1c2b1c;
+    --amber: #d9a24a;
+    --shadow: 0 2px 10px rgba(0, 0, 0, .3);
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+  line-height: 1.8;
+  font-size: 16px;
+}
+main, header, footer { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+/* ヘッダー */
+header { padding-top: 56px; padding-bottom: 40px; text-align: center; }
+.logo { font-size: 44px; font-weight: 800; letter-spacing: .06em; }
+.logo .egg { font-size: 40px; margin-right: 8px; }
+.philosophy { margin-top: 10px; font-size: 19px; font-weight: 600; }
+.for-visitors { margin-top: 14px; color: var(--ink-soft); }
+.cta {
+  display: inline-block; margin-top: 26px; padding: 14px 34px;
+  background: var(--accent); color: var(--accent-ink);
+  border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 17px;
+  box-shadow: var(--shadow);
+}
+.cta:hover { filter: brightness(1.08); }
+.cta.ghost {
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--line); box-shadow: none; font-weight: 600;
+}
+.bridge { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+
+/* セクション共通 */
+section { margin: 36px 0; }
+h2 { font-size: 20px; margin-bottom: 6px; }
+.lead { color: var(--ink-soft); font-size: 14px; margin-bottom: 18px; }
+
+/* カード */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 18px 20px; box-shadow: var(--shadow);
+}
+.card a.place { text-decoration: none; color: var(--ink); display: block; }
+.card .name { font-size: 18px; font-weight: 700; }
+.card .desc { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+details { margin-top: 10px; font-size: 14px; }
+summary { cursor: pointer; color: var(--amber); font-weight: 600; list-style: none; }
+summary::before { content: "❓ "; }
+details p { margin-top: 6px; color: var(--ink-soft); }
+
+/* アプリ一覧 */
+.app-card { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.badge {
+  font-size: 13px; padding: 2px 12px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap;
+}
+.empty {
+  border-style: dashed; text-align: center; color: var(--ink-soft);
+  display: flex; flex-direction: column; justify-content: center; min-height: 96px;
+}
+
+/* ストリップ */
+.strip { display: flex; gap: 14px; flex-wrap: wrap; }
+.strip a {
+  flex: 1; min-width: 240px; text-align: center; text-decoration: none;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 16px; padding: 14px; box-shadow: var(--shadow); font-weight: 600;
+}
+
+/* Dashboard: リンク一覧 */
+.links { list-style: none; padding: 0; margin-top: 8px; }
+.links li { margin: 8px 0; font-size: 15px; }
+.links a { color: var(--ink); text-decoration: none; border-bottom: 1px dashed var(--line); }
+.links a:hover { border-bottom-color: var(--amber); color: var(--amber); }
+.links .note { color: var(--ink-soft); font-size: 13px; }
+.dash-header { padding-top: 40px; padding-bottom: 20px; }
+.dash-header .backlink { font-size: 14px; }
+.dash-header .backlink a { color: var(--ink-soft); text-decoration: none; }
+
+/* フッター */
+footer {
+  margin-top: 56px; padding-top: 24px; padding-bottom: 40px;
+  border-top: 1px solid var(--line); text-align: center; color: var(--ink-soft); font-size: 14px;
+}
+footer a { color: var(--ink-soft); }
+
+@media (max-width: 420px) {
+  .cta { font-size: 15px; padding: 12px 22px; }
+  .logo { font-size: 36px; }
+}
+@media print {
+  .cta, .bridge, details, footer img { display: none; }
+  body { background: #fff; color: #000; }
+  .card, .strip a { box-shadow: none; }
+}

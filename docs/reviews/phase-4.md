@@ -30,5 +30,9 @@
 
 ## 残作業（オーナー確認）
 
-- [ ] GitHub Pages有効化（未実施の場合）と公開URLでの表示確認（Portal・START_HERE・Handbook表紙・knowledge）
+- [ ] GitHub Pages有効化と公開URLでの表示確認（Portal・START_HERE・Handbook表紙・knowledge）
 - [ ] 確認後、実際の人間による初心者テストの機会があれば実施し、ここに追記
+
+## 追記（2026-07-07・Pages状態の切り分け結果）
+
+「Pagesが有効化されていないようです」の根拠を切り分けた。**判定: PagesはOFF（確定）**。GitHub APIでリポジトリのワークフロー一覧を照会した結果、存在するのは自作CIのみで、Pagesを一度でも有効化すると必ず生成される「pages build and deployment」ワークフローが存在しなかった。実行環境からgithub.ioへ直接アクセスできない制約とは独立した、API証拠による判定である。有効化はオーナーの操作待ち（`docs/human-only-operations.md` 参照）。
