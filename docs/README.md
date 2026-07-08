@@ -45,6 +45,7 @@ flowchart TB
 |---|---|
 | [ロードマップ](roadmap.md) | NESTの育成計画（Workspace OS構想）の正本 |
 | [用語集](glossary.md) | やさしい言葉の辞書 |
+| [デザインガイド](design-guide.md) | 見た目の方針（アイコン・色・絵文字の二層方針） |
 | [人間にしかできない操作リスト](human-only-operations.md) | AIに任せられない操作の一覧と手順 |
 | [共通語彙台帳](vocabulary.md) | 場所の呼び名・絵文字の台帳 |
 | [Starter Kit — NESTのDNA](starter-kit.md) | 新しい巣を生む最小単位の定義 |

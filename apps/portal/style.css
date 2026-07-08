@@ -68,8 +68,14 @@ h2 { font-size: 20px; margin-bottom: 6px; }
 .card .desc { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
 details { margin-top: 10px; font-size: 14px; }
 summary { cursor: pointer; color: var(--amber); font-weight: 600; list-style: none; }
-summary::before { content: "❓ "; }
+summary::before { content: "› "; }
 details p { margin-top: 6px; color: var(--ink-soft); }
+
+/* Lucideアイコン（インラインSVG・currentColorでダークモード自動追従） */
+svg.icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
+.name svg.icon, h2 svg.icon { color: var(--accent); margin-right: 4px; }
+.cta svg.icon { margin-right: 6px; }
+.logo svg.icon { width: 38px; height: 38px; vertical-align: -5px; margin-right: 10px; color: var(--accent); }
 
 /* アプリ一覧 */
 .app-card { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
