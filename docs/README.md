@@ -43,6 +43,7 @@ flowchart TB
 
 | 付録 | 内容 |
 |---|---|
+| [ルール索引（Governance Index）](governance.md) | どのルールがどこにあるかの地図 |
 | [ロードマップ](roadmap.md) | NESTの育成計画（Workspace OS構想）の正本 |
 | [用語集](glossary.md) | やさしい言葉の辞書 |
 | [デザインガイド](design-guide.md) | 見た目の方針（アイコン・色・絵文字の二層方針） |
