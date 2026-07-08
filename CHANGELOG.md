@@ -17,6 +17,10 @@
 
 - 廊下（NEST Phase 4）: `_config.yml` によるJekyll有効化 — 全Markdownが自動でHTMLページ化（HTML Handbook実現）。AI切替ガイド（切替タイミング・手順・最終確認日付きAI比較表）をai-tools.mdに追加
 
+### Changed
+
+- レビュー文化に「引き算のレビュー（棚卸しの視点）」を追加 — 削除・重複・統合・Future送り・思想での不要化を探す5つの問い。新ガバナンスではなく既存Reviewのレンズとして `review-process.md` に吸収（ADR・専用文書・固定周期は作らない）。ADRは消さず廃止/置換、影響の大きい引き算は提案扱い
+
 ### Added
 
 - `docs/governance.md`（ルール索引 / Governance Index）: どのルールがどこにあるかの地図（ポインタのみ・中身は二重に持たない）。AGENTS.md・Handbook表紙から誘導
