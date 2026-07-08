@@ -17,8 +17,13 @@
 
 - 廊下（NEST Phase 4）: `_config.yml` によるJekyll有効化 — 全Markdownが自動でHTMLページ化（HTML Handbook実現）。AI切替ガイド（切替タイミング・手順・最終確認日付きAI比較表）をai-tools.mdに追加
 
+### Added
+
+- `docs/governance.md`（ルール索引 / Governance Index）: どのルールがどこにあるかの地図（ポインタのみ・中身は二重に持たない）。AGENTS.md・Handbook表紙から誘導
+
 ### Changed
 
+- 思想層の凍結ルールに「Visionを含む6文書すべての変更ガバナンスである」旨を明記（Vision専用ガバナンスは作らない。ADR `20260708-vision-change-governance`）
 - 運用ルール: Future候補を「着手条件（Trigger）つきの控え室」として運用ルール化（書く/書かない/Trigger/削除/完了時の扱い。roadmap.md）
 - 運用ルール: 仕事の分類（Phase/ADR/運用変更）が非自明なら、AIは提案して止まる（自律ゾーンを明示・迷ったら提案）。AGENTS.mdに明記、ADR `20260708-classification-governance`
 - 運用ルール: ロードマップのPhase構成変更（追加・削除・順序・優先度・スコープ）はオーナー承認を先に得る（AIは提案まで）。AGENTS.md・roadmap.mdに明記、ADR `20260708-roadmap-change-governance`
