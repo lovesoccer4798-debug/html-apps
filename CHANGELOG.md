@@ -19,6 +19,8 @@
 
 ### Changed
 
+- 運用ルール: Future候補を「着手条件（Trigger）つきの控え室」として運用ルール化（書く/書かない/Trigger/削除/完了時の扱い。roadmap.md）
+- 運用ルール: 仕事の分類（Phase/ADR/運用変更）が非自明なら、AIは提案して止まる（自律ゾーンを明示・迷ったら提案）。AGENTS.mdに明記、ADR `20260708-classification-governance`
 - 運用ルール: ロードマップのPhase構成変更（追加・削除・順序・優先度・スコープ）はオーナー承認を先に得る（AIは提案まで）。AGENTS.md・roadmap.mdに明記、ADR `20260708-roadmap-change-governance`
 - 記録運用: Decision Logは作らず、mini-ADRの公認＋「決定の行き先」表で対応（ADR `20260708-decision-record-routing`）。記録の3兄弟（ADR/Reviews/Knowledge）は維持
 - デザインシステム（NEST Phase 6）: 見た目の値を `tokens.css` に集約（Design Tokens）。`style.css` はトークンを消費するだけに。Portal/Dashboardの役割を背景色で差別化（Portal=迎える面／Dashboard=作業面）、Dashboard非肥大ガバナンスを明文化、`templates/app/tokens.css` を追加（新アプリのDNA）。判断は ADR `20260708-design-tokens.md`。「最初の住人」はPhase 7へ繰り下げ、Portal全体検索はFuture候補に
