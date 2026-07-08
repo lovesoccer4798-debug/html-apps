@@ -19,6 +19,7 @@
 
 ### Changed
 
+- デザイン統一（Phase 5.5）: UIの絵文字をLucideアイコン（インラインSVG同梱・CDNなし）へ移行。方針は `docs/design-guide.md`、判断は ADR `20260708-icon-system.md`。Dashboardの文言（迷ったら）・並び順・NotebookLM入口も改善
 - ダッシュボード（NEST Phase 5）: Portal v1.2.0 — 毎日使う人のホーム `dashboard.html` を追加（新機能なし・情報整理のみ、全情報へ2クリック以内）。4つの役割（Portal/Dashboard/Handbook/Knowledge）を語彙台帳に正式定義。docs/adr/ にREADMEを追加（Pages上の404解消）
 - Portal v1.1.0: リンク先をサイト内HTMLへ・CIバッジ・印刷CSS（PDF対応）
 - NotebookLM同期対象をファイル列挙から**フォルダ単位**へ変更（追加漏れの構造的防止）
