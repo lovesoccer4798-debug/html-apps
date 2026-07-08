@@ -1,27 +1,16 @@
-/* NEST Portal 共通スタイル（index.html / dashboard.html） */
+/* NEST Portal 共通スタイル（index.html / dashboard.html）
+   色・形の値は tokens.css を消費する（このファイルはコンポーネントの見た目のみ）。
+   tokens.css を style.css より先に読み込むこと。 */
 :root {
-  --bg: #faf6ef;
-  --ink: #33312b;
-  --ink-soft: #6b675c;
-  --card: #ffffff;
-  --line: #e8e1d3;
-  --accent: #4c8c4a;
-  --accent-ink: #ffffff;
-  --amber: #b97d1f;
-  --shadow: 0 2px 10px rgba(90, 80, 55, .08);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #23221e;
-    --ink: #ece8dd;
-    --ink-soft: #b8b3a5;
-    --card: #2c2b26;
-    --line: #3d3b33;
-    --accent: #6fae6d;
-    --accent-ink: #1c2b1c;
-    --amber: #d9a24a;
-    --shadow: 0 2px 10px rgba(0, 0, 0, .3);
-  }
+  --bg: var(--nest-bg);
+  --ink: var(--nest-ink);
+  --ink-soft: var(--nest-ink-soft);
+  --card: var(--nest-card);
+  --line: var(--nest-line);
+  --accent: var(--nest-accent);
+  --accent-ink: var(--nest-accent-ink);
+  --amber: var(--nest-amber);
+  --shadow: var(--nest-shadow);
 }
 * { box-sizing: border-box; margin: 0; }
 body {
@@ -31,6 +20,8 @@ body {
   line-height: 1.8;
   font-size: 16px;
 }
+/* 役割の差別化: Portal=迎える面(--bg) / Dashboard=毎日の作業面(--bg-alt) */
+body.work { background: var(--nest-bg-alt); }
 main, header, footer { max-width: 960px; margin: 0 auto; padding: 0 20px; }
 
 /* ヘッダー */
@@ -42,7 +33,7 @@ header { padding-top: 56px; padding-bottom: 40px; text-align: center; }
 .cta {
   display: inline-block; margin-top: 26px; padding: 14px 34px;
   background: var(--accent); color: var(--accent-ink);
-  border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 17px;
+  border-radius: var(--nest-radius-pill); text-decoration: none; font-weight: 700; font-size: 17px;
   box-shadow: var(--shadow);
 }
 .cta:hover { filter: brightness(1.08); }
@@ -60,7 +51,7 @@ h2 { font-size: 20px; margin-bottom: 6px; }
 /* カード */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .card {
-  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--nest-radius);
   padding: 18px 20px; box-shadow: var(--shadow);
 }
 .card a.place { text-decoration: none; color: var(--ink); display: block; }
@@ -80,7 +71,7 @@ svg.icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
 /* アプリ一覧 */
 .app-card { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .badge {
-  font-size: 13px; padding: 2px 12px; border-radius: 999px;
+  font-size: 13px; padding: 2px 12px; border-radius: var(--nest-radius-pill);
   border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap;
 }
 .empty {
@@ -93,7 +84,7 @@ svg.icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
 .strip a {
   flex: 1; min-width: 240px; text-align: center; text-decoration: none;
   background: var(--card); color: var(--ink); border: 1px solid var(--line);
-  border-radius: 16px; padding: 14px; box-shadow: var(--shadow); font-weight: 600;
+  border-radius: var(--nest-radius); padding: 14px; box-shadow: var(--shadow); font-weight: 600;
 }
 
 /* Dashboard: リンク一覧 */

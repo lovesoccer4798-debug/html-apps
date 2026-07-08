@@ -5,7 +5,7 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-07-08
-- **更新者メモ**: Dashboard改善5点＋デザイン統一（Lucideアイコン移行、Portal v1.3.0）完了。次はPhase 6「最初の住人」— オーナーが主役のPhase
+- **更新者メモ**: Phase 6「デザインシステム」（Design Tokens・Portal v1.4.0）完了。「最初の住人」はPhase 7へ繰り下げ。以降Opus 4.8で継続（思想は不変）
 
 ## ワークスペース全体の状態
 
@@ -25,7 +25,7 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3は
 
 1. **【人間の操作】GitHub Pages有効化**（OFFと確定判定済み。Settings→Pages→main→/(root)→Save）＋公開URLの表示確認 → Phase 3〜5完全クローズ
 2. **NotebookLM初回同期**（`docs/ai-tools.md` のフロー参照）
-3. **Phase 6「最初の住人」**（`docs/roadmap.md` 参照）: 実用アプリ第1号＋Experience Review 2.0
+3. **Phase 7「最初の住人」**（`docs/roadmap.md` 参照）: オーナー自身が最初の実用アプリを作る（主役＝オーナー）。必要なもの＝Pages有効化＋「作りたいもの」一言
 4. 機会があり次第: 実際の人間による初心者テスト（結果は docs/reviews/ に追記）
 
 ## 注意点・申し送り

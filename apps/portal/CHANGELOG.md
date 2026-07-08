@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-08
+
+### Changed
+
+- 見た目の値を `tokens.css`（Design Tokens）へ分離。`style.css` はトークンを消費するだけに（見た目は変わらず、保守性が向上）
+- Dashboardの背景を作業面色（`--nest-bg-alt`）にし、Portal（迎える面）と役割をデザインで差別化
+
 ## [1.3.0] - 2026-07-08
 
 ### Changed
