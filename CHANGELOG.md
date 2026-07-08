@@ -19,6 +19,8 @@
 
 ### Changed
 
+- 運用ルール: ロードマップのPhase構成変更（追加・削除・順序・優先度・スコープ）はオーナー承認を先に得る（AIは提案まで）。AGENTS.md・roadmap.mdに明記、ADR `20260708-roadmap-change-governance`
+- 記録運用: Decision Logは作らず、mini-ADRの公認＋「決定の行き先」表で対応（ADR `20260708-decision-record-routing`）。記録の3兄弟（ADR/Reviews/Knowledge）は維持
 - デザインシステム（NEST Phase 6）: 見た目の値を `tokens.css` に集約（Design Tokens）。`style.css` はトークンを消費するだけに。Portal/Dashboardの役割を背景色で差別化（Portal=迎える面／Dashboard=作業面）、Dashboard非肥大ガバナンスを明文化、`templates/app/tokens.css` を追加（新アプリのDNA）。判断は ADR `20260708-design-tokens.md`。「最初の住人」はPhase 7へ繰り下げ、Portal全体検索はFuture候補に
 - デザイン統一（Phase 5.5）: UIの絵文字をLucideアイコン（インラインSVG同梱・CDNなし）へ移行。方針は `docs/design-guide.md`、判断は ADR `20260708-icon-system.md`。Dashboardの文言（迷ったら）・並び順・NotebookLM入口も改善
 - ダッシュボード（NEST Phase 5）: Portal v1.2.0 — 毎日使う人のホーム `dashboard.html` を追加（新機能なし・情報整理のみ、全情報へ2クリック以内）。4つの役割（Portal/Dashboard/Handbook/Knowledge）を語彙台帳に正式定義。docs/adr/ にREADMEを追加（Pages上の404解消）
