@@ -28,8 +28,11 @@
 | 3 | 玄関 | Portal v1（apps/portal/・正式フロー・初心者テスト） | 公開URLでPortalが開く | ✅（Pages有効化待ち） |
 | 4 | 廊下 | Jekyll有効化で全MarkdownをHTML化・Portalリンク差し替え・CIバッジ・印刷CSS | 初心者が**GitHubのUIを見ずに**Handbook/Knowledge/Journeyを読み回れる。ブラウザ印刷でPDF化できる | ✅（Pages上の実表示はオーナー確認待ち） |
 | 5 | ダッシュボード | Portal拡張（新機能なし・情報整理のみ。4つの役割の正式定義） | 主要13項目すべてにPortalから**2クリック以内** | ✅（Pages実表示はオーナー確認待ち） |
-| 6 | 最初の住人 | 実用アプリ第1号（オーナーのJourney Level 3体験）＋Experience Review 2.0 | North Star第1指標（公開アプリ）が1になる | ⬜ |
-| 7 | 巣立ちの準備 | Starter Kit実装（`docs/starter-kit.md` のDNA定義に従い `nest-starter` を作成） | 第三者が15分で自分の巣を作れる | ⬜ |
+| 6 | デザインシステム | Design Tokens抽出（tokens.css）・Portal/Dashboardの役割をデザインで差別化・非肥大ガバナンス | 見た目は現状維持のまま全色がトークン経由。新アプリがtokens.cssのコピーで見た目を継承できる | ✅（Pages実表示はオーナー確認待ち） |
+| 7 | 最初の住人 | 実用アプリ第1号（オーナーのJourney Level 3体験）＋Experience Review 2.0 | North Star第1指標（公開アプリ）が1になる | ⬜ |
+| 8 | 巣立ちの準備 | Starter Kit実装（`docs/starter-kit.md` のDNA定義に従い `nest-starter` を作成） | 第三者が15分で自分の巣を作れる | ⬜ |
+
+> **Phase順の改訂記録（2026-07-08）**: 「最初の住人」はオーナーの参加とPages有効化が前提でブロック中のため、その待ち時間に「デザインシステム」を先に敷いた。オーナーの最初のアプリが整ったtokensを継承できるので順序として合理的（ADR: 20260708-design-tokens）。
 
 ## 優先順位の理由
 
@@ -45,6 +48,11 @@
 4. CIバッジをPortalに設置（GitHub公式バッジSVG）
 5. 印刷CSS（`@media print`）
 6. 初心者テスト→ `docs/reviews/phase-4.md` に記録
+
+## Future 候補（着手が決まったらPhase化する）
+
+- **Portal 全体検索** — ドキュメントが増えたとき、Portalから横断検索できる入口。実装はJSゼロ方針との兼ね合いを検討（静的インデックス or Pages内蔵の仕組み）。今は不要（原則7）
+- **Design Tokens の拡張** — 余白・文字スケールのトークン化（コンポーネント整理が必要になった時）
 
 ## Future — Version 2以降の余白（実装も設計もしない）
 

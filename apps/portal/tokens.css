@@ -1,0 +1,35 @@
+/* NEST Design Tokens — 見た目の「値」の唯一の正本
+   ここには値の定義だけを置く（コンポーネントの見た目は style.css）。
+   選定理由・使い方・スケール方針は docs/design-guide.md。
+   各アプリはこのファイルをコピーして持つ（Starter KitのDNA）。 */
+:root {
+  /* 色 — ライト */
+  --nest-bg: #faf6ef;         /* 基本の背景（Portal＝迎える面） */
+  --nest-bg-alt: #f2ead9;     /* 作業面（Dashboard＝毎日のホーム） */
+  --nest-ink: #33312b;        /* 本文 */
+  --nest-ink-soft: #6b675c;   /* 補助テキスト */
+  --nest-card: #ffffff;       /* カード面 */
+  --nest-line: #e8e1d3;       /* 罫線・境界 */
+  --nest-accent: #4c8c4a;     /* アクセント（巣の緑） */
+  --nest-accent-ink: #ffffff; /* アクセント上の文字 */
+  --nest-amber: #b97d1f;      /* 補助アクセント（琥珀） */
+  --nest-shadow: 0 2px 10px rgba(90, 80, 55, .08);
+
+  /* 形 */
+  --nest-radius: 16px;
+  --nest-radius-pill: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nest-bg: #23221e;
+    --nest-bg-alt: #201f1b;
+    --nest-ink: #ece8dd;
+    --nest-ink-soft: #b8b3a5;
+    --nest-card: #2c2b26;
+    --nest-line: #3d3b33;
+    --nest-accent: #6fae6d;
+    --nest-accent-ink: #1c2b1c;
+    --nest-amber: #d9a24a;
+    --nest-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+  }
+}

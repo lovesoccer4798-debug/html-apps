@@ -23,6 +23,7 @@
 - [Phase 3 — Portal](phase-3.md)
 - [Phase 4 — 廊下（HTML Handbook）](phase-4.md)
 - [Phase 5 — ダッシュボード](phase-5.md)
+- [Phase 6 — デザインシステム（Design Tokens）](phase-6.md)
 
 ---
 
