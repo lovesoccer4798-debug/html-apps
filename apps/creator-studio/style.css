@@ -1,0 +1,150 @@
+/* Creator Studio — コンポーネントの見た目（値は tokens.css を消費）
+   tokens.css を先に読み込むこと。NEST Design Guide 準拠。 */
+:root {
+  --bg: var(--nest-bg);
+  --bg-alt: var(--nest-bg-alt);
+  --ink: var(--nest-ink);
+  --ink-soft: var(--nest-ink-soft);
+  --card: var(--nest-card);
+  --line: var(--nest-line);
+  --accent: var(--nest-accent);
+  --accent-ink: var(--nest-accent-ink);
+  --amber: var(--nest-amber);
+  --shadow: var(--nest-shadow);
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  /* Studio＝作業面。Portalの「迎える面」と対に、落ち着いた作業場の色 */
+  background: var(--bg-alt);
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+  line-height: 1.7;
+  font-size: 16px;
+}
+a { color: inherit; }
+svg.icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
+
+/* レイアウト枠 */
+header, main, footer { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+/* ヘッダー */
+.top { padding: 22px 0 6px; }
+.top .back { font-size: 14px; color: var(--ink-soft); text-decoration: none; }
+.brand { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.brand svg.icon { width: 30px; height: 30px; color: var(--accent); }
+.brand h1 { font-size: 26px; font-weight: 800; letter-spacing: .02em; }
+.subtitle { color: var(--ink-soft); font-size: 15px; margin-top: 4px; }
+
+/* 2カラム（PC）→ 1カラム（スマホ） */
+.studio-grid { display: grid; grid-template-columns: 1fr; gap: 18px; margin: 22px 0; }
+@media (min-width: 880px) {
+  .studio-grid { grid-template-columns: 1.05fr 0.95fr; align-items: start; }
+  .result-col { position: sticky; top: 20px; }
+}
+
+/* パネル（カード） */
+.panel {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--nest-radius); box-shadow: var(--shadow);
+  padding: 20px; margin-bottom: 18px;
+}
+.result-col .panel { margin-bottom: 0; }
+.panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.step-no {
+  width: 24px; height: 24px; flex: none; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 13px; font-weight: 700; display: grid; place-items: center;
+}
+.panel-head h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.panel-head h2 svg.icon { color: var(--accent); }
+.panel-head .hint { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
+
+/* フォーム部品 */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field > label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+.field > label svg.icon { color: var(--ink-soft); }
+input[type="text"], textarea, select {
+  width: 100%; font: inherit; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px;
+}
+input[type="text"]:focus, textarea:focus, select:focus {
+  outline: none; border-color: var(--accent);
+}
+textarea { resize: vertical; min-height: 120px; }
+textarea.body-input { min-height: 150px; }
+
+/* 媒体カード（ラジオ選択・JSなしで選択表現） */
+.media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.media-card {
+  position: relative; display: flex; flex-direction: column; gap: 3px;
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  cursor: pointer; background: var(--bg);
+}
+.media-card input { position: absolute; opacity: 0; pointer-events: none; }
+.media-card .m-name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 7px; }
+.media-card .m-name svg.icon { color: var(--accent); }
+.media-card .m-guide { font-size: 12px; color: var(--ink-soft); }
+.media-card:has(input:checked) {
+  border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--card));
+}
+
+/* 設定グリッド */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.settings-grid .field.full { grid-column: 1 / -1; }
+@media (max-width: 520px) { .settings-grid { grid-template-columns: 1fr; } }
+
+/* トグル */
+.toggles { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
+.toggle input { position: absolute; opacity: 0; }
+.track {
+  width: 40px; height: 22px; border-radius: 999px; background: var(--line);
+  position: relative; flex: none; transition: background .15s;
+}
+.track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .15s;
+}
+.toggle input:checked + .track { background: var(--accent); }
+.toggle input:checked + .track::after { left: 20px; }
+
+/* 生成ボタン */
+.generate {
+  width: 100%; margin-top: 4px; padding: 14px; font: inherit; font-weight: 700; font-size: 16px;
+  background: var(--accent); color: var(--accent-ink); border: none;
+  border-radius: var(--nest-radius-pill); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: var(--shadow);
+}
+.generate:hover { filter: brightness(1.07); }
+
+/* 結果パネル */
+.result-panel .out {
+  width: 100%; min-height: 320px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 13px; line-height: 1.7; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; resize: vertical;
+}
+.result-panel .out::placeholder { color: var(--ink-soft); }
+.result-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.copy-btn {
+  padding: 10px 18px; font: inherit; font-weight: 600;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--nest-radius-pill); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.result-actions .paste-hint { font-size: 12px; color: var(--ink-soft); }
+
+/* フッター */
+footer {
+  margin-top: 30px; padding: 22px 0 40px; border-top: 1px solid var(--line);
+  text-align: center; color: var(--ink-soft); font-size: 13px;
+}
+footer a { color: var(--ink-soft); }
+
+@media (max-width: 420px) {
+  .brand h1 { font-size: 22px; }
+  .media-grid { grid-template-columns: 1fr; }
+}
