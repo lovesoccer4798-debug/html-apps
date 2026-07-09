@@ -1,13 +1,17 @@
 /* Creator Studio — アプリのロジック
  *
  * 設計方針（10年育てるための責務分離）:
- *   DATA      … MEDIA[] / SETTINGS[]。ここに1行足すだけで機能が増える
- *   ICONS     … インラインSVG（CDN非依存）
- *   Store     … 設定の保存/復元「だけ」。他の何も知らない
- *   buildPrompt … 純粋関数（入力→文字列。DOMもStorageも触らない・毎回同じ入力→同じ出力）
- *   UI        … 描画とイベント配線「だけ」。ロジックを持たない
+ *   DATA         … MEDIA[] / SETTINGS[]。ここに1行足すだけで機能が増える
+ *   ICONS        … インラインSVG（CDN非依存）
+ *   Store        … 設定の保存/復元「だけ」。他の何も知らない
+ *   PromptEngine … 入力→AIへ渡すPromptを生成するエンジン（純粋関数・AI非依存）
+ *   UI           … 描画とイベント配線「だけ」。ロジックを持たない
  *
- * この4層は互いに一方向にしか依存しない: UI → (buildPrompt / Store) → DATA
+ * この4層は互いに一方向にしか依存しない: UI → (PromptEngine / Store) → DATA
+ *
+ * 現在:      Input → PromptEngine → Prompt（人がAIに貼る）
+ * 将来(P2+): Input → PromptEngine → AI Connector → Claude / ChatGPT / Gemini / ローカルLLM / MCP
+ *            ※ Connector は Engine の「外側」に足すだけ。PromptEngine 自体は無変更。
  */
 
 /* ============================================================
@@ -17,13 +21,13 @@
 // 媒体: 追加は1エントリ足すだけ。buildPrompt と描画がMEDIAを総なめする
 const MEDIA = [
   { id: 'note',    label: 'Note',            icon: 'file-text',    guide: '長文・見出しでじっくり読ませる',
-    spec: '長文でよい。見出しと段落で構成し、導入→本文→まとめの流れでじっくり読ませる。' },
+    spec: '長文でよい。「惹きつける導入 → 体験や具体例を交えた本文 → 読者が持ち帰れる学びのまとめ」の順に構成し、内容に合った見出しを付ける。結論を急がず、体験の手触りが伝わるように書く。' },
   { id: 'x',       label: 'X',               icon: 'hash',         guide: '280字以内・フックを最初に',
-    spec: '280字以内。必要なら2〜3個の連投に分ける。最初の1行で強く惹きつける。' },
+    spec: '日本語で280字以内。最初の1行を強いフックにする。伝える要点は1つに絞る。内容が入りきらなければ2〜3投稿の連投（スレッド）に分け、各投稿を単体でも読めるようにする。ハッシュタグは付けても2個まで。' },
   { id: 'threads', label: 'Threads',         icon: 'at-sign',      guide: '会話的・短め・親しみやすく',
-    spec: '会話するように短めに。親しみやすく、1〜3投稿程度で。' },
-  { id: 'reel',    label: 'Instagramリール', icon: 'clapperboard', guide: '台本・フック・キャプション案',
-    spec: '動画の台本として。冒頭2秒のフック、話す流れ、最後にキャプション案とハッシュタグ案を添える。' },
+    spec: '友人に話すような、短く柔らかい口語で。問いかけや共感から入り、1〜3投稿で親しみやすくまとめる。カジュアルでも要点（気づき）は必ず残す。宣伝くささを出さない。' },
+  { id: 'reel',    label: 'Instagramリール', icon: 'clapperboard', guide: '台本・フック・テロップ・キャプション案',
+    spec: '短尺動画の台本として構成する。(1)冒頭2秒の強いフック（最初の一言）、(2)話す流れを短い箇条書き、(3)画面に出すテロップ案、(4)締めの一言（次の行動を促す）。最後に、投稿用キャプション案とハッシュタグ案（3〜5個）も分けて添える。' },
 ];
 
 // 設定: 追加は1エントリ足すだけ。各設定は「プロンプトへの表し方(toPrompt)」を自分で持つ
@@ -43,7 +47,10 @@ const SETTINGS = [
     toPrompt: v => v ? '絵文字は一切使わない。' : '' },
   { id: 'humanize', label: 'AI感を減らす（自然な人間の文章にする）', type: 'toggle', default: true,
     toPrompt: v => v ? 'AIっぽい定型表現や過度な言い換えを避け、自然な人間が書いた文章にする。' : '' },
-  // ↑ Phase 2の「Output Profile」等もこの配列に1行足すだけで増やせる
+  // ↓ Phase 2の「Output Profile」もこの配列に1行足すだけで乗る（Prompt Engine は無変更）。例:
+  // { id:'profile', label:'投稿の狙い', type:'select',
+  //   options:['ストーリー重視','学び重視','共感重視','営業寄り','教育寄り'], default:'学び重視',
+  //   toPrompt: v => `投稿の狙いは「${v}」。その狙いが伝わる構成にする。` },
 ];
 
 /* ============================================================
@@ -80,35 +87,46 @@ const Store = {
 };
 
 /* ============================================================
- * buildPrompt — 純粋関数（DOM/Storage非依存・ベンダー中立な日本語プロンプト）
- *   入力: { title, body, media(id), settings(オブジェクト) }
- *   出力: どの主要AIにも貼れるプロンプト文字列
- *   ※ 将来の複数媒体同時生成 = 選択media配列を map してこの関数を回すだけ
+ * Prompt Engine v1 — 入力から「AIへ渡すPrompt」を生成するエンジン
+ *
+ *   責務  : Input（素材＋媒体＋設定）→ Prompt（文字列）
+ *   AI非依存: Claude / ChatGPT / Gemini / ローカルLLM のどれにも貼れる汎用日本語プロンプト。
+ *            特定AIの構文・システムトークン・独自記法を使わない。
+ *   純粋   : DOM・Storage・時刻・乱数に触れない（同じ入力→同じ出力・テスト可能）。
+ *   単一媒体: build は媒体1つを受け取る。複数同時生成は build を map するだけ。
+ *
+ *   将来（Phase 2+）のAPI版:
+ *     const prompt = PromptEngine.build(input);              // ← ここは無変更
+ *     const post   = await AIConnector.send(prompt, { model }); // ← Connectorを外側に足すだけ
  * ========================================================== */
-function buildPrompt({ title, body, media, settings }) {
-  const m = MEDIA.find(x => x.id === media) || MEDIA[0];
-  const conditions = SETTINGS
-    .map(s => s.toPrompt(settings[s.id]))
-    .filter(Boolean); // 空文字（OFF/未入力）は落とす
+const PromptEngine = {
+  version: 'v1',
 
-  return [
-    `あなたはプロの${m.label}ライターです。以下の素材をもとに、${m.label}向けの投稿を作成してください。`,
-    ``,
-    `# タイトル / テーマ`,
-    title || '（未入力）',
-    ``,
-    `# 素材`,
-    body || '（未入力）',
-    ``,
-    `# 媒体の指針（${m.label}）`,
-    m.spec,
-    ``,
-    `# 仕上げの条件`,
-    ...conditions.map(c => `- ${c}`),
-    ``,
-    `上記をふまえ、まず投稿本文だけを出力してください。前置きや解説は不要です。`,
-  ].join('\n');
-}
+  build({ title, body, media, settings }) {
+    const m = MEDIA.find(x => x.id === media) || MEDIA[0];
+    const conditions = SETTINGS
+      .map(s => s.toPrompt(settings[s.id]))
+      .filter(Boolean); // 空文字（OFF/未入力）は落とす
+
+    return [
+      `あなたはプロの${m.label}ライターです。以下の素材をもとに、${m.label}向けの投稿を作成してください。`,
+      ``,
+      `# タイトル / テーマ`,
+      title || '（未入力）',
+      ``,
+      `# 素材`,
+      body || '（未入力）',
+      ``,
+      `# 媒体の指針（${m.label}）`,
+      m.spec,
+      ``,
+      `# 仕上げの条件`,
+      ...conditions.map(c => `- ${c}`),
+      ``,
+      `上記をふまえ、まず投稿本文だけを出力してください。前置きや解説は不要です。`,
+    ].join('\n');
+  },
+};
 
 /* ============================================================
  * UI — 描画とイベント配線だけ（ロジックは上の層に委譲）
@@ -178,7 +196,7 @@ function init() {
     const title = $('#title').value.trim();
     const body = $('#body').value.trim();
     if (!title && !body) { outEl.value = '素材（タイトルまたは本文）を入力してください。'; return; }
-    outEl.value = buildPrompt({
+    outEl.value = PromptEngine.build({
       title, body,
       media: (document.querySelector('input[name="media"]:checked') || {}).value,
       settings: collectSettings(),

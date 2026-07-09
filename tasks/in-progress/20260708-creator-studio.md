@@ -16,8 +16,8 @@
 - [x] **Step 1**: 仕様書・タスク・アプリ雛形の作成（コードなし）
 - [x] **Step 2**: 骨組み（HTML構造＋tokens/style・静的表示・JSなし）
 - [x] **Step 3**: データ駆動（SETTINGS/MEDIA配列）＋設定UI動的生成＋Store＋buildPrompt＋生成/コピー（JS導入）
-- [~] **Step 4**: プロンプト生成ロジック＋結果表示（Step 3で先行実装済み・媒体別の文言微調整が残）
-- [ ] **Step 5**: コピー機能＋媒体別の最適化（コピーはStep 3で実装済み・媒体別最適化を詰める）
+- [x] **Step 4**: プロンプト生成ロジック＋結果表示（Step 3で実装）
+- [x] **Step 5**: Prompt Engine v1化（buildPrompt→PromptEngine.build・AI非依存・Connector継ぎ目）＋媒体別spec品質向上（コピーはStep 3で実装済み）
 - [ ] **Step 6**: レスポンシブ・ダーク・アイコン仕上げ
 - [ ] **Step 7**: セルフレビュー＋動作確認＋CHANGELOG/STATUS→コミット/PR/CI/マージ＋mini-ADR（JS採用）
 - [ ] **Step 8**: Portalの「育てているアプリ」に追加
@@ -43,3 +43,10 @@
 - 設計の要点: 設定追加=SETTINGS配列に1エントリ（toPrompt付き）足すだけでUI・保存・生成が自動追従。媒体追加=MEDIA配列に1エントリ。buildPromptはDOM/Storage非依存
 - 気づき: ラジオを pointer-events:none で隠しているためテストは force/check が必要（実ユーザーはカードを押すので問題なし）
 - 次にやること: アーキテクチャ承認後、Step 5〜6（媒体別最適化・仕上げ）、Step 7でJS採用のmini-ADR＋PR
+
+### 2026-07-08（Step 5）
+
+- 何をしたか: buildPrompt を **Prompt Engine v1**（`PromptEngine.build`）として明確化。AI非依存・純粋関数を設計コメントで明示し、将来の `AIConnector.send(prompt,{model})` を Engine の外側に足す継ぎ目をコメントで用意（Connector自体は作らない＝原則7）。媒体別spec（Note/X/Threads/リール）を「その媒体らしい」出力になるよう全面改稿
+- 検証（Playwright）: 4媒体すべてで媒体固有の指針が出力（Note=構成/X=280字・連投・ハッシュタグ2個/Threads=口語・共感/リール=台本・フック・テロップ・キャプション）。Engineロジックは無変更でdataだけ更新＝データ駆動の実証
+- Output Profile（Phase 2）: SETTINGS配列に1エントリ足すだけで乗ることをコメント例で明示。Prompt Engineは無変更で対応可
+- 次にやること: 承認後 Step 6（レスポンシブ・見出し窮屈の微調整）→ Step 7（JS採用mini-ADR＋PR/CI/マージ）→ Step 8（Portal掲載）
