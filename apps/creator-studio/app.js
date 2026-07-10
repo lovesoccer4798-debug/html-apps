@@ -18,7 +18,7 @@
  * DATA — ここを増やすだけで機能が増える（UI・保存・生成が自動追従）
  * ========================================================== */
 
-// 媒体: 追加は1エントリ足すだけ。buildPrompt と描画がMEDIAを総なめする
+// 媒体: 追加は1エントリ足すだけ。PromptEngine と描画がMEDIAを総なめする
 const MEDIA = [
   { id: 'note',    label: 'Note',            icon: 'file-text',    guide: '長文・見出しでじっくり読ませる',
     spec: '長文でよい。「惹きつける導入 → 体験や具体例を交えた本文 → 読者が持ち帰れる学びのまとめ」の順に構成し、内容に合った見出しを付ける。結論を急がず、体験の手触りが伝わるように書く。' },
@@ -140,13 +140,16 @@ const PromptEngine = {
  * ========================================================== */
 const $ = sel => document.querySelector(sel);
 
+// innerHTMLへ差し込む文字列は必ずエスケープ（保存済みの入力値などが崩れ・自己XSSにならないように）
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
 function renderMedia(container) {
   container.innerHTML = MEDIA.map((m, i) => `
     <label class="media-card">
-      <input type="radio" name="media" value="${m.id}" ${i === 0 ? 'checked' : ''}>
+      <input type="radio" name="media" value="${esc(m.id)}" ${i === 0 ? 'checked' : ''}>
       <span class="m-check">${ICONS.check}</span>
-      <span class="m-name">${ICONS[m.icon] || ''} ${m.label}</span>
-      <span class="m-guide">${m.guide}</span>
+      <span class="m-name">${ICONS[m.icon] || ''} ${esc(m.label)}</span>
+      <span class="m-guide">${esc(m.guide)}</span>
     </label>`).join('');
 }
 
@@ -158,16 +161,16 @@ function renderSettings(fieldsEl, togglesEl, values) {
     if (s.type === 'toggle') {
       const label = document.createElement('label');
       label.className = 'toggle';
-      label.innerHTML = `<input type="checkbox" data-id="${s.id}" ${v ? 'checked' : ''}><span class="track"></span>${s.label}`;
+      label.innerHTML = `<input type="checkbox" data-id="${esc(s.id)}" ${v ? 'checked' : ''}><span class="track"></span>${esc(s.label)}`;
       togglesEl.appendChild(label);
     } else {
       const field = document.createElement('div');
       field.className = 'field' + (s.full ? ' full' : '');
       if (s.type === 'select') {
-        const opts = s.options.map(o => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('');
-        field.innerHTML = `<label>${s.label}</label><select data-id="${s.id}">${opts}</select>`;
+        const opts = s.options.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('');
+        field.innerHTML = `<label>${esc(s.label)}</label><select data-id="${esc(s.id)}">${opts}</select>`;
       } else {
-        field.innerHTML = `<label>${s.label}</label><input type="text" data-id="${s.id}" value="${v ?? ''}" placeholder="${s.placeholder || ''}">`;
+        field.innerHTML = `<label>${esc(s.label)}</label><input type="text" data-id="${esc(s.id)}" value="${esc(v)}" placeholder="${esc(s.placeholder || '')}">`;
       }
       fieldsEl.appendChild(field);
     }

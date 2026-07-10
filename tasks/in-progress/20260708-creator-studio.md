@@ -19,7 +19,7 @@
 - [x] **Step 4**: プロンプト生成ロジック＋結果表示（Step 3で実装）
 - [x] **Step 5**: Prompt Engine v1化（buildPrompt→PromptEngine.build・AI非依存・Connector継ぎ目）＋媒体別spec品質向上（コピーはStep 3で実装済み）
 - [x] **Step 6**: UI仕上げ（見出し折返し解消・セレクト矢印・フォーカスリング・ホバー）＋Prompt Engine Roadmapコメント＋README設計方針
-- [ ] **Step 7**: セルフレビュー＋動作確認＋CHANGELOG/STATUS→コミット/PR/CI/マージ＋mini-ADR（JS採用）
+- [~] **Step 7**: セルフレビュー＋ADR＋CHANGELOG整理まで完了。PR/CI/mainマージはオーナー承認待ち
 - [ ] **Step 8**: Portalの「育てているアプリ」に追加
 
 ## 作業ログ
@@ -56,3 +56,13 @@
 - 設計追記: app.js に Prompt Engine Roadmap（v1生成→v2 Output Profile→v3 Connector→v4 Workflow/MCP）をコメントで記載。README に「Prompt Engine中心・Connectorは外側に足す」基本方針を一文追加（いずれも実装なし・思想の記録）
 - Step 6（UI仕上げ）: panel-headをflex-wrapにし見出しの途中折返しを解消（補足は下段へ回り込み）。selectにカスタム矢印、input/textarea/selectにフォーカスリング、媒体カードにホバー/フォーカス表現。PC/スマホ/ダーク3種スクショで確認
 - 次にやること: 承認後 Step 7（セルフレビュー＋JS採用のmini-ADR＋CHANGELOG/STATUS→PR/CI/mainマージ）→ Step 8（Portal掲載・バッジ🐣→🐦）
+
+### 2026-07-08（Step 7・PR前レビュー）
+
+- ADR: `docs/adr/20260708-creator-studio-vanilla-js.md` 作成（Vanilla JS採用・React/Vue/Alpine不採用の理由・依存ゼロを保つ理由・将来フレームワークを検討するトリガー条件まで）
+- CHANGELOG: 将来予定を排し「実際に入った変更のみ」に整理。[1.0.0] として確定（ロードマップ/設計コメントとの責務分離）
+- セルフレビュー（Step 1〜6総ざらい）で2件検出・修正:
+  1. 古いコメント「buildPrompt」→「PromptEngine」に修正
+  2. 堅牢性: 設定のテキスト値を innerHTML に素で差し込んでいた → esc() を追加。`36"モニター <script>` で検証し、保存/復元・マークアップ無崩れ・script非混入・生成へテキスト安全反映を確認
+- CSS未使用セレクタ: 照合の結果ゼロ。ICONS(JS)とHTML内SVGの一部重複は「静的chrome=HTML/動的=JS」の意図的分離として許容（統一は複雑化に見合わず）
+- 次にやること: オーナー承認後、PR作成→CIグリーン確認→squashでmainマージ → Step 8（Portal掲載）
