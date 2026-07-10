@@ -98,6 +98,13 @@ const Store = {
  *   将来（Phase 2+）のAPI版:
  *     const prompt = PromptEngine.build(input);              // ← ここは無変更
  *     const post   = await AIConnector.send(prompt, { model }); // ← Connectorを外側に足すだけ
+ *
+ *   Prompt Engine Roadmap（進化イメージ・設計メモ。実装は各Phaseで判断）:
+ *     v1 … Prompt生成（現在）
+ *     v2 … Output Profile対応（SETTINGSに1行足すだけで乗る想定・Engine無変更）
+ *     v3 … AI Connector連携（Engineの外側にConnector層を追加。API/ローカルLLM）
+ *     v4 … Workflow生成・MCP連携（複数媒体・複数ステップの一括生成へ）
+ *   いずれの版でも「Prompt生成」という Engine の中核責務は変えない。
  * ========================================================== */
 const PromptEngine = {
   version: 'v1',

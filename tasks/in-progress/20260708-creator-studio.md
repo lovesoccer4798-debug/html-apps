@@ -18,7 +18,7 @@
 - [x] **Step 3**: データ駆動（SETTINGS/MEDIA配列）＋設定UI動的生成＋Store＋buildPrompt＋生成/コピー（JS導入）
 - [x] **Step 4**: プロンプト生成ロジック＋結果表示（Step 3で実装）
 - [x] **Step 5**: Prompt Engine v1化（buildPrompt→PromptEngine.build・AI非依存・Connector継ぎ目）＋媒体別spec品質向上（コピーはStep 3で実装済み）
-- [ ] **Step 6**: レスポンシブ・ダーク・アイコン仕上げ
+- [x] **Step 6**: UI仕上げ（見出し折返し解消・セレクト矢印・フォーカスリング・ホバー）＋Prompt Engine Roadmapコメント＋README設計方針
 - [ ] **Step 7**: セルフレビュー＋動作確認＋CHANGELOG/STATUS→コミット/PR/CI/マージ＋mini-ADR（JS採用）
 - [ ] **Step 8**: Portalの「育てているアプリ」に追加
 
@@ -50,3 +50,9 @@
 - 検証（Playwright）: 4媒体すべてで媒体固有の指針が出力（Note=構成/X=280字・連投・ハッシュタグ2個/Threads=口語・共感/リール=台本・フック・テロップ・キャプション）。Engineロジックは無変更でdataだけ更新＝データ駆動の実証
 - Output Profile（Phase 2）: SETTINGS配列に1エントリ足すだけで乗ることをコメント例で明示。Prompt Engineは無変更で対応可
 - 次にやること: 承認後 Step 6（レスポンシブ・見出し窮屈の微調整）→ Step 7（JS採用mini-ADR＋PR/CI/マージ）→ Step 8（Portal掲載）
+
+### 2026-07-08（設計追記＋Step 6）
+
+- 設計追記: app.js に Prompt Engine Roadmap（v1生成→v2 Output Profile→v3 Connector→v4 Workflow/MCP）をコメントで記載。README に「Prompt Engine中心・Connectorは外側に足す」基本方針を一文追加（いずれも実装なし・思想の記録）
+- Step 6（UI仕上げ）: panel-headをflex-wrapにし見出しの途中折返しを解消（補足は下段へ回り込み）。selectにカスタム矢印、input/textarea/selectにフォーカスリング、媒体カードにホバー/フォーカス表現。PC/スマホ/ダーク3種スクショで確認
+- 次にやること: 承認後 Step 7（セルフレビュー＋JS採用のmini-ADR＋CHANGELOG/STATUS→PR/CI/mainマージ）→ Step 8（Portal掲載・バッジ🐣→🐦）

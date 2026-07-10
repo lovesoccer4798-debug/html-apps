@@ -22,6 +22,7 @@
 
 ## 設計メモ
 
+- **Creator Studioは Prompt Engine を中心とした設計**である。将来的にAI API（Claude / OpenAI / Gemini / ローカルLLM / MCP）を接続する場合でも、**Prompt Engine 自体は変更せず、その外側に Connector 層を追加する**ことを基本方針とする（Input → Prompt Engine → Prompt → 〔将来〕AI Connector → 各AI）。
 - 素のHTML/CSS/JS。フレームワーク・CDN・ビルド・サーバ通信なし（NEST Design Principles 原則6）
 - 見た目は `tokens.css`（NESTのDesign Tokens）を継承
 - 設定（SETTINGS）と媒体（MEDIA）はデータ配列で定義し、後から項目を足すだけで拡張できる

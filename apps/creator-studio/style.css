@@ -49,15 +49,17 @@ header, main, footer { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
   padding: 20px; margin-bottom: 18px;
 }
 .result-col .panel { margin-bottom: 0; }
-.panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.panel-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-bottom: 14px; }
 .step-no {
   width: 24px; height: 24px; flex: none; border-radius: 999px;
   background: var(--accent); color: var(--accent-ink);
   font-size: 13px; font-weight: 700; display: grid; place-items: center;
 }
-.panel-head h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.panel-head h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .panel-head h2 svg.icon { color: var(--accent); }
+/* 補足は右寄せ。幅が足りなければ丸ごと次の行へ回り、見出しの折返しを防ぐ */
 .panel-head .hint { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
+@media (max-width: 560px) { .panel-head .hint { flex-basis: 100%; margin-left: 34px; } }
 
 /* フォーム部品 */
 .field { margin-bottom: 14px; }
@@ -67,10 +69,16 @@ header, main, footer { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
 input[type="text"], textarea, select {
   width: 100%; font: inherit; color: var(--ink);
   background: var(--bg); border: 1px solid var(--line);
-  border-radius: 10px; padding: 10px 12px;
+  border-radius: 10px; padding: 10px 12px; transition: border-color .12s, box-shadow .12s;
 }
 input[type="text"]:focus, textarea:focus, select:focus {
   outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+select { appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  padding-right: 30px;
 }
 textarea { resize: vertical; min-height: 120px; }
 textarea.body-input { min-height: 150px; }
@@ -80,8 +88,10 @@ textarea.body-input { min-height: 150px; }
 .media-card {
   position: relative; display: flex; flex-direction: column; gap: 3px;
   border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
-  cursor: pointer; background: var(--bg);
+  cursor: pointer; background: var(--bg); transition: border-color .12s, background .12s;
 }
+.media-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.media-card:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
 .media-card input { position: absolute; opacity: 0; pointer-events: none; }
 .media-card .m-name { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 7px; }
 .media-card .m-name svg.icon { color: var(--accent); }
