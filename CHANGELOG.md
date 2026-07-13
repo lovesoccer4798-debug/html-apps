@@ -43,6 +43,7 @@
 - 思想層v1.0改訂: Version 1系での凍結ルール、VisionにNorth Star（恩恵の循環3指標）、Journeyを円環構造に（承認済みの憲法改正）
 - development-flow.md に「はじめてモード」（最初の1個は仕様書・タスク免除）を条文化
 - README冒頭に来訪者バナーを追加
+- Navigator v1（Context Budget運用の最小セット・再現テスト合格で正式採用）: Context Manifest欄とプリセット3種＋再開ブロック書式（`templates/task.md`）、Manifest優先の例外と実装セッションでの壁打ち禁止（`AGENTS.md` §2・§4）、差分レビューAIプロンプト（`prompts/review-code.md` 改修）。追記は `navigator-v1` マーカーで撤去可能（仕様: `tasks/done/20260713-navigator-v1.md` に内包）
 
 ## [1.0.0] - 2026-07-07
 
