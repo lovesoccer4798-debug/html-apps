@@ -5,7 +5,7 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-07-08
-- **更新者メモ**: レビュー文化に「引き算のレビュー」を吸収（新ルールは足さず review-process.md にレンズ追加）。初回棚卸しパス実施済み。Phase 6完了。次はPhase 7「最初の住人」（オーナーが主役）
+- **更新者メモ**: Phase 7「最初の住人」着手。Creator Studio の Step 1（仕様書・タスク・雛形）完了、Step 2（HTML骨組み）待ち
 
 ## ワークスペース全体の状態
 
@@ -16,10 +16,11 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3は
 | アプリ | 状態 | 一言メモ |
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐣→🐦（Pages有効化待ち） | NEST初のアプリ。正式フローのドッグフーディング |
+| [Creator Studio](../apps/creator-studio/README.md) | 🥚 たまご | SNS投稿プロンプト生成アプリ。Phase 7・Step 1完了（仕様確定） |
 
 ## 進行中のタスク
 
-（なし — 次はNEST Phase 1）
+- [Creator Studio v1](in-progress/20260708-creator-studio.md) — Step 1完了、Step 2（HTML骨組み）から再開
 
 ## 次にやるべきこと
 
