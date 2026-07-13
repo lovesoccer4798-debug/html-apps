@@ -5,29 +5,30 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-07-08
-- **更新者メモ**: Phase 7「最初の住人」着手。Creator Studio の Step 1（仕様書・タスク・雛形）完了、Step 2（HTML骨組み）待ち
+- **更新者メモ**: Phase 7完了。Creator Studio v1.0 をmainにマージ＆Portal掲載（🐦）。実運用での育成と（未実施なら）Pages有効化が残
 
 ## ワークスペース全体の状態
 
-Workspace v1.0.0 リリース済み。**NEST Phase 0〜3が完了**（Phase 3はPages有効化のみ残）。思想層は凍結、歓迎キット・安心の備蓄・Portal（NEST初のアプリ、正式フローで開発）が揃った。初心者テストが正式文化になった（review-process.md §3）。
+Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了**。思想層は凍結、歓迎キット・安心の備蓄・Portal・Dashboard・デザインシステム・ガバナンスが揃い、**初の実用アプリ Creator Studio v1.0 が誕生**（North Star第1指標＝公開アプリが1に）。残る人間操作は GitHub Pages 有効化。
 
 ## プロジェクト索引
 
 | アプリ | 状態 | 一言メモ |
 |---|---|---|
-| 🏠 [Portal](../apps/portal/README.md) | 🐣→🐦（Pages有効化待ち） | NEST初のアプリ。正式フローのドッグフーディング |
-| [Creator Studio](../apps/creator-studio/README.md) | 🥚 たまご | SNS投稿プロンプト生成アプリ。Phase 7・Step 1完了（仕様確定） |
+| 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard |
+| [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
 
 ## 進行中のタスク
 
-- [Creator Studio v1](in-progress/20260708-creator-studio.md) — Step 1完了、Step 2（HTML骨組み）から再開
+（なし）
 
 ## 次にやるべきこと
 
-1. **【人間の操作】GitHub Pages有効化**（OFFと確定判定済み。Settings→Pages→main→/(root)→Save）＋公開URLの表示確認 → Phase 3〜5完全クローズ
-2. **NotebookLM初回同期**（`docs/ai-tools.md` のフロー参照）
-3. **Phase 7「最初の住人」**（`docs/roadmap.md` 参照）: オーナー自身が最初の実用アプリを作る（主役＝オーナー）。必要なもの＝Pages有効化＋「作りたいもの」一言
-4. 機会があり次第: 実際の人間による初心者テスト（結果は docs/reviews/ に追記）
+1. **【人間の操作】GitHub Pages有効化**（OFFと確定判定済み。Settings→Pages→main→/(root)→Save）→ Portal・Creator Studio の公開URL確認
+2. **Creator Studioを実運用で育てる**（実際に各AIへ貼って生成品質を評価・specやSETTINGSを調整。NESTの「使いながら育てる」）
+3. **NotebookLM初回同期**（`docs/ai-tools.md` のフロー参照）
+4. **Phase 8「巣立ちの準備」**（`docs/roadmap.md`）: 承認後に Starter Kit 実装
+5. 保留のオーナー判断: アプリ単位のタグ運用（`creator-studio-v1.0.0` 等）の要否
 
 ## 注意点・申し送り
 

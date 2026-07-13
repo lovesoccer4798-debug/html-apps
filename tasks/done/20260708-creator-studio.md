@@ -19,7 +19,8 @@
 - [x] **Step 4**: プロンプト生成ロジック＋結果表示（Step 3で実装）
 - [x] **Step 5**: Prompt Engine v1化（buildPrompt→PromptEngine.build・AI非依存・Connector継ぎ目）＋媒体別spec品質向上（コピーはStep 3で実装済み）
 - [x] **Step 6**: UI仕上げ（見出し折返し解消・セレクト矢印・フォーカスリング・ホバー）＋Prompt Engine Roadmapコメント＋README設計方針
-- [~] **Step 7**: セルフレビュー＋ADR＋CHANGELOG整理まで完了。PR/CI/mainマージはオーナー承認待ち
+- [x] **Step 7**: セルフレビュー＋ADR＋CHANGELOG整理＋PR #17 squashマージ（CIグリーン）
+- [x] **Step 8**: Portalの「育てているアプリ」にCreator Studioを掲載（🐦 そだち）
 - [ ] **Step 8**: Portalの「育てているアプリ」に追加
 
 ## 作業ログ
@@ -66,3 +67,10 @@
   2. 堅牢性: 設定のテキスト値を innerHTML に素で差し込んでいた → esc() を追加。`36"モニター <script>` で検証し、保存/復元・マークアップ無崩れ・script非混入・生成へテキスト安全反映を確認
 - CSS未使用セレクタ: 照合の結果ゼロ。ICONS(JS)とHTML内SVGの一部重複は「静的chrome=HTML/動的=JS」の意図的分離として許容（統一は複雑化に見合わず）
 - 次にやること: オーナー承認後、PR作成→CIグリーン確認→squashでmainマージ → Step 8（Portal掲載）
+
+### 2026-07-08（Step 7・8 完了 / クローズ）
+
+- PR #17 を squashマージ（CIグリーン）。Version 1.0公開。タグは今回なし（素の`v1.0.0`はWorkspaceが使用済み・アプリ単位のタグ運用は未決＝オーナー判断の保留事項）
+- Step 8: PortalのApps欄に Creator Studio（🐦 そだち・アプリへリンク）を掲載。空スロットは「次のアプリ」に更新。Portal v1.4.1
+- 完了: 仕様書の完成の定義（Pages公開を除く）を満たし、Release Review合格。本タスクを done へ
+- 残（オーナー領域）: 実運用での生成品質の育成、（未実施なら）GitHub Pages有効化での公開確認、アプリ単位タグ運用の要否判断
