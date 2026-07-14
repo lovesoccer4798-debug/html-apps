@@ -1,0 +1,65 @@
+/* NEST Design Tokens — 見た目の「値」の唯一の正本（templates/app/tokens.css のDNAコピー）
+   値の意味・スケール方針は docs/design-guide.md。 */
+:root {
+  /* 色 — ライト */
+  --nest-bg: #faf6ef;         /* 基本の背景（迎える面） */
+  --nest-bg-alt: #f2ead9;     /* 作業面 */
+  --nest-ink: #33312b;        /* 本文 */
+  --nest-ink-soft: #6b675c;   /* 補助テキスト */
+  --nest-card: #ffffff;       /* カード面 */
+  --nest-line: #e8e1d3;       /* 罫線・境界 */
+  --nest-accent: #4c8c4a;     /* アクセント（巣の緑） */
+  --nest-accent-ink: #ffffff; /* アクセント上の文字 */
+  --nest-amber: #b97d1f;      /* 補助アクセント（琥珀） */
+  --nest-shadow: 0 2px 10px rgba(90, 80, 55, .08);
+
+  /* 形 */
+  --nest-radius: 16px;
+  --nest-radius-pill: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nest-bg: #23221e;
+    --nest-bg-alt: #201f1b;
+    --nest-ink: #ece8dd;
+    --nest-ink-soft: #b8b3a5;
+    --nest-card: #2c2b26;
+    --nest-line: #3d3b33;
+    --nest-accent: #6fae6d;
+    --nest-accent-ink: #1c2b1c;
+    --nest-amber: #d9a24a;
+    --nest-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+  }
+}
+
+/* ---- Task Calendar 固有トークン ----
+   テーマカラーはオーナー指定のエメラルドグリーン #00C896（仕様書 §7 参照）。
+   #00C896 上の白文字はコントラスト不足のため、文字は濃いティール（--tc-accent-ink）を使う。 */
+:root {
+  --tc-accent: #00c896;        /* 主役のエメラルド */
+  --tc-accent-bright: #21e0af; /* グラデーションの中心（明るい側） */
+  --tc-accent-deep: #009f78;   /* グラデーションの外周・ホバー */
+  --tc-accent-ink: #04382b;    /* エメラルド上の文字（濃いティール） */
+  --tc-accent-soft: rgba(0, 200, 150, .13);  /* 淡い塗り（選択・達成セル） */
+  --tc-accent-line: rgba(0, 200, 150, .45);  /* 淡い枠線 */
+  --tc-danger: #c4574d;        /* 削除など */
+  --tc-sun: #c4574d;           /* 日曜の色 */
+  --tc-sat: #4a7dbb;           /* 土曜の色 */
+  --tc-hero-ink: #04382b;      /* ヒーロー帯の文字 */
+  --tc-hero-chip: rgba(255, 255, 255, .42); /* ヒーロー帯の統計チップ面 */
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tc-accent: #00bd8d;
+    --tc-accent-bright: #17cf9e;
+    --tc-accent-deep: #008f6c;
+    --tc-accent-ink: #03291f;
+    --tc-accent-soft: rgba(0, 200, 150, .17);
+    --tc-accent-line: rgba(0, 200, 150, .5);
+    --tc-danger: #d97b72;
+    --tc-sun: #d97b72;
+    --tc-sat: #7ba3d4;
+    --tc-hero-ink: #032a20;
+    --tc-hero-chip: rgba(255, 255, 255, .5);
+  }
+}

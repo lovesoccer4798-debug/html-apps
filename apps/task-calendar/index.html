@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Task Calendar — 日・週・月の3つの視点でタスクをこなし、積み上がった「できた」をながめるNESTのアプリ。">
+<title>Task Calendar — NEST</title>
+<meta name="theme-color" content="#00c896">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Task Calendar">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="top">
+    <a class="back" href="../portal/"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg> NEST Portal へ戻る</a>
+    <div class="brand">
+      <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+      <h1>Task Calendar</h1>
+    </div>
+    <p class="subtitle">今日やることを決めて、こなして、積み上がった「できた」をながめる。</p>
+    <div class="stats" aria-label="振り返りサマリー">
+      <div class="stat">
+        <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+        <span class="stat-label">今日</span><strong id="stat-today">0/0</strong>
+      </div>
+      <div class="stat">
+        <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg>
+        <span class="stat-label">連続</span><strong id="stat-streak">0日</strong>
+      </div>
+      <div class="stat">
+        <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg>
+        <span class="stat-label">累計</span><strong id="stat-total">0</strong>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="seg" role="tablist" aria-label="表示の切り替え">
+      <button class="seg-btn is-active" data-view="day" role="tab" aria-selected="true"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg> 日</button>
+      <button class="seg-btn" data-view="week" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/></svg> 週</button>
+      <button class="seg-btn" data-view="month" role="tab" aria-selected="false"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg> 月</button>
+    </div>
+    <div class="datenav">
+      <button class="nav-btn" id="nav-prev" aria-label="前へ"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button class="today-btn" id="nav-today">今日</button>
+      <h2 class="heading" id="heading" aria-live="polite"></h2>
+      <button class="nav-btn" id="nav-next" aria-label="次へ"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+  </div>
+
+  <!-- 日 -->
+  <section id="view-day" class="view">
+    <form id="add-form" class="add-form" autocomplete="off">
+      <div class="add-row">
+        <input type="text" id="add-title" maxlength="120" placeholder="やることを追加（例：朝のストレッチ）" aria-label="タスク名">
+        <button type="submit" class="add-btn"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> 追加</button>
+      </div>
+      <div class="add-row add-row-time">
+        <label class="time-label" for="add-minutes"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 所要時間</label>
+        <input type="number" id="add-minutes" min="1" max="600" placeholder="--" aria-label="所要時間（分）"><span class="time-unit">分</span>
+        <div class="time-presets" id="time-presets">
+          <button type="button" data-min="5">5</button>
+          <button type="button" data-min="15">15</button>
+          <button type="button" data-min="25">25</button>
+          <button type="button" data-min="45">45</button>
+          <button type="button" data-min="60">60</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="day-progress" id="day-progress" hidden>
+      <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+      <span class="bar-text" id="bar-text"></span>
+    </div>
+
+    <div class="celebrate" id="celebrate" hidden>
+      <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg>
+      <p><strong>この日のタスク、ぜんぶ完了！</strong>ひとつずつ積み上がっています。おつかれさま。</p>
+    </div>
+
+    <ul class="task-list" id="day-list"></ul>
+    <p class="empty" id="day-empty" hidden>まだタスクがありません。上のフォームから最初のひとつを追加してみましょう。</p>
+  </section>
+
+  <!-- 週 -->
+  <section id="view-week" class="view" hidden>
+    <div class="week-grid" id="week-grid"></div>
+  </section>
+
+  <!-- 月 -->
+  <section id="view-month" class="view" hidden>
+    <div class="month-weekdays" id="month-weekdays"></div>
+    <div class="month-grid" id="month-grid"></div>
+    <p class="month-legend"><span class="dot done"></span> 完了　<span class="dot"></span> 未完了　<span class="cell-chip">色つき</span> = 全部できた日</p>
+  </section>
+</main>
+
+<!-- タイマー -->
+<div class="timer-overlay" id="timer-overlay" hidden>
+  <div class="timer-card" role="dialog" aria-modal="true" aria-labelledby="timer-task">
+    <button class="timer-close" id="timer-close" aria-label="タイマーを閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <p class="timer-label"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg> 集中タイム</p>
+    <h3 class="timer-task" id="timer-task"></h3>
+    <div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="ring-bg" cx="100" cy="100" r="88"/>
+        <circle class="ring-fg" id="ring-fg" cx="100" cy="100" r="88"/>
+      </svg>
+      <div class="timer-time" id="timer-time">00:00</div>
+    </div>
+    <p class="timer-msg" id="timer-msg">&nbsp;</p>
+    <div class="timer-actions">
+      <button class="t-btn" id="timer-reset" aria-label="リセット"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button class="t-btn t-main" id="timer-toggle" aria-label="一時停止／再開"></button>
+      <button class="t-btn t-done" id="timer-done"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> 完了にする</button>
+    </div>
+  </div>
+</div>
+
+<!-- 削除の取り消し -->
+<div class="toast" id="toast" hidden>
+  <span id="toast-text"></span>
+  <button id="toast-undo">元に戻す</button>
+</div>
+
+<footer>
+  <p>Made in NEST — <strong>AT-Labo</strong></p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
