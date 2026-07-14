@@ -615,6 +615,17 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !els.timerOverlay.hidden) closeTimer();
 });
 
+/* ========== PWA ========== */
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      // オフライン対応が効かないだけでアプリ本体は動く
+      console.warn('Task Calendar: service worker registration failed', err);
+    });
+  });
+}
+
 /* ========== init ========== */
 
 for (let i = 0; i < 7; i += 1) {
