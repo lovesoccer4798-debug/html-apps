@@ -8,7 +8,7 @@
 
 ### Added
 
-- 生きた地図（NEST Phase 9）: Handbook表紙（`docs/README.md`）を「毎日開くホーム」へ改組 — Today（現在地・次の一歩）・やりたいことから探す（目的導線）・3つの入口の見取り図・品質パネル（鮮度情報の正本）。`docs/handbook/atlas.md`（全体地図・「1情報1正本」台帳・Navigator=育成中の思想）を新設。3ホームの役割を再定義（迎える=Portal／帰る=Handbook／跳ぶ=Dashboard、語彙台帳改定）。NotebookLM検収質問を4問化・同期記録の正本を品質パネルへ移設、セルフレビューにHandbook鮮度チェックを追加。判断は ADR `20260714-handbook-living-map.md`
+- 生きた地図（NEST Phase 9・実証中）: Handbook表紙（`docs/README.md`）を「毎日開くホーム」へ改組 — Today（現在地・今日の一歩1〜3件・次の一歩）・やりたいことから探す（目的導線）・3つの入口の見取り図・品質パネル（ステータス・責任者・点検サイクル・鮮度情報の正本）。`docs/handbook/atlas.md`（全体地図・「1情報1正本」台帳・Navigator=育成中の思想・信頼性フッター）を新設。3ホームの役割を再定義（迎える=Portal／帰る=Handbook／跳ぶ=Dashboard、語彙台帳改定）。NotebookLM検収質問を4問化・同期記録の正本を品質パネルへ移設、セルフレビューにHandbook鮮度チェックを追加。「実証してから正式採用」により、正式採用は実運用＋NotebookLM検証＋初見ユーザーテスト合格後（roadmap・reviews/phase-9.md）。判断は ADR `20260714-handbook-living-map.md`
 
 ### Fixed
 

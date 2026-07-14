@@ -7,8 +7,16 @@
 | 知りたいこと | 答え |
 |---|---|
 | いま使えるもの | [Creator Studio](../apps/creator-studio/index.html)（SNS投稿の下ごしらえ）／[Portal](../apps/portal/index.html)・[Dashboard](../apps/portal/dashboard.html)／この地図 |
-| できあがり具合 | ロードマップ10段階のうち**9段階が完了**（残りは Phase 8「巣立ちの準備」）→ 詳細は [ロードマップ](roadmap.md) |
+| できあがり具合 | ロードマップ10段階のうち**8段階が完了・この地図が実証中**（残りは Phase 8「巣立ちの準備」）→ 詳細は [ロードマップ](roadmap.md) |
 | きょうの続き・次の一歩 | [STATUS を開く](../tasks/STATUS.md)（30秒。「いま、なにしてる？」がいつも書いてあります） |
+
+### 今日の一歩 — おすすめ（いつも1〜3件だけ）
+
+1. GitHub Pages を有効化する（[人間専用の手順](human-only-operations.md)。済んだらこの行を消す）
+2. Creator Studio で投稿を1本作ってみる（3分。作った感想が一番の育成材料）
+3. NotebookLM の初回同期をする（[5分の手順](ai-tools.md)。済んだら品質パネルに日付を記入）
+
+> この欄のルール: **3件を超えない・終わったら消す・空でもよい。** 詳しい作業リストはSTATUSが正本で、ここは「今日ひとつやるなら」のおすすめだけを置きます。
 
 ## やりたいことから探す
 
@@ -50,13 +58,16 @@
 
 | 確認したいこと | いまの状態 |
 |---|---|
+| この地図のステータス | **実証中**（実装済み。実運用数日＋NotebookLM検証＋初見ユーザーテストに合格したら「正式採用」になります — [レビュー記録](reviews/phase-9.md)） |
 | この地図の最終更新 | **2026-07-14**（この行が正本。Phase完了ごとに更新されます） |
+| 責任者（Owner） | オーナー（AT-Labo）。更新はPhase完了時にAIパートナーが行い、オーナーが確認します |
+| 点検サイクル（Review Cycle） | Phase完了ごと＋月1点検（NotebookLM同期と同時） |
+| NotebookLM同期 | 未実施（初回同期がまだです。同期したらこの行に日付が入ります） |
 | Workspace Version | [Releases で確認](https://github.com/lovesoccer4798-debug/html-apps/releases)（手書きしないので、常に正確です） |
 | 自動検査（CI） | [![CIの状態](https://github.com/lovesoccer4798-debug/html-apps/actions/workflows/ci.yml/badge.svg)](https://github.com/lovesoccer4798-debug/html-apps/actions)（リンク切れ・秘密情報を毎回自動検査） |
-| NotebookLM同期 | 未実施（初回同期がまだです。同期したらこの行に日付が入ります） |
 | レビュー記録 | [Phase 9 まで記録あり](reviews/README.md)（Phase 7分は未記録 — STATUSに申し送り済み） |
 
-この表の見方: 上2行が「地図そのものの鮮度」、下3行が「Workspaceの品質」です。日付が3ヶ月以上古いときは、月1点検（[手順](ai-tools.md)）のサインです。
+この表の見方: 上4行が「この地図そのものの信頼性」、下4行が「Workspaceの品質」です。日付が3ヶ月以上古いときは、月1点検（[手順](ai-tools.md)）のサインです。
 
 ## しくみとルールの本棚
 
