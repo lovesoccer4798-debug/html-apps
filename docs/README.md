@@ -1,58 +1,85 @@
-# 📖 Workspace Handbook — 表紙と目次
+# NEST Handbook — 生きた地図
 
-> 🧭 ここはNESTの**説明書（Handbook）の表紙**です。使い方とルールの正式版がここから引けます。
+> ここは**毎日開くホーム**です。いまの現在地と、やりたいことへの入口が、この1枚にあります。説明書ではありません — 全部読むものではなく、開いて、押して、始めるためのページです。
 
-## 第0章 この説明書の読み方
+## Today — いま、どこにいる？
 
-**全部読まなくて大丈夫です。** 必要になった章だけ、必要になったときに読んでください。はじめての方はこの目次より先に [START_HERE](../START_HERE.md) がおすすめです。
+| 知りたいこと | 答え |
+|---|---|
+| いま使えるもの | [Creator Studio](../apps/creator-studio/index.html)（SNS投稿の下ごしらえ）／[Portal](../apps/portal/index.html)・[Dashboard](../apps/portal/dashboard.html)／この地図 |
+| できあがり具合 | ロードマップ10段階のうち**9段階が完了**（残りは Phase 8「巣立ちの準備」）→ 詳細は [ロードマップ](roadmap.md) |
+| きょうの続き・次の一歩 | [STATUS を開く](../tasks/STATUS.md)（30秒。「いま、なにしてる？」がいつも書いてあります） |
 
-## 第1章 NESTの全体像
+## やりたいことから探す
 
-NESTは3階建て＋2人の同伴者でできています。
+どの行き先も**2クリック以内**で「触れるもの」に着きます。名前を覚えていなくて大丈夫です。
 
-```mermaid
-flowchart TB
-    subgraph 思想層["🧠 思想層 — 変わらないもの"]
-        P[Story・Manifesto・Vision<br>Brand Book・Design Principles・Journey]
-    end
-    subgraph 体験層["🚪 体験層 — 人を迎えるもの"]
-        E[Portal・START_HERE・STATUS]
-    end
-    subgraph 実体層["🌱 実体層 — 育っていくもの"]
-        R[Apps・Knowledge・Handbook・templates・tasks]
-    end
-    思想層 --> 体験層 --> 実体層
-    AI["🤖 AIパートナー ＆ 📓 NotebookLM<br>（どの層にも、いつでも隣にいる）"] -.-> 思想層 & 体験層 & 実体層
+| やりたいこと | 行き先 |
+|---|---|
+| SNS投稿をつくりたい（3分・素材を貼るだけ） | [Creator Studio](../apps/creator-studio/index.html) |
+| AIと一緒に何かをつくりたい | [first-app — コピペで始まる声かけ文](../prompts/first-app.md) |
+| いまの進捗・完成状況を知りたい | [STATUS](../tasks/STATUS.md) と [ロードマップ](roadmap.md) |
+| 質問したい・意味を知りたい | NotebookLM に聞く（まず「NESTの六箇条は？」と聞いてみてください。[設定と使い方](ai-tools.md)）／言葉なら [用語集](glossary.md) |
+| 困った・つまずいた | [Knowledge — 先輩の転んだ跡](../knowledge/README.md) |
+| しくみと「なぜ」を知りたい | [全体地図（atlas）](handbook/atlas.md) と [思想層](philosophy/README.md) |
+| はじめて来た・人に渡したい | [START_HERE — 10分の案内](../START_HERE.md) |
+
+## 3つの入口の見取り図
+
+```
+はじめての人                     毎日のあなた
+     |                               |
+     v                               v
+ [ Portal ]  ------------->  [ Handbook ] ←― いまここ
+  玄関。NESTを初めての人に      毎日開くホーム。現在地と
+  紹介する面                    「やりたいこと」からの入口
+     |                               |
+     v                               v
+ [ START_HERE ]              [ Dashboard ]
+  10分の案内。                  全部への近道。すべてへ
+  最初の一歩はここから          2クリックで跳ぶリンク集
+                                     |
+                                     v
+                    Apps（Creator Studio ほか）・STATUS・
+                    Knowledge・Handbookの各章 …
 ```
 
-詳しくは [思想層の目次](philosophy/README.md) へ。
+**迎えるのがPortal、帰るのがHandbook、跳ぶのがDashboard。** はじめての人はPortalからSTART_HEREへ。2回目からはこのHandbookをホームにして、急ぐ日はDashboardから直接跳んでください。もっと詳しい地図（責務分離・情報の流れ・「なぜこう設計されているか」）は [atlas](handbook/atlas.md) にあります。
 
-## 章立て
+## 品質パネル — この地図は信じられるか
 
-| 章 | 内容 | 本文 |
-|---|---|---|
-| 第2章 ものづくりの流れ | アプリ作成→仕様→タスク→実装→リリース（はじめてモード含む） | [development-flow.md](development-flow.md) |
-| 第3章 Gitとの付き合い方 | ブランチ・コミット・マージの約束 | [git-workflow.md](git-workflow.md) |
-| 第4章 書き方のルール | コーディング規約 | [coding-standards.md](coding-standards.md) |
-| 第5章 テストと動作確認 | 何をどこまで確認するか | [testing-policy.md](testing-policy.md) |
-| 第6章 レビューのしかた | セルフレビューとAIクロスレビュー | [review-process.md](review-process.md) |
-| 第7章 AIと働く | AIツールの案内・使い分け | [ai-tools.md](ai-tools.md)＋[AGENTS.md](../AGENTS.md) |
-| 第8章 記録の残し方 | どの情報をどこに書くか。合言葉は「**ADR＝なぜそう決めたか／Reviews＝あとから振り返る記録／Knowledge＝困った時の助け**」 | [AGENTS.md §3](../AGENTS.md)＋[knowledge/](../knowledge/README.md)＋[adr/](adr/) |
-
-## 付録
-
-| 付録 | 内容 |
+| 確認したいこと | いまの状態 |
 |---|---|
-| [ルール索引（Governance Index）](governance.md) | どのルールがどこにあるかの地図 |
-| [ロードマップ](roadmap.md) | NESTの育成計画（Workspace OS構想）の正本 |
-| [用語集](glossary.md) | やさしい言葉の辞書 |
-| [デザインガイド](design-guide.md) | 見た目の方針（アイコン・色・絵文字の二層方針） |
-| [人間にしかできない操作リスト](human-only-operations.md) | AIに任せられない操作の一覧と手順 |
-| [共通語彙台帳](vocabulary.md) | 場所の呼び名・絵文字の台帳 |
-| [Starter Kit — NESTのDNA](starter-kit.md) | 新しい巣を生む最小単位の定義 |
-| [フェーズレビューの記録](reviews/README.md) | 設計思想が育った歴史 |
-| [設計判断の記録（ADR）](adr/) | 個別判断の理由 |
+| この地図の最終更新 | **2026-07-14**（この行が正本。Phase完了ごとに更新されます） |
+| Workspace Version | [Releases で確認](https://github.com/lovesoccer4798-debug/html-apps/releases)（手書きしないので、常に正確です） |
+| 自動検査（CI） | [![CIの状態](https://github.com/lovesoccer4798-debug/html-apps/actions/workflows/ci.yml/badge.svg)](https://github.com/lovesoccer4798-debug/html-apps/actions)（リンク切れ・秘密情報を毎回自動検査） |
+| NotebookLM同期 | 未実施（初回同期がまだです。同期したらこの行に日付が入ります） |
+| レビュー記録 | [Phase 9 まで記録あり](reviews/README.md)（Phase 7分は未記録 — STATUSに申し送り済み） |
+
+この表の見方: 上2行が「地図そのものの鮮度」、下3行が「Workspaceの品質」です。日付が3ヶ月以上古いときは、月1点検（[手順](ai-tools.md)）のサインです。
+
+## しくみとルールの本棚
+
+必要になった章だけ、必要になったときに。
+
+| 章 | 内容 |
+|---|---|
+| [ものづくりの流れ](development-flow.md) | アプリ作成→仕様→タスク→実装→リリース（はじめてモード含む） |
+| [Gitとの付き合い方](git-workflow.md) | ブランチ・コミット・マージの約束 |
+| [書き方のルール](coding-standards.md) | コーディング規約 |
+| [テストと動作確認](testing-policy.md) | 何をどこまで確認するか |
+| [レビューのしかた](review-process.md) | セルフレビュー・初心者テスト・引き算のレビュー |
+| [AIと働く](ai-tools.md) | AIツールの案内・NotebookLM同期・[AGENTS.md（AI向けルール）](../AGENTS.md) |
+| 記録の残し方 | **ADR＝なぜそう決めたか**（[adr/](adr/)）／**Reviews＝あとから振り返る記録**（[reviews/](reviews/README.md)）／**Knowledge＝困った時の助け**（[knowledge/](../knowledge/README.md)） |
+
+**付録**: [ルール索引（Governance Index）](governance.md)｜[ロードマップ](roadmap.md)｜[用語集](glossary.md)｜[共通語彙台帳](vocabulary.md)｜[デザインガイド](design-guide.md)｜[人間にしかできない操作](human-only-operations.md)｜[Starter Kit — NESTのDNA](starter-kit.md)｜[思想層](philosophy/README.md)
+
+## この地図の育ち方
+
+- **動くのはPhase完了のときだけ。** 更新するのは「Today」と「品質パネル」の数行（作業したAI・人が、Phase完了レビューとセットで更新します）
+- **事実はここに書かない。** 進捗はSTATUS、計画はroadmap、バージョンはReleasesが正本。この地図はそこへ案内するだけなので、古びても嘘をつきません（設計の理由: [ADR](adr/20260714-handbook-living-map.md)）
+- **増やさない。** Handbookはこの表紙と [atlas](handbook/atlas.md) の2枚まで。書きたいことが増えたら、上の本棚の章側に書きます
 
 ---
 
-📍 **戻る**: [README（全体像）](../README.md)　|　**はじめての方**: [START_HERE](../START_HERE.md)
+戻る: [README（全体像）](../README.md)｜はじめての方: [START_HERE](../START_HERE.md)

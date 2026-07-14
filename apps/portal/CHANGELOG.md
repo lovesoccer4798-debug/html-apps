@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-14
+
+### Changed
+
+- 3ホームの役割再定義（Phase 9「生きた地図」）に合わせて文言を統一 — Handbookカードを「毎日開くホーム。NESTの生きた地図」へ、Portalの「2回目以降の方はこちら」ボタンの行き先をDashboardからHandbookへ変更（毎日のホームはHandbook・急ぐ日の近道はDashboard）
+- Dashboardの一言を「全部への近道」へ変更し、Handbookへの案内を1行追加
+
 ## [1.4.1] - 2026-07-08
 
 ### Added

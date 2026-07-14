@@ -29,25 +29,19 @@
 | 4 | 廊下 | Jekyll有効化で全MarkdownをHTML化・Portalリンク差し替え・CIバッジ・印刷CSS | 初心者が**GitHubのUIを見ずに**Handbook/Knowledge/Journeyを読み回れる。ブラウザ印刷でPDF化できる | ✅（Pages上の実表示はオーナー確認待ち） |
 | 5 | ダッシュボード | Portal拡張（新機能なし・情報整理のみ。4つの役割の正式定義） | 主要13項目すべてにPortalから**2クリック以内** | ✅（Pages実表示はオーナー確認待ち） |
 | 6 | デザインシステム | Design Tokens抽出（tokens.css）・Portal/Dashboardの役割をデザインで差別化・非肥大ガバナンス | 見た目は現状維持のまま全色がトークン経由。新アプリがtokens.cssのコピーで見た目を継承できる | ✅（Pages実表示はオーナー確認待ち） |
-| 7 | 最初の住人 | 実用アプリ第1号（オーナーのJourney Level 3体験）＋Experience Review 2.0 | North Star第1指標（公開アプリ）が1になる | ⬜ |
+| 7 | 最初の住人 | 実用アプリ第1号（オーナーのJourney Level 3体験）＋Experience Review 2.0 | North Star第1指標（公開アプリ）が1になる | ✅ |
 | 8 | 巣立ちの準備 | Starter Kit実装（`docs/starter-kit.md` のDNA定義に従い `nest-starter` を作成） | 第三者が15分で自分の巣を作れる | ⬜ |
+| 9 | 生きた地図 | Handbookを「毎日開くホーム」へ改組（Today・目的導線・品質パネル・atlas）＋3ホームの役割再定義（ADR: 20260714-handbook-living-map） | UXテスト6本に合格（10分で成功体験・30秒で現在地・2クリックで目的到達・嘘ゼロ・NotebookLM正答・3ホームの違いが初見で分かる） | ✅（初心者テストはオーナー確認待ち） |
 
 > **Phase順の改訂記録（2026-07-08）**: 「最初の住人」はオーナーの参加とPages有効化が前提でブロック中のため、その待ち時間に「デザインシステム」を先に敷いた。オーナーの最初のアプリが整ったtokensを継承できるので順序として合理的（ADR: 20260708-design-tokens）。
+>
+> **Phase追加の記録（2026-07-14）**: Phase 9「生きた地図」をオーナー承認により追加し、Phase 8より先に実施。人間向けの地図が整ってからDNA（Starter Kit）を配るほうが、受け取った第三者も迷わないため。
 
 ## 優先順位の理由
 
 - **4（廊下）を5（ダッシュボード）より先に**: 設定ファイル1枚で「リンク先の無骨さの根治・HTML Handbook・PDF」の3つが同時に手に入る最小手。廊下がないとダッシュボードの行き先が無骨なまま
 - **6（住人）を7（巣立ち）より先に**: 実績のないDNAを配らない。オーナー自身のLevel 3体験が最初の実績になる
 - **却下済みの誘惑**: Git/CI状態の自前ダッシュボード（バッジで代替）、PDF生成パイプライン（印刷CSSで代替）、アプリ一覧の自動生成（10個まで手動）
-
-## Phase 4の実装ステップ（次回）
-
-1. `_config.yml` 追加（Pagesテーマ＋ `jekyll-relative-links` で .mdリンクを自動変換）
-2. 主要ドキュメントの表示確認・崩れの微修正
-3. Portalの5枚カードのリンク先をHTML版URLへ差し替え
-4. CIバッジをPortalに設置（GitHub公式バッジSVG）
-5. 印刷CSS（`@media print`）
-6. 初心者テスト→ `docs/reviews/phase-4.md` に記録
 
 ## Future 候補 — 着手条件つきの控え室
 
@@ -66,6 +60,7 @@ Futureは「いつかやりたいこと」ではなく、**着手条件（Trigge
 | Portal 全体検索 | 原則7。文書が少なくJSゼロ方針とも要検討 | Dashboardの2クリックで目的の文書に届かなくなったら |
 | Design Tokens の拡張（余白・文字スケール） | 消費先がまだない | 余白・文字サイズの不揃いが実際に問題化したら |
 | Decision Log（日々の軽い決定記録） | mini-ADRで足りる | Phase建設期が終わり、Phaseに紐づかない小決定の記録漏れが問題化したら（判断: ADR 20260708-decision-record-routing） |
+| Handbook図解のリッチ化（Mermaid描画 or SVG） | テキスト図はGitHub・Pages・NotebookLMのどこでも同じに読める（ADR 20260714-handbook-living-map） | Pages公開後、テキスト図では初見の理解が足りない場面が実際に観察されたら |
 
 ## Future — Version 2以降の余白（実装も設計もしない）
 
