@@ -17,6 +17,7 @@
 | 記録の3兄弟＝ADR（なぜ決めたか）／Reviews（振り返り）／Knowledge（困った時）。ADRは短くてよい（mini-ADR）。決定の行き先表あり | [adr/README](adr/README.md) |
 | Phaseごとにレビュー記録を残す。体験層の成果物は初心者テスト必須。レビューは「引き算の視点」（削除・統合・棚卸し）も持つ | [review-process](review-process.md)／[reviews/](reviews/README.md) |
 | 作業終了時に必ず STATUS を更新する | [AGENTS.md](../AGENTS.md)／[tasks/](../tasks/README.md) |
+| Handbookは事実を持たない生きた地図（表紙＋atlasの2枚まで。鮮度情報だけは表紙の品質パネルが正本。更新はPhase完了時） | [ADR](adr/20260714-handbook-living-map.md)／[Handbook表紙](README.md) |
 
 ## ロードマップ
 

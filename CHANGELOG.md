@@ -8,6 +8,16 @@
 
 ### Added
 
+- 生きた地図（NEST Phase 9・実証中）: Handbook表紙（`docs/README.md`）を「毎日開くホーム」へ改組 — Today（現在地・今日の一歩1〜3件・次の一歩）・やりたいことから探す（目的導線）・3つの入口の見取り図・品質パネル（ステータス・責任者・点検サイクル・鮮度情報の正本）。`docs/handbook/atlas.md`（全体地図・「1情報1正本」台帳・Navigator=育成中の思想・信頼性フッター）を新設。3ホームの役割を再定義（迎える=Portal／帰る=Handbook／跳ぶ=Dashboard、語彙台帳改定）。NotebookLM検収質問を4問化・同期記録の正本を品質パネルへ移設、セルフレビューにHandbook鮮度チェックを追加。「実証してから正式採用」により、正式採用は実運用＋NotebookLM検証＋初見ユーザーテスト合格後（roadmap・reviews/phase-9.md）。判断は ADR `20260714-handbook-living-map.md`
+
+- Handbook実証フェーズの枠組み: 実証開始チェックリスト（時系列10項目）と実証終了条件5つ（実運用7日以上・Creator Studio5回以上・NotebookLM質問検収5問正答・初見ユーザーテスト合格・must指摘ゼロ）を先行定義（`tasks/in-progress/20260714-handbook-validation.md`）。NotebookLM検収は「同期完了」でなく「質問検収完了」を完了条件に（検収質問を5問化 — ai-tools.md）
+
+### Fixed
+
+- roadmap: Phase 7の状態列の更新漏れを修正（⬜→✅）。完了済みの「Phase 4の実装ステップ」節を削除（棚卸し）
+
+### Added
+
 - 思想層（`docs/philosophy/`）: Story・Manifesto・Vision・Brand Book・Design Principles・Journey の6文書＋玄関README（NEST Phase 0）
 - 歓迎キット（NEST Phase 1）: `START_HERE.md`（10分の初心者案内）、`prompts/hello-nest.md`（自己完結型の挨拶プロンプト）、`prompts/first-app.md`（はじめてモード）、`docs/vocabulary.md`（共通語彙台帳）
 - 安心の備蓄（NEST Phase 2）: `knowledge/`（実体験の種まき5件）、`docs/README.md`（Handbook表紙・目次）、`docs/glossary.md`（用語集）、`docs/human-only-operations.md`（人間にしかできない操作リスト）、`docs/reviews/`（フェーズレビュー記録・Phase 0〜2）、`docs/starter-kit.md`（Starter Kit＝NESTのDNAの定義）

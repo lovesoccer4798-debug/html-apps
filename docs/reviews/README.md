@@ -24,6 +24,8 @@
 - [Phase 4 — 廊下（HTML Handbook）](phase-4.md)
 - [Phase 5 — ダッシュボード](phase-5.md)
 - [Phase 6 — デザインシステム（Design Tokens）](phase-6.md)
+- Phase 7 — 最初の住人（Creator Studio）: レビュー記録は未作成（[STATUS](../../tasks/STATUS.md) に申し送り）
+- [Phase 9 — 生きた地図（Handbook）](phase-9.md)
 
 ---
 
