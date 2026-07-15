@@ -44,7 +44,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all' }, running: null };
 }
 
 function loadDb() {
@@ -68,6 +68,9 @@ function loadDb() {
 }
 
 const db = loadDb();
+if (!Array.isArray(db.calendars) || db.calendars.length === 0) {
+  db.calendars = [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }];
+}
 
 function save() {
   try {
@@ -146,6 +149,32 @@ function occursOn(t, key) {
 }
 function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
 function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+const MAX_CALENDARS = 8; // 仕様§7: 色の見分けとチップ視認性の上限
+
+function allFilterIds() {
+  const ids = db.calendars.map((c) => c.id);
+  if (db.routines.length) ids.push('routine');
+  return ids;
+}
+function passFilter(it) {
+  const f = db.settings.calendarFilter;
+  if (!f || f === 'all') return true;
+  if (it.kind === 'task' && it.ref.routineId) return f.includes('routine');
+  return f.includes(it.ref.calendarId || 'c-default');
+}
+function toggleFilter(id) {
+  const all = allFilterIds();
+  let f = db.settings.calendarFilter;
+  if (id === 'all') f = 'all';
+  else if (f === 'all') f = all.filter((x) => x !== id);
+  else if (f.includes(id)) f = f.filter((x) => x !== id);
+  else f = [...f, id];
+  if (Array.isArray(f) && (f.length === 0 || all.every((x) => f.includes(x)))) f = 'all'; // 全解除は「すべて」へ復帰（真っ白防止）
+  db.settings.calendarFilter = f;
+  save();
+  renderAll();
+}
+
 /* 予定表モード等で使う色: 自分の色 > ルーティンの色 > なし */
 function itemColor(it) {
   const pick = (id) => (ACCENTS[id] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
@@ -153,6 +182,11 @@ function itemColor(it) {
   if (it.kind === 'task' && it.ref.routineId) {
     const r = db.routines.find((x) => x.id === it.ref.routineId);
     if (r) return pick(r.color);
+  }
+  const calId = it.ref.calendarId;
+  if (calId && calId !== 'c-default') {
+    const cal = db.calendars.find((x) => x.id === calId);
+    if (cal) return pick(cal.color);
   }
   return null;
 }
@@ -645,6 +679,28 @@ function renderCal() {
   const body = $('#cal-body');
   body.textContent = '';
   openSwipeEl = null;
+
+  // マイカレンダーのフィルタチップ（TimeTree風）
+  if (db.calendars.length > 1 || db.routines.length) {
+    const chips = el('div', 'cal-chips');
+    const f = db.settings.calendarFilter;
+    const mkChip = (id, name, on, color) => {
+      const b = el('button', `cal-chip${on ? ' is-on' : ''}`);
+      b.type = 'button';
+      const d = el('span', 'ccdot');
+      if (on && color) d.style.background = color;
+      b.append(d, name);
+      b.addEventListener('click', () => toggleFilter(id));
+      return b;
+    };
+    chips.append(mkChip('all', 'すべて', f === 'all'));
+    const dark = effectiveDark();
+    for (const cal of db.calendars) {
+      chips.append(mkChip(cal.id, cal.name, f === 'all' || f.includes(cal.id), (ACCENTS[cal.color] || ACCENTS.green)[dark ? 'dark' : 'light']));
+    }
+    if (db.routines.length) chips.append(mkChip('routine', 'ルーティン', f === 'all' || f.includes('routine')));
+    body.append(chips);
+  }
   if (ui.view === 'day') renderDay(body);
   if (ui.view === 'week') renderWeek(body);
   if (ui.view === 'month') renderMonth(body);
@@ -659,7 +715,7 @@ function renderDay(body) {
 
   body.append(buildSleepCard(key));
 
-  const items = itemsFor(key);
+  const items = itemsFor(key).filter(passFilter);
   const stats = tasksStatsFor(key);
   if (stats.total > 0 && stats.done === stats.total) {
     const cel = el('div', 'celebrate');
@@ -702,7 +758,7 @@ function renderWeek(body) {
     row.append(dateBlock);
 
     const main = el('div', 'wk-main');
-    const items = itemsFor(key);
+    const items = itemsFor(key).filter(passFilter);
     if (items.length === 0) {
       const empty = el('button', 'wk-empty', '予定なし — タップして追加');
       empty.type = 'button';
@@ -752,7 +808,7 @@ function renderMonth(body) {
   for (let i = 0; i < 42; i += 1) {
     const day = addDays(gridStart, i);
     const key = toKey(day);
-    const items = itemsFor(key);
+    const items = itemsFor(key).filter(passFilter);
     const isOther = day.getMonth() !== c.getMonth();
     const cell = el('button', [
       'mo-cell',
@@ -787,7 +843,7 @@ function renderMonth(body) {
   // 選択日のプレビュー
   const key = ui.selectedKey || todayKey();
   const day = fromKey(key);
-  const items = itemsFor(key);
+  const items = itemsFor(key).filter(passFilter);
   const stats = tasksStatsFor(key);
   const headRow = el('div', 'preview-head');
   headRow.append(el('span', 'preview-title', `${day.getMonth() + 1}月${day.getDate()}日（${WD_JA[day.getDay()]}）`));
@@ -1098,7 +1154,60 @@ function renderInsights() {
 
 /* ----- settings ----- */
 
+const ACCENT_KEYS = Object.keys(ACCENTS);
+function renderCalManage() {
+  const wrap = $('#cal-manage');
+  wrap.textContent = '';
+  const dark = effectiveDark();
+  for (const cal of db.calendars) {
+    const row = el('div', 'calm-row');
+    const sw = el('button', 'calm-swatch');
+    sw.type = 'button';
+    sw.style.background = (ACCENTS[cal.color] || ACCENTS.green)[dark ? 'dark' : 'light'];
+    sw.setAttribute('aria-label', '色を切り替え');
+    sw.addEventListener('click', () => {
+      cal.color = ACCENT_KEYS[(ACCENT_KEYS.indexOf(cal.color) + 1) % ACCENT_KEYS.length];
+      save(); renderAll();
+    });
+    const name = document.createElement('input');
+    name.type = 'text'; name.maxLength = 20; name.value = cal.name;
+    name.addEventListener('blur', () => {
+      cal.name = name.value.trim() || cal.name;
+      save(); renderAll();
+    });
+    row.append(sw, name);
+    if (cal.id !== 'c-default') {
+      const del = el('button', 'iconbtn');
+      del.type = 'button'; del.setAttribute('aria-label', '削除'); del.innerHTML = ICONS.trash;
+      del.addEventListener('click', () => {
+        const idx = db.calendars.indexOf(cal);
+        const moved = [...db.tasks, ...db.events].filter((x) => x.calendarId === cal.id);
+        db.calendars.splice(idx, 1);
+        moved.forEach((x) => { delete x.calendarId; }); // 項目はマイカレンダーへ
+        if (Array.isArray(db.settings.calendarFilter)) db.settings.calendarFilter = 'all';
+        save(); renderAll();
+        showUndoToast(`「${cal.name}」を削除しました（項目はマイカレンダーへ）`, () => {
+          db.calendars.splice(Math.min(idx, db.calendars.length), 0, cal);
+          moved.forEach((x) => { x.calendarId = cal.id; });
+          save(); renderAll();
+        });
+      });
+      row.append(del);
+    }
+    wrap.append(row);
+  }
+  const addBtn = $('#cal-add');
+  addBtn.disabled = db.calendars.length >= MAX_CALENDARS;
+  addBtn.textContent = addBtn.disabled ? '上限（8個）に達しました' : '＋ カレンダーを追加';
+}
+$('#cal-add').addEventListener('click', () => {
+  if (db.calendars.length >= MAX_CALENDARS) return;
+  db.calendars.push({ id: newId('c'), name: `カレンダー${db.calendars.length + 1}`, color: ACCENT_KEYS[db.calendars.length % ACCENT_KEYS.length], order: db.calendars.length });
+  save(); renderAll();
+});
+
 function renderSettings() {
+  renderCalManage();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
@@ -1197,6 +1306,18 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
     sheetEls.repeatHint.hidden = true;
   }
   buildSheetColors(item ? (item.ref.color || '') : '');
+  const calSel = $('#f-cal');
+  calSel.textContent = '';
+  for (const cal of db.calendars) {
+    const o = document.createElement('option');
+    o.value = cal.id;
+    o.textContent = cal.name;
+    calSel.append(o);
+  }
+  calSel.value = item ? (item.ref.calendarId || 'c-default') : 'c-default';
+  const single = db.calendars.length < 2;
+  calSel.hidden = single;
+  $('#f-cal-label').hidden = single;
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
 }
@@ -1259,19 +1380,21 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const repeat = sheetEls.fRepeat.value || null;
   const memo = sheetEls.fMemo.value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
+  const calSelV = $('#f-cal').value;
+  const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color, calendarId });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, createdAt: Date.now() };
+    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, calendarId, createdAt: Date.now() };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1285,11 +1408,12 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color, calendarId }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
   r.color = color;
+  r.calendarId = calendarId;
   if (item.kind === 'event') {
     r.date = dateKey;
     r.memo = memo;

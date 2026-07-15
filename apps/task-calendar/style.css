@@ -944,3 +944,30 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .sleep-card input[type="time"]:focus { outline: none; border-color: var(--tc-accent); }
 .sleep-dur { margin-left: auto; font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }
+
+/* ---------- v6: マイカレンダー ---------- */
+
+.cal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.cal-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--tc-line);
+  background: var(--tc-surface);
+  border-radius: var(--tc-r-pill);
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--tc-ink3);
+}
+.cal-chip .ccdot { width: 8px; height: 8px; border-radius: 50%; background: var(--tc-ink4); }
+.cal-chip.is-on { color: var(--tc-ink); border-color: var(--tc-accent-line); background: var(--tc-accent-soft); font-weight: 600; }
+.cal-chip.is-on .ccdot { background: var(--tc-accent); }
+
+.calm-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
+.calm-row:last-child { border-bottom: none; }
+.calm-swatch { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; }
+.calm-row input {
+  flex: 1; min-width: 0;
+  background: transparent; border: none;
+  border-bottom: 1.5px dashed transparent;
+  font-size: 14px; color: var(--tc-ink); padding: 2px 0;
+}
+.calm-row input:focus { outline: none; border-bottom-color: var(--tc-accent); }

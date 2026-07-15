@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=8">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="tokens.css?v=9">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -104,6 +104,13 @@
         <p class="hint" id="font-hint">端末に入っている書体を使います。「＊」が付く書体はこの端末に日本語書体がなく、数字・英字だけ変わります。</p>
       </div>
 
+      <p class="section-label">マイカレンダー</p>
+      <div class="card">
+        <div id="cal-manage"></div>
+        <button type="button" class="cta ghost" id="cal-add">＋ カレンダーを追加</button>
+        <p class="hint">タスク・予定の分類に使えます（最大8個）。名前はタップで編集、色は丸をタップで切替。</p>
+      </div>
+
       <p class="section-label">文字サイズ</p>
       <div class="card">
         <div class="theme-seg" id="size-seg">
@@ -189,6 +196,8 @@
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
       <div class="r-colors" id="f-colors"></div>
+      <label class="f-label" for="f-cal" id="f-cal-label">カレンダー</label>
+      <select id="f-cal"></select>
       <label class="f-label" for="f-memo">メモ（任意）</label>
       <textarea id="f-memo" rows="2" maxlength="500" placeholder="ふりかえり用のひとこと・気づきなど"></textarea>
       <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます（メモだけはこの日の分として保存）。</p>
@@ -321,6 +330,6 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
