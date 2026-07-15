@@ -44,7 +44,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large' }, running: null };
 }
 
 function loadDb() {
@@ -105,6 +105,26 @@ function fromKey(key) {
 }
 function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
 function startOfWeekMon(d) { return addDays(d, -((d.getDay() + 6) % 7)); } // handoffは月曜はじまり
+/* 日本の祝日（主要な固定・ハッピーマンデー・春分秋分の近似式＋振替休日） */
+function jpHolidayBase(d) {
+  const y = d.getFullYear(); const m = d.getMonth() + 1; const day = d.getDate(); const w = d.getDay();
+  const nthMon = (n) => w === 1 && Math.ceil(day / 7) === n;
+  const shunbun = Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  const shubun = Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  return (m === 1 && day === 1) || (m === 2 && (day === 11 || day === 23)) || (m === 4 && day === 29)
+    || (m === 5 && day >= 3 && day <= 5) || (m === 8 && day === 11) || (m === 11 && (day === 3 || day === 23))
+    || (m === 1 && nthMon(2)) || (m === 7 && nthMon(3)) || (m === 9 && nthMon(3)) || (m === 10 && nthMon(2))
+    || (m === 3 && day === shunbun) || (m === 9 && day === shubun);
+}
+function isJpHoliday(d) {
+  if (jpHolidayBase(d)) return true;
+  return d.getDay() === 1 && jpHolidayBase(addDays(d, -1)); // 振替休日
+}
+function dayColorClass(d) {
+  if (d.getDay() === 0 || isJpHoliday(d)) return ' sun';
+  if (d.getDay() === 6) return ' sat';
+  return '';
+}
 function todayKey() { return toKey(new Date()); }
 
 /* ========== occurrences（繰り返しの展開） ========== */
@@ -210,6 +230,11 @@ function fontMissing(opt) {
   }
 }
 
+function applySize() {
+  const v = db.settings.fontSize;
+  if (!v || v === 'large') delete document.documentElement.dataset.fontsize;
+  else document.documentElement.dataset.fontsize = v;
+}
 function applyFont() {
   if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
   else document.documentElement.dataset.font = db.settings.font;
@@ -632,6 +657,8 @@ function renderDay(body) {
   const key = toKey(ui.cursor);
   if (db.running) body.append(buildRunCard());
 
+  body.append(buildSleepCard(key));
+
   const items = itemsFor(key);
   const stats = tasksStatsFor(key);
   if (stats.total > 0 && stats.done === stats.total) {
@@ -669,8 +696,8 @@ function renderWeek(body) {
     const dateBlock = el('button', `wk-date${key === todayKey() ? ' is-today' : ''}`);
     dateBlock.type = 'button';
     dateBlock.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日をデイリー表示で開く`);
-    dateBlock.append(el('span', 'dnum', String(day.getDate())));
-    dateBlock.append(el('span', `wd${day.getDay() === 0 ? ' sun' : ''}`, WD_EN[day.getDay()]));
+    dateBlock.append(el('span', `dnum${dayColorClass(day)}`, String(day.getDate())));
+    dateBlock.append(el('span', `wd${day.getDay() === 0 ? ' sun' : day.getDay() === 6 ? ' sat' : ''}`, WD_EN[day.getDay()]));
     dateBlock.addEventListener('click', () => { ui.cursor = day; ui.view = 'day'; renderAll(); });
     row.append(dateBlock);
 
@@ -735,7 +762,7 @@ function renderMonth(body) {
     ].filter(Boolean).join(' '));
     cell.type = 'button';
     cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
-    cell.append(el('span', 'dnum', String(day.getDate())));
+    cell.append(el('span', `dnum${dayColorClass(day)}`, String(day.getDate())));
     if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
       for (const it of items.slice(0, 4)) {
         const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}`, it.title);
@@ -877,6 +904,36 @@ $('#picker-today').addEventListener('click', () => {
 });
 $('#picker-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePicker(); });
 
+/* ----- 睡眠記録（朝活サポート: この日の起床とその前夜の就寝） ----- */
+
+function toMin(t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3)); }
+function sleepDurMin(rec) { return (toMin(rec.wake) - toMin(rec.bed) + 1440) % 1440; }
+function fmtDur(min) { return `${Math.floor(min / 60)}時間${String(Math.round(min % 60)).padStart(2, '0')}分`; }
+function fmtClock(min) { const m2 = ((Math.round(min) % 1440) + 1440) % 1440; return `${String(Math.floor(m2 / 60)).padStart(2, '0')}:${String(m2 % 60).padStart(2, '0')}`; }
+
+function buildSleepCard(key) {
+  const rec = db.sleep[key] || {};
+  const card = el('div', 'sleep-card');
+  card.innerHTML = `${ICONS.clock}<span>就寝</span>`;
+  const bed = document.createElement('input');
+  bed.type = 'time'; bed.value = rec.bed || '';
+  const wakeLabel = el('span', '', '起床');
+  const wake = document.createElement('input');
+  wake.type = 'time'; wake.value = rec.wake || '';
+  const dur = el('span', 'sleep-dur');
+  const sync = () => {
+    const r = { bed: bed.value || null, wake: wake.value || null };
+    if (r.bed || r.wake) db.sleep[key] = r; else delete db.sleep[key];
+    dur.textContent = r.bed && r.wake ? fmtDur(sleepDurMin(r)) : '';
+    save();
+  };
+  bed.addEventListener('change', sync);
+  wake.addEventListener('change', sync);
+  if (rec.bed && rec.wake) dur.textContent = fmtDur(sleepDurMin(rec));
+  card.append(bed, wakeLabel, wake, dur);
+  return card;
+}
+
 /* ----- insights（振り返り） ----- */
 
 function periodDays(period) {
@@ -987,6 +1044,21 @@ function renderInsights() {
   }
   body.append(doneCard);
 
+  // 睡眠（平均就寝・起床・睡眠時間）
+  const sleepRecs = keys.filter((k) => k <= tKey).map((k) => db.sleep[k]).filter((r) => r && r.bed && r.wake);
+  if (sleepRecs.length) {
+    const bedAvg = sleepRecs.reduce((a, r) => a + (toMin(r.bed) < 720 ? toMin(r.bed) + 1440 : toMin(r.bed)), 0) / sleepRecs.length;
+    const wakeAvg = sleepRecs.reduce((a, r) => a + toMin(r.wake), 0) / sleepRecs.length;
+    const durAvg = sleepRecs.reduce((a, r) => a + sleepDurMin(r), 0) / sleepRecs.length;
+    const sCard = el('div', 'card chart-card');
+    sCard.append(el('p', 'section-label', `睡眠（${sleepRecs.length}日分）`));
+    const row = el('div', 'stats-row');
+    const mk = (num, label) => { const d2 = el('div', 'stat-card'); d2.innerHTML = `<div class="stat-num" style="font-size:18px">${num}</div><div class="stat-label">${label}</div>`; return d2; };
+    row.append(mk(fmtClock(bedAvg), '平均就寝'), mk(fmtClock(wakeAvg), '平均起床'), mk(fmtDur(durAvg), '平均睡眠'));
+    sCard.append(row);
+    body.append(sCard);
+  }
+
   // ルーティン別の達成
   if (db.routines.length > 0) {
     const rCard = el('div', 'card chart-card');
@@ -1030,6 +1102,9 @@ function renderSettings() {
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
+  document.querySelectorAll('#size-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.sizeOpt === (db.settings.fontSize || 'large'));
+  });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
     const missing = fontMissing(b.dataset.fontOpt);
@@ -1071,6 +1146,12 @@ document.querySelectorAll('#font-seg button').forEach((b) => {
   b.addEventListener('click', () => {
     db.settings.font = b.dataset.fontOpt;
     save(); applyFont(); renderAll();
+  });
+});
+document.querySelectorAll('#size-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.fontSize = b.dataset.sizeOpt;
+    save(); applySize(); renderAll();
   });
 });
 
@@ -1850,6 +1931,7 @@ if ('serviceWorker' in navigator) {
 
 applyTheme();
 applyFont();
+applySize();
 // 実行中タイマーの復元（リロード・再起動後）
 if (db.running) {
   const r = db.running;

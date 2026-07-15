@@ -908,3 +908,39 @@ input, select, textarea { font: inherit; color: inherit; }
   color: var(--tc-ink);
 }
 .goal-input:focus { outline: none; }
+
+/* ---------- v6: 予定表セル均等化・土日祝色・睡眠記録 ---------- */
+
+.mo-grid .mo-cell { min-width: 0; }
+.mo-grid.schedule .mo-cell { height: 96px; min-height: 0; overflow: hidden; }
+
+.mo-head span:nth-child(6) { color: var(--tc-sat); }
+.mo-head span:nth-child(7) { color: var(--tc-sun); }
+.mo-cell:not(.is-today) .dnum.sun { color: var(--tc-sun); }
+.mo-cell:not(.is-today) .dnum.sat { color: var(--tc-sat); }
+.wk-date:not(.is-today) .dnum.sun { color: var(--tc-sun); }
+.wk-date:not(.is-today) .dnum.sat { color: var(--tc-sat); }
+.wk-date .wd.sat { color: var(--tc-sat); }
+
+.sleep-card {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--tc-surface);
+  border-radius: var(--tc-r-card);
+  box-shadow: var(--tc-shadow);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: var(--tc-ink2);
+}
+.sleep-card .icon { color: var(--tc-ink3); }
+.sleep-card input[type="time"] {
+  background: var(--tc-bg);
+  border: 1.5px solid var(--tc-line);
+  border-radius: 8px;
+  padding: 3px 6px;
+  font-family: var(--tc-mono);
+  font-size: 12.5px;
+  color: var(--tc-ink);
+}
+.sleep-card input[type="time"]:focus { outline: none; border-color: var(--tc-accent); }
+.sleep-dur { margin-left: auto; font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }

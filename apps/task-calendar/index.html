@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=7">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="tokens.css?v=8">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -102,6 +102,15 @@
         </div>
         <p class="font-preview">あしたも、じぶんのペースで。 ABC 0123</p>
         <p class="hint" id="font-hint">端末に入っている書体を使います。「＊」が付く書体はこの端末に日本語書体がなく、数字・英字だけ変わります。</p>
+      </div>
+
+      <p class="section-label">文字サイズ</p>
+      <div class="card">
+        <div class="theme-seg" id="size-seg">
+          <button data-size-opt="large">大（今のまま）</button>
+          <button data-size-opt="medium">中</button>
+          <button data-size-opt="small">小</button>
+        </div>
       </div>
 
       <p class="section-label">データ</p>
@@ -312,6 +321,6 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

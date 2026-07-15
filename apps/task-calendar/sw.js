@@ -3,13 +3,13 @@
 /* Task Calendar service worker — オフラインでも開けるようにする（PWA）。
    スコープはこのアプリのディレクトリのみ。他のNESTアプリには影響しない。 */
 
-const CACHE_NAME = 'task-calendar-v7';
+const CACHE_NAME = 'task-calendar-v8';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=7',
-  './tokens.css?v=7',
-  './app.js?v=7',
+  './style.css?v=8',
+  './tokens.css?v=8',
+  './app.js?v=8',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
