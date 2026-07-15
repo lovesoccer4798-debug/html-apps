@@ -44,7 +44,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], settings: { theme: 'auto', accent: 'green', font: 'gothic' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots' }, running: null };
 }
 
 function loadDb() {
@@ -126,6 +126,16 @@ function occursOn(t, key) {
 }
 function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
 function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+/* 予定表モード等で使う色: 自分の色 > ルーティンの色 > なし */
+function itemColor(it) {
+  const pick = (id) => (ACCENTS[id] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+  if (it.ref.color) return pick(it.ref.color);
+  if (it.kind === 'task' && it.ref.routineId) {
+    const r = db.routines.find((x) => x.id === it.ref.routineId);
+    if (r) return pick(r.color);
+  }
+  return null;
+}
 function memoFor(it) {
   const r = it.ref;
   if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
@@ -409,14 +419,11 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
   card.append(main);
 
-  if (it.kind === 'task' && it.ref.routineId) { // ルーティン色のタグ
-    const r = db.routines.find((x) => x.id === it.ref.routineId);
-    if (r) {
-      const dot = el('span', 'routine-dot');
-      dot.style.background = (ACCENTS[r.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
-      dot.title = r.title;
-      card.append(dot);
-    }
+  const ownColor = itemColor(it);
+  if (ownColor) { // 自分の色 or ルーティン色のタグ
+    const dot = el('span', 'routine-dot');
+    dot.style.background = ownColor;
+    card.append(dot);
   }
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
   if (showTime && it.time) {
@@ -555,6 +562,7 @@ function renderCal() {
     title.textContent = `${c.getMonth() + 1}月${c.getDate()}日（${WD_JA[c.getDay()]}）`;
   } else if (ui.view === 'week') {
     const s = startOfWeekMon(c);
+    $('#cal-title').classList.add('small'); // 「7月27日〜8月2日」が変な位置で折り返さないように
     const e2 = addDays(s, 6);
     eyebrow.textContent = s.getMonth() === e2.getMonth()
       ? `${MONTH_EN[s.getMonth()]} ${s.getDate()} — ${e2.getDate()}`
@@ -567,6 +575,7 @@ function renderCal() {
     title.textContent = `${c.getFullYear()}年${c.getMonth() + 1}月`;
   }
 
+  if (ui.view !== 'week') $('#cal-title').classList.remove('small');
   const body = $('#cal-body');
   body.textContent = '';
   openSwipeEl = null;
@@ -651,11 +660,25 @@ function renderWeek(body) {
 
 function renderMonth(body) {
   const c = ui.cursor;
+  const schedule = db.settings.monthStyle === 'schedule';
+
+  // ドット（既定）⇄ 予定表（TimeTree風ラベル）の切替 — 既存のドット表示はそのまま
+  const styleRow = el('div', 'mo-style-seg');
+  const styleSeg = el('div', 'seg');
+  [['dots', 'ドット'], ['schedule', '予定表']].forEach(([v, label]) => {
+    const b = el('button', `seg-btn${(db.settings.monthStyle || 'dots') === v ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { db.settings.monthStyle = v; save(); renderAll(); });
+    styleSeg.append(b);
+  });
+  styleRow.append(styleSeg);
+  body.append(styleRow);
+
   const head = el('div', 'mo-head');
   ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].forEach((w) => head.append(el('span', '', w)));
   body.append(head);
 
-  const grid = el('div', 'mo-grid');
+  const grid = el('div', schedule ? 'mo-grid schedule' : 'mo-grid');
   const first = new Date(c.getFullYear(), c.getMonth(), 1);
   const gridStart = startOfWeekMon(first);
   for (let i = 0; i < 42; i += 1) {
@@ -672,12 +695,22 @@ function renderMonth(body) {
     cell.type = 'button';
     cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
     cell.append(el('span', 'dnum', String(day.getDate())));
-    const dots = el('span', 'mo-dots');
-    for (const it of items.slice(0, MAX_MONTH_DOTS)) {
-      dots.append(el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`));
+    if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
+      for (const it of items.slice(0, 4)) {
+        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}`, it.title);
+        const cc = itemColor(it);
+        if (cc) chip.style.background = cc;
+        cell.append(chip);
+      }
+      if (items.length > 4) cell.append(el('span', 'mo-chip-more', `+${items.length - 4}`));
+    } else {
+      const dots = el('span', 'mo-dots');
+      for (const it of items.slice(0, MAX_MONTH_DOTS)) {
+        dots.append(el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`));
+      }
+      if (items.length > MAX_MONTH_DOTS) dots.append(el('span', 'mdot-more', '+'));
+      cell.append(dots);
     }
-    if (items.length > MAX_MONTH_DOTS) dots.append(el('span', 'mdot-more', '+'));
-    cell.append(dots);
     cell.addEventListener('click', () => { ui.selectedKey = key; renderAll(); });
     grid.append(cell);
   }
@@ -1041,14 +1074,38 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
     sheetEls.fMemo.value = '';
     sheetEls.repeatHint.hidden = true;
   }
+  buildSheetColors(item ? (item.ref.color || '') : '');
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
+}
+function buildSheetColors(current) {
+  const wrap = $('#f-colors');
+  wrap.textContent = '';
+  const options = [['', 'なし'], ...Object.entries(ACCENTS).map(([id, a]) => [id, a.name])];
+  for (const [id, name] of options) {
+    const sw = el('button', `accent-swatch${id === '' ? ' f-colors-none' : ''}${current === id ? ' is-active' : ''}`);
+    sw.type = 'button';
+    sw.dataset.color = id;
+    if (id === '') sw.textContent = 'なし';
+    else sw.style.background = effectiveDark() ? ACCENTS[id].dark : ACCENTS[id].light;
+    sw.setAttribute('aria-label', name);
+    if (current === id && id !== '') sw.innerHTML = ICONS.check;
+    sw.addEventListener('click', () => {
+      wrap.querySelectorAll('.accent-swatch').forEach((b) => { b.classList.remove('is-active'); if (b.dataset.color !== '') b.innerHTML = ''; });
+      sw.classList.add('is-active');
+      if (id !== '') sw.innerHTML = ICONS.check;
+    });
+    wrap.append(sw);
+  }
 }
 function closeSheet() {
   sheetEls.scrim.hidden = true;
   ui.editing = null;
 }
 sheetEls.scrim.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSheet(); });
+$('#sheet-close').addEventListener('click', closeSheet);
+$('#r-close').addEventListener('click', () => { $('#routine-scrim').hidden = true; routineEditing = null; });
+$('#share-close').addEventListener('click', () => { $('#share-scrim').hidden = true; });
 
 sheetEls.typeSeg.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-type]');
@@ -1079,19 +1136,20 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const minutes = Number.isInteger(rawMin) && rawMin >= 1 && rawMin <= 600 ? rawMin : null;
   const repeat = sheetEls.fRepeat.value || null;
   const memo = sheetEls.fMemo.value.trim() || null;
+  const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, memo, createdAt: Date.now() };
+    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, createdAt: Date.now() };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1105,10 +1163,11 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
+  r.color = color;
   if (item.kind === 'event') {
     r.date = dateKey;
     r.memo = memo;

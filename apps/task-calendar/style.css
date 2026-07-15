@@ -831,3 +831,54 @@ input, select, textarea { font: inherit; color: inherit; }
 .r-item-row .del-btn { flex: none; }
 
 #share-text { font-family: var(--tc-mono); font-size: 12px; }
+
+/* ---------- v5: 予定表モード・シート×ボタン・見出し改行対策 ---------- */
+
+.sheet-close {
+  position: absolute; top: 12px; right: 14px;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  color: var(--tc-ink3);
+}
+.sheet-close:hover { background: var(--tc-surface2); color: var(--tc-ink); }
+
+.date-title { white-space: nowrap; }
+.date-title.small { font-size: 19px; }
+
+.mo-style-seg { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.mo-style-seg .seg { margin: 0; padding: 3px; }
+.mo-style-seg .seg-btn { padding: 4px 14px; font-size: 11.5px; flex: none; }
+
+.mo-grid.schedule .mo-cell {
+  aspect-ratio: auto;
+  min-height: 76px;
+  justify-content: flex-start;
+  padding: 4px 3px;
+  gap: 2px;
+}
+.mo-grid.schedule .mo-cell .dnum { font-size: 12px; line-height: 1.3; }
+.mo-chip {
+  display: block;
+  width: 100%;
+  font-size: 8.5px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #fff;
+  background: var(--tc-accent);
+  border-radius: 4px;
+  padding: 0 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: left;
+}
+.mo-chip.is-done { opacity: .55; text-decoration: line-through; }
+.mo-chip.is-event-chip { background: var(--tc-ink3); }
+.mo-chip-more { font-family: var(--tc-mono); font-size: 8px; color: var(--tc-ink3); line-height: 1.4; }
+
+.f-colors-none {
+  border: 1.5px dashed var(--tc-check-border) !important;
+  background: transparent !important;
+  color: var(--tc-ink3);
+  font-size: 10px;
+}
