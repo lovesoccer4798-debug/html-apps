@@ -90,6 +90,7 @@ const ui = {
   sheetType: 'task',
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
+  insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
 };
 
 /* ========== date helpers (local timezone) ========== */
@@ -447,6 +448,7 @@ function navigate(dir) {
   const c = ui.cursor;
   if (ui.view === 'day') ui.cursor = addDays(c, dir);
   else if (ui.view === 'week') ui.cursor = addDays(c, dir * 7);
+  else if (ui.view === 'year') ui.cursor = new Date(c.getFullYear() + dir, 0, 1);
   else {
     ui.cursor = new Date(c.getFullYear(), c.getMonth() + dir, 1);
     ui.selectedKey = toKey(ui.cursor);
@@ -496,8 +498,11 @@ function renderCal() {
   document.querySelectorAll('.seg-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === ui.view));
   const c = ui.cursor;
   const eyebrow = $('#cal-eyebrow');
-  const title = $('#cal-title');
-  if (ui.view === 'day') {
+  const title = $('#cal-title-text');
+  if (ui.view === 'year') {
+    eyebrow.textContent = `YEAR ${c.getFullYear()}`;
+    title.textContent = `${c.getFullYear()}年`;
+  } else if (ui.view === 'day') {
     const isToday = toKey(c) === todayKey();
     eyebrow.textContent = `${WD_EN[c.getDay()]} · ${MONTH_EN[c.getMonth()]} ${c.getDate()}${isToday ? ' · TODAY' : ''}`;
     title.textContent = `${c.getMonth() + 1}月${c.getDate()}日（${WD_JA[c.getDay()]}）`;
@@ -521,6 +526,7 @@ function renderCal() {
   if (ui.view === 'day') renderDay(body);
   if (ui.view === 'week') renderWeek(body);
   if (ui.view === 'month') renderMonth(body);
+  if (ui.view === 'year') renderYear(body);
 }
 
 /* ----- day（タイムライン） ----- */
@@ -648,63 +654,211 @@ function renderMonth(body) {
   body.append(stack);
 }
 
+/* ----- year（ヒートマップ） ----- */
+
+function doneCountMapForYear(y) {
+  const prefix = `${y}-`;
+  const map = {};
+  for (const t of db.tasks) {
+    if (t.repeat) {
+      for (const k of Object.keys(t.doneDates || {})) if (k.startsWith(prefix)) map[k] = (map[k] || 0) + 1;
+    } else if (t.done && t.date && t.date.startsWith(prefix)) {
+      map[t.date] = (map[t.date] || 0) + 1;
+    }
+  }
+  return map;
+}
+
+function renderYear(body) {
+  const y = ui.cursor.getFullYear();
+  const map = doneCountMapForYear(y);
+  const totalDone = Object.values(map).reduce((s, n) => s + n, 0);
+  const activeDays = Object.keys(map).length;
+  const tKey = todayKey();
+
+  const stats = el('div', 'yr-stats');
+  const s1 = el('span'); s1.append('完了 '); s1.append(el('b', '', String(totalDone))); s1.append(' 回');
+  const s2 = el('span'); s2.append('実行した日 '); s2.append(el('b', '', String(activeDays))); s2.append(' 日');
+  stats.append(s1, s2);
+  body.append(stats);
+
+  const card = el('div', 'card');
+  for (let m = 0; m < 12; m += 1) {
+    const row = el('div', 'yr-month-row');
+    row.append(el('span', 'yr-label', `${m + 1}月`));
+    const cells = el('div', 'yr-cells');
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d += 1) {
+      const key = toKey(new Date(y, m, d));
+      const n = map[key] || 0;
+      const lv = n >= 3 ? 'lv3' : n === 2 ? 'lv2' : n === 1 ? 'lv1' : '';
+      const cell = el('button', `yr-cell ${lv}${key === tKey ? ' is-today' : ''}`.trim());
+      cell.type = 'button';
+      cell.setAttribute('aria-label', `${m + 1}月${d}日（完了${n}件）を開く`);
+      cell.addEventListener('click', () => {
+        ui.cursor = new Date(y, m, d);
+        ui.view = 'day';
+        renderAll();
+      });
+      cells.append(cell);
+    }
+    row.append(cells);
+    card.append(row);
+  }
+  const legend = el('div', 'yr-legend');
+  legend.append('少');
+  ['', 'lv1', 'lv2', 'lv3'].forEach((lv) => legend.append(el('span', `yr-cell ${lv}`.trim())));
+  legend.append('多');
+  card.append(legend);
+  body.append(card);
+}
+
+/* ----- 年月ピッカー ----- */
+
+let pickerYear = new Date().getFullYear();
+
+function openPicker() {
+  pickerYear = ui.cursor.getFullYear();
+  renderPicker();
+  $('#picker-scrim').hidden = false;
+}
+function closePicker() { $('#picker-scrim').hidden = true; }
+function renderPicker() {
+  $('#py-val').textContent = String(pickerYear);
+  const grid = $('#pm-grid');
+  grid.textContent = '';
+  const now = new Date();
+  for (let m = 0; m < 12; m += 1) {
+    const btn = el('button', 'pm-btn');
+    btn.type = 'button';
+    btn.textContent = `${m + 1}月`;
+    if (pickerYear === ui.cursor.getFullYear() && m === ui.cursor.getMonth()) btn.classList.add('is-active');
+    if (pickerYear === now.getFullYear() && m === now.getMonth()) btn.classList.add('is-current');
+    btn.addEventListener('click', () => {
+      // 日は維持しつつ、月末を超える場合は丸める（例: 31日→2月28日）
+      const day = Math.min(ui.cursor.getDate(), new Date(pickerYear, m + 1, 0).getDate());
+      ui.cursor = new Date(pickerYear, m, day);
+      ui.selectedKey = toKey(new Date(pickerYear, m, 1));
+      closePicker();
+      renderAll();
+    });
+    grid.append(btn);
+  }
+}
+$('#cal-title').addEventListener('click', openPicker);
+$('#py-prev').addEventListener('click', () => { pickerYear -= 1; renderPicker(); });
+$('#py-next').addEventListener('click', () => { pickerYear += 1; renderPicker(); });
+$('#picker-today').addEventListener('click', () => {
+  ui.cursor = new Date();
+  ui.selectedKey = todayKey();
+  closePicker();
+  renderAll();
+});
+$('#picker-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePicker(); });
+
 /* ----- insights（振り返り） ----- */
+
+function periodDays(period) {
+  const now = new Date();
+  let start;
+  let count;
+  if (period === 'week') { start = startOfWeekMon(now); count = 7; }
+  else if (period === 'month') { start = new Date(now.getFullYear(), now.getMonth(), 1); count = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); }
+  else { start = new Date(now.getFullYear(), 0, 1); count = Math.round((new Date(now.getFullYear() + 1, 0, 1) - start) / 86400000); }
+  const keys = [];
+  for (let i = 0; i < count; i += 1) keys.push(toKey(addDays(start, i)));
+  return keys;
+}
 
 function renderInsights() {
   const body = $('#insights-body');
   body.textContent = '';
   const tKey = todayKey();
-  const today = tasksStatsFor(tKey);
-  const rate = today.total ? Math.round((today.done / today.total) * 100) : null;
+  const period = ui.insightsPeriod;
 
-  const week = [];
-  const start = startOfWeekMon(new Date());
-  for (let i = 0; i < 7; i += 1) {
-    const key = toKey(addDays(start, i));
-    week.push({ key, ...tasksStatsFor(key) });
-  }
-  const rated = week.filter((w) => w.total > 0);
-  const weekAvg = rated.length ? Math.round(rated.reduce((s, w) => s + w.done / w.total, 0) / rated.length * 100) : null;
+  // 期間セグメント（週／月／年）
+  const seg = el('div', 'seg period-seg');
+  [['week', '週'], ['month', '月'], ['year', '年']].forEach(([v, label]) => {
+    const b = el('button', `seg-btn${period === v ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { ui.insightsPeriod = v; renderAll(); });
+    seg.append(b);
+  });
+  body.append(seg);
+
+  const keys = periodDays(period);
+  const perDay = keys.map((key) => ({ key, ...tasksStatsFor(key) }));
+  const total = perDay.reduce((s, d) => s + d.total, 0);
+  const done = perDay.reduce((s, d) => s + d.done, 0);
+  const rate = total ? Math.round((done / total) * 100) : null;
+  const periodLabel = { week: '今週', month: '今月', year: '今年' }[period];
 
   const stats = el('div', 'stats-row');
   const c1 = el('div', 'stat-card deep');
-  c1.innerHTML = `<div class="stat-num">${rate === null ? '--' : `${rate}<small>%</small>`}</div><div class="stat-label">今日の完了率（${today.done}/${today.total}）</div>`;
+  c1.innerHTML = `<div class="stat-num">${rate === null ? '--' : `${rate}<small>%</small>`}</div><div class="stat-label">${periodLabel}の完了率（${done}/${total}）</div>`;
   const c2 = el('div', 'stat-card');
   c2.innerHTML = `<div class="stat-num">${streakDays()}<small>日</small></div><div class="stat-label">連続達成</div>`;
   const c3 = el('div', 'stat-card');
-  c3.innerHTML = `<div class="stat-num">${weekAvg === null ? '--' : `${weekAvg}<small>%</small>`}</div><div class="stat-label">今週平均</div>`;
+  c3.innerHTML = `<div class="stat-num">${done}<small>件</small></div><div class="stat-label">${periodLabel}の完了数</div>`;
   stats.append(c1, c2, c3);
   body.append(stats);
 
-  // 今週の完了（棒グラフ）
+  // 完了の棒グラフ（週=曜日別／月=週別／年=月別）
+  let cols;
+  if (period === 'week') {
+    cols = perDay.map((d, i) => ({ label: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'][i], done: d.done, now: d.key === tKey }));
+  } else if (period === 'month') {
+    cols = [];
+    perDay.forEach((d, i) => {
+      const w = Math.floor(i / 7);
+      cols[w] = cols[w] || { label: `W${w + 1}`, done: 0, now: false };
+      cols[w].done += d.done;
+      if (d.key === tKey) cols[w].now = true;
+    });
+  } else {
+    cols = Array.from({ length: 12 }, (_, m) => ({ label: String(m + 1), done: 0, now: m === new Date().getMonth() }));
+    perDay.forEach((d) => { cols[Number(d.key.slice(5, 7)) - 1].done += d.done; });
+  }
   const chart = el('div', 'card chart-card');
-  chart.append(el('p', 'section-label', '今週の完了'));
+  chart.append(el('p', 'section-label', `${periodLabel}の完了`));
   const bars = el('div', 'bars');
-  const maxDone = Math.max(1, ...week.map((w) => w.done));
-  week.forEach((w, i) => {
-    const col = el('div', `bar-col${w.key === tKey ? ' is-today' : ''}`);
-    const bar = el('div', `bar${w.done > 0 ? ' hot' : ''}`);
-    bar.style.height = `${Math.max(4, (w.done / maxDone) * 100)}%`;
-    bar.title = `${w.done}件完了`;
-    col.append(bar, el('span', 'bar-label', ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][i].slice(0, 2)));
+  const maxDone = Math.max(1, ...cols.map((c) => c.done));
+  for (const c of cols) {
+    const col = el('div', `bar-col${c.now ? ' is-today' : ''}`);
+    const bar = el('div', `bar${c.done > 0 ? ' hot' : ''}`);
+    bar.style.height = `${Math.max(4, (c.done / maxDone) * 100)}%`;
+    bar.title = `${c.done}件完了`;
+    col.append(bar, el('span', 'bar-label', c.label));
     bars.append(col);
-  });
+  }
   chart.append(bars);
   body.append(chart);
 
-  // できたこと
-  const doneToday = itemsFor(tKey).filter((i) => i.kind === 'task' && i.done);
+  // できたこと（期間内・新しい順に最大15件）
+  const doneItems = [];
+  for (let i = keys.length - 1; i >= 0 && doneItems.length < 15; i -= 1) {
+    if (keys[i] > tKey) continue; // 未来の日はスキップ
+    const dayDone = itemsFor(keys[i]).filter((it) => it.kind === 'task' && it.done);
+    for (const it of dayDone.reverse()) {
+      if (doneItems.length < 15) doneItems.push(it);
+    }
+  }
   const doneCard = el('div', 'card chart-card');
-  doneCard.append(el('p', 'section-label', `できたこと ✓ ${doneToday.length}`));
-  if (doneToday.length === 0) {
+  doneCard.append(el('p', 'section-label', `できたこと ✓ ${done}`));
+  if (doneItems.length === 0) {
     doneCard.append(el('p', 'hint', '完了したタスクがここに並びます。まずはひとつ。'));
   } else {
-    for (const it of doneToday) {
+    for (const it of doneItems) {
       const row = el('div', 'done-row');
       row.innerHTML = ICONS.check;
-      row.append(el('span', 'dr-title', it.title));
+      const main = el('div', 'dr-main');
+      main.append(el('span', 'dr-title', it.title));
+      row.append(main);
       const at = taskDoneAt(it.ref, it.key);
-      row.append(el('span', 'dr-time', at ? new Date(at).toTimeString().slice(0, 5) : ''));
+      const d = fromKey(it.key);
+      row.append(el('span', 'dr-time', it.key === tKey && at
+        ? new Date(at).toTimeString().slice(0, 5)
+        : `${d.getMonth() + 1}/${d.getDate()}`));
       doneCard.append(row);
     }
   }
@@ -1101,7 +1255,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!$('#focus').hidden) { closeFocus(); renderAll(); return; }
   if (!sheetEls.scrim.hidden) { closeSheet(); return; }
-  if (!$('#confirm-scrim').hidden) closeConfirm();
+  if (!$('#confirm-scrim').hidden) { closeConfirm(); return; }
+  if (!$('#picker-scrim').hidden) closePicker();
 });
 
 /* ========== PWA ========== */

@@ -31,7 +31,7 @@
         </div>
       </div>
       <div class="date-row">
-        <h1 class="date-title" id="cal-title"></h1>
+        <h1><button class="date-title" id="cal-title" aria-label="年月を選ぶ"><span id="cal-title-text"></span><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></h1>
         <div class="date-nav">
           <button class="iconbtn" id="nav-prev" aria-label="前へ"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
           <button class="pill-btn" id="nav-today">今日</button>
@@ -42,6 +42,7 @@
         <button class="seg-btn" data-view="day" role="tab">日</button>
         <button class="seg-btn" data-view="week" role="tab">週</button>
         <button class="seg-btn" data-view="month" role="tab">月</button>
+        <button class="seg-btn" data-view="year" role="tab">年</button>
       </nav>
     </header>
     <div class="body" id="cal-body"></div>
@@ -163,6 +164,20 @@
     <button class="cta ghost" id="del-one">この回のみ削除</button>
     <button class="cta danger" id="del-all">繰り返しをすべて削除</button>
     <button class="cta plain" id="del-cancel">キャンセル</button>
+  </div>
+</div>
+
+<!-- 年月ピッカー -->
+<div class="sheet-scrim" id="picker-scrim" hidden>
+  <div class="sheet sheet-picker" role="dialog" aria-modal="true" aria-label="年月を選ぶ">
+    <div class="sheet-grip"></div>
+    <div class="py-row">
+      <button class="iconbtn" id="py-prev" aria-label="前の年"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+      <span class="py-val mono" id="py-val"></span>
+      <button class="iconbtn" id="py-next" aria-label="次の年"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <div class="pm-grid" id="pm-grid"></div>
+    <button class="cta ghost" id="picker-today">今日へ戻る</button>
   </div>
 </div>
 
