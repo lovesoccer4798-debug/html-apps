@@ -38,12 +38,13 @@ const ICONS = {
   calendar: `<svg ${ICON_ATTRS}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>`,
   sprout: `<svg ${ICON_ATTRS}><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg>`,
   maximize: `<svg ${ICON_ATTRS}><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
+  copy: `<svg ${ICON_ATTRS}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
 };
 
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], settings: { theme: 'auto', accent: 'green', font: 'gothic' }, running: null };
 }
 
 function loadDb() {
@@ -109,6 +110,10 @@ function todayKey() { return toKey(new Date()); }
 /* ========== occurrences（繰り返しの展開） ========== */
 
 function occursOn(t, key) {
+  if (t.routineId) { // 一時停止中のルーティンのタスクは pausedFrom 以降出さない
+    const r = db.routines.find((x) => x.id === t.routineId);
+    if (r && r.pausedFrom && key >= r.pausedFrom) return false;
+  }
   if (!t.repeat) return t.date === key;
   if (key < t.startDate || (t.exDates || []).includes(key)) return false;
   const d = fromKey(key);
@@ -179,6 +184,22 @@ function applyAccent() {
   rs.setProperty('--tc-accent-bright', a.bright);
   rs.setProperty('--tc-accent-ink', a.ink);
 }
+/* 端末にその書体（日本語）が入っているかの目安。document.fonts.check が使えない環境では判定しない */
+const FONT_PROBES = {
+  rounded: ['Hiragino Maru Gothic ProN', 'HGMaruGothicMPRO', 'BIZ UDGothic'],
+  mincho: ['Hiragino Mincho ProN', 'Yu Mincho', 'BIZ UDMincho', 'Noto Serif CJK JP', 'Noto Serif JP', 'MS PMincho'],
+  mono: ['Osaka-Mono', 'Noto Sans Mono CJK JP', 'MS Gothic'],
+};
+function fontMissing(opt) {
+  const probes = FONT_PROBES[opt];
+  if (!probes || !document.fonts || !document.fonts.check) return false;
+  try {
+    return probes.every((f) => !document.fonts.check(`12px "${f}"`));
+  } catch (err) {
+    return false;
+  }
+}
+
 function applyFont() {
   if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
   else document.documentElement.dataset.font = db.settings.font;
@@ -388,6 +409,15 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
   card.append(main);
 
+  if (it.kind === 'task' && it.ref.routineId) { // ルーティン色のタグ
+    const r = db.routines.find((x) => x.id === it.ref.routineId);
+    if (r) {
+      const dot = el('span', 'routine-dot');
+      dot.style.background = (ACCENTS[r.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+      dot.title = r.title;
+      card.append(dot);
+    }
+  }
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
   if (showTime && it.time) {
     const c = el('span', 'chip mono');
@@ -445,6 +475,7 @@ $('#bottomnav').addEventListener('click', (e) => {
   if (nav === 'today') { ui.view = 'day'; ui.cursor = new Date(); setScreen('cal'); }
   if (nav === 'calendar') { ui.view = 'month'; ui.selectedKey = ui.selectedKey || todayKey(); setScreen('cal'); }
   if (nav === 'insights') setScreen('insights');
+  if (nav === 'routines') setScreen('routines');
 });
 
 document.querySelectorAll('.seg-btn').forEach((btn) => {
@@ -475,7 +506,8 @@ function renderAll() {
   $('#scr-cal').hidden = ui.screen !== 'cal';
   $('#scr-insights').hidden = ui.screen !== 'insights';
   $('#scr-settings').hidden = ui.screen !== 'settings';
-  $('#fab').hidden = ui.screen === 'settings';
+  $('#scr-routines').hidden = ui.screen !== 'routines';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -485,13 +517,15 @@ function renderAll() {
     const nav = b.dataset.nav;
     const active = (nav === 'today' && ui.screen === 'cal' && ui.view === 'day')
       || (nav === 'calendar' && ui.screen === 'cal' && ui.view !== 'day')
-      || (nav === 'insights' && ui.screen === 'insights');
+      || (nav === 'insights' && ui.screen === 'insights')
+      || (nav === 'routines' && ui.screen === 'routines');
     b.classList.toggle('is-active', active);
   });
 
   if (ui.screen === 'cal') renderCal();
   if (ui.screen === 'insights') renderInsights();
   if (ui.screen === 'settings') renderSettings();
+  if (ui.screen === 'routines') renderRoutines();
 }
 
 function streakDays() {
@@ -879,6 +913,27 @@ function renderInsights() {
   }
   body.append(doneCard);
 
+  // ルーティン別の達成
+  if (db.routines.length > 0) {
+    const rCard = el('div', 'card chart-card');
+    rCard.append(el('p', 'section-label', 'ルーティン'));
+    for (const r of db.routines) {
+      const w = routineWeek(r, startOfWeekMon(new Date()));
+      const row = el('div', 'r-hist-row');
+      const label = el('span', 'r-item-title', r.title);
+      row.append(label);
+      row.append(el('span', 'r-count mono', `今週 ${w.done}/${r.targetPerWeek || 3}日`));
+      if (w.pass) row.append(el('span', 'pass-chip', '合格'));
+      const streakEl = el('span', 'r-streak');
+      streakEl.append('連続 ');
+      streakEl.append(el('b', '', String(routineStreakWeeks(r))));
+      streakEl.append('週');
+      row.append(streakEl);
+      rCard.append(row);
+    }
+    body.append(rCard);
+  }
+
   // 今日のひとこと
   const note = el('div', 'card note-card');
   note.append(el('p', 'section-label', '今日のひとこと'));
@@ -903,6 +958,14 @@ function renderSettings() {
   });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
+    const missing = fontMissing(b.dataset.fontOpt);
+    let mark = b.querySelector('.miss-mark');
+    if (missing && !mark) {
+      mark = el('span', 'miss-mark', '＊');
+      b.append(mark);
+    } else if (!missing && mark) {
+      mark.remove();
+    }
   });
   const grid = $('#accent-grid');
   grid.textContent = '';
@@ -1292,8 +1355,385 @@ document.addEventListener('keydown', (e) => {
   if (!$('#focus').hidden) { closeFocus(); renderAll(); return; }
   if (!sheetEls.scrim.hidden) { closeSheet(); return; }
   if (!$('#confirm-scrim').hidden) { closeConfirm(); return; }
-  if (!$('#picker-scrim').hidden) closePicker();
+  if (!$('#picker-scrim').hidden) { closePicker(); return; }
+  if (!$('#routine-scrim').hidden) { $('#routine-scrim').hidden = true; return; }
+  if (!$('#share-scrim').hidden) { $('#share-scrim').hidden = true; return; }
+  if (!$('#rdel-scrim').hidden) $('#rdel-scrim').hidden = true;
 });
+
+
+/* ========== v4: ルーティンパッケージ ========== */
+
+const R_DEFAULT_TARGET = 3; // 週3日でOK（仕様§7）
+
+function routineTasks(r) { return db.tasks.filter((t) => t.routineId === r.id); }
+function routineDoneDay(r, key) {
+  return db.tasks.some((t) => t.routineId === r.id && taskDoneOn(t, key) && (t.repeat ? true : t.date === key));
+}
+function routineWeek(r, weekStart) {
+  const days = [];
+  for (let i = 0; i < 7; i += 1) days.push(routineDoneDay(r, toKey(addDays(weekStart, i))));
+  const done = days.filter(Boolean).length;
+  return { days, done, pass: done >= (r.targetPerWeek || R_DEFAULT_TARGET) };
+}
+function routineStreakWeeks(r) {
+  let s = startOfWeekMon(new Date());
+  let n = routineWeek(r, s).pass ? 1 : 0;
+  s = addDays(s, -7);
+  while (s >= fromKey(r.startDate || todayKey()) || routineWeek(r, s).pass) {
+    if (!routineWeek(r, s).pass) break;
+    n += 1;
+    s = addDays(s, -7);
+  }
+  return n;
+}
+
+function renderRoutines() {
+  const body = $('#routines-body');
+  body.textContent = '';
+
+  const ctaRow = el('div', 'r-cta-row');
+  const addBtn = el('button', 'cta', '＋ 新しいルーティン');
+  addBtn.type = 'button';
+  addBtn.addEventListener('click', () => openRoutineSheet(null));
+  const importBtn = el('button', 'cta ghost', '読み込む');
+  importBtn.type = 'button';
+  importBtn.addEventListener('click', openImportSheet);
+  ctaRow.append(addBtn, importBtn);
+  body.append(ctaRow);
+
+  if (db.routines.length === 0) {
+    body.append(el('p', 'empty', 'ゴールに向けた習慣の束を「ルーティン」としてまとめられます。例：「ダイエット計画」に ウォーキング・体重記録…。週の目標日数をクリアすると合格！'));
+    return;
+  }
+
+  const weekStart = startOfWeekMon(new Date());
+  const tKey = todayKey();
+  for (const r of db.routines) {
+    const accent = (ACCENTS[r.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+    const card = el('div', `r-card${r.pausedFrom ? ' is-paused' : ''}`);
+    card.style.borderLeftColor = accent;
+
+    const head = el('div', 'r-head');
+    const titleRow = el('div', 'r-title-row');
+    titleRow.append(el('span', 'r-title', r.title));
+    if (r.pausedFrom) titleRow.append(el('span', 'r-paused-chip', '一時停止中'));
+    head.append(titleRow);
+    if (r.goal) head.append(el('p', 'r-goal', `ゴール: ${r.goal}`));
+
+    const w = routineWeek(r, weekStart);
+    const weekRow = el('div', 'r-week');
+    const dots = el('span', 'r-dots');
+    w.days.forEach((done, i) => {
+      const key = toKey(addDays(weekStart, i));
+      const d = el('span', `rdot${done ? ' done' : ''}${key === tKey ? ' today' : ''}`);
+      if (done) d.style.background = accent;
+      dots.append(d);
+    });
+    weekRow.append(dots);
+    weekRow.append(el('span', 'r-count', `${w.done}/${r.targetPerWeek || R_DEFAULT_TARGET}日`));
+    if (w.pass) weekRow.append(el('span', 'pass-chip', '今週合格'));
+    const streakEl = el('span', 'r-streak');
+    streakEl.append('連続 ');
+    streakEl.append(el('b', '', String(routineStreakWeeks(r))));
+    streakEl.append('週');
+    weekRow.append(streakEl);
+    head.append(weekRow);
+    card.append(head);
+
+    const list = el('ul', 'r-item-list');
+    for (const t of routineTasks(r)) {
+      const li = el('li');
+      li.append(el('span', 'chip', REPEAT_LABEL[t.repeat] || '毎日'));
+      li.append(el('span', 'r-item-title', t.title));
+      if (t.time) li.append(el('span', 'r-item-time', t.time));
+      if (t.minutes) li.append(el('span', 'r-item-time', `${t.minutes}分`));
+      list.append(li);
+    }
+    if (routineTasks(r).length === 0) {
+      const li = el('li');
+      li.append(el('span', 'r-item-title', 'タスクがまだありません（編集から追加）'));
+      list.append(li);
+    }
+    card.append(list);
+
+    const actions = el('div', 'r-actions');
+    const toggle = el('button', 'pill-btn', r.pausedFrom ? '再開する' : '一時停止');
+    toggle.type = 'button';
+    toggle.addEventListener('click', () => {
+      r.pausedFrom = r.pausedFrom ? null : todayKey();
+      r.active = !r.pausedFrom;
+      save(); renderAll();
+    });
+    actions.append(toggle);
+    actions.append(el('span', 'spacer'));
+    const editBtn = el('button', 'iconbtn');
+    editBtn.type = 'button'; editBtn.setAttribute('aria-label', '編集');
+    editBtn.innerHTML = ICONS.pencil;
+    editBtn.addEventListener('click', () => openRoutineSheet(r));
+    const shareBtn = el('button', 'iconbtn');
+    shareBtn.type = 'button'; shareBtn.setAttribute('aria-label', '共有');
+    shareBtn.innerHTML = ICONS.copy;
+    shareBtn.addEventListener('click', () => openShareSheet(r));
+    const delBtn = el('button', 'iconbtn');
+    delBtn.type = 'button'; delBtn.setAttribute('aria-label', '削除');
+    delBtn.innerHTML = ICONS.trash;
+    delBtn.addEventListener('click', () => {
+      rdelTarget = r;
+      $('#rdel-name').textContent = `「${r.title}」`;
+      $('#rdel-scrim').hidden = false;
+    });
+    actions.append(editBtn, shareBtn, delBtn);
+    card.append(actions);
+
+    // タップで直近12週の合否履歴を開閉
+    head.addEventListener('click', () => {
+      const existing = card.querySelector('.r-history');
+      if (existing) { existing.remove(); return; }
+      const hist = el('div', 'r-history');
+      for (let wk = 0; wk < 12; wk += 1) {
+        const ws = addDays(weekStart, -7 * wk);
+        if (toKey(ws) < (r.startDate || tKey) && wk > 0) break;
+        const info = routineWeek(r, ws);
+        const row = el('div', 'r-hist-row');
+        row.append(el('span', 'r-hist-label', `${ws.getMonth() + 1}/${ws.getDate()}〜`));
+        const hd = el('span', 'r-dots');
+        info.days.forEach((done) => {
+          const d = el('span', `rdot${done ? ' done' : ''}`);
+          if (done) d.style.background = accent;
+          hd.append(d);
+        });
+        row.append(hd);
+        row.append(info.pass ? el('span', 'pass-chip r-hist-pass', '合格') : el('span', 'r-hist-none', '─'));
+        hist.append(row);
+      }
+      card.append(hist);
+    });
+
+    body.append(card);
+  }
+}
+
+/* ----- 作成／編集シート ----- */
+
+let routineEditing = null; // 編集中のルーティン（nullなら新規）
+let rdelTarget = null;
+
+function routineItemRow(data = {}) {
+  const row = el('div', 'r-item-row');
+  const title = document.createElement('input');
+  title.type = 'text'; title.maxLength = 80; title.placeholder = '例：ウォーキング'; title.value = data.title || '';
+  const rep = document.createElement('select');
+  [['daily', '毎日'], ['weekly', '毎週'], ['monthly', '毎月']].forEach(([v, l]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = l; rep.append(o);
+  });
+  rep.value = data.repeat || 'daily';
+  const time = document.createElement('input');
+  time.type = 'time'; time.className = 'mono'; time.value = data.time || '';
+  const min = document.createElement('input');
+  min.type = 'number'; min.min = 1; min.max = 600; min.placeholder = '分'; min.className = 'mono'; min.value = data.minutes || '';
+  const rm = el('button', 'del-btn');
+  rm.type = 'button'; rm.setAttribute('aria-label', 'この行を削除'); rm.innerHTML = ICONS.trash;
+  rm.addEventListener('click', () => row.remove());
+  row.append(title, rep, time, min, rm);
+  if (data.taskId) row.dataset.taskId = data.taskId;
+  row._fields = { title, rep, time, min };
+  return row;
+}
+
+function openRoutineSheet(r) {
+  routineEditing = r;
+  $('#r-sheet-title').textContent = r ? 'ルーティンを編集' : '新しいルーティン';
+  $('#r-title').value = r ? r.title : '';
+  $('#r-goal').value = r ? (r.goal || '') : '';
+  $('#r-target').value = String(r ? (r.targetPerWeek || R_DEFAULT_TARGET) : R_DEFAULT_TARGET);
+  const colors = $('#r-colors');
+  colors.textContent = '';
+  const current = r ? (r.color || 'green') : 'green';
+  for (const [id, a] of Object.entries(ACCENTS)) {
+    const swx = el('button', `accent-swatch${current === id ? ' is-active' : ''}`);
+    swx.type = 'button';
+    swx.dataset.color = id;
+    swx.style.background = effectiveDark() ? a.dark : a.light;
+    swx.setAttribute('aria-label', a.name);
+    if (current === id) swx.innerHTML = ICONS.check;
+    swx.addEventListener('click', () => {
+      colors.querySelectorAll('.accent-swatch').forEach((b) => { b.classList.remove('is-active'); b.innerHTML = ''; });
+      swx.classList.add('is-active');
+      swx.innerHTML = ICONS.check;
+    });
+    colors.append(swx);
+  }
+  const items = $('#r-items');
+  items.textContent = '';
+  if (r) {
+    for (const t of routineTasks(r)) {
+      items.append(routineItemRow({ taskId: t.id, title: t.title, repeat: t.repeat, time: t.time, minutes: t.minutes }));
+    }
+  }
+  if (!items.children.length) items.append(routineItemRow());
+  $('#routine-scrim').hidden = false;
+  $('#r-title').focus();
+}
+$('#r-add-item').addEventListener('click', () => $('#r-items').append(routineItemRow()));
+$('#routine-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) $('#routine-scrim').hidden = true; });
+
+$('#r-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const title = $('#r-title').value.trim();
+  if (!title) {
+    $('#r-title').classList.remove('shake');
+    void $('#r-title').offsetWidth;
+    $('#r-title').classList.add('shake');
+    $('#r-title').focus();
+    return;
+  }
+  const goal = $('#r-goal').value.trim() || null;
+  const color = $('#r-colors .accent-swatch.is-active')?.dataset.color || 'green';
+  const target = parseInt($('#r-target').value, 10) || R_DEFAULT_TARGET;
+
+  let r = routineEditing;
+  if (!r) {
+    r = { id: newId('r'), title, goal, color, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), createdAt: Date.now() };
+    db.routines.push(r);
+  } else {
+    r.title = title; r.goal = goal; r.color = color; r.targetPerWeek = target;
+  }
+
+  // アイテム行と実タスクを同期（行が消えた=タスク削除、taskIdなし=新規）
+  const keptIds = new Set();
+  for (const row of $('#r-items').children) {
+    const f = row._fields;
+    const t2 = f.title.value.trim();
+    if (!t2) continue;
+    const minRaw = parseInt(f.min.value, 10);
+    const minutes = Number.isInteger(minRaw) && minRaw >= 1 && minRaw <= 600 ? minRaw : null;
+    const time = f.time.value || null;
+    const repeat = f.rep.value;
+    if (row.dataset.taskId) {
+      const t = db.tasks.find((x) => x.id === row.dataset.taskId);
+      if (t) { t.title = t2; t.time = time; t.minutes = minutes; t.repeat = repeat; keptIds.add(t.id); }
+    } else {
+      const t = { id: newId('t'), routineId: r.id, title: t2, time, minutes, repeat, startDate: r.startDate || todayKey(), doneDates: {}, exDates: [], memo: null, memoDates: {}, createdAt: Date.now() };
+      db.tasks.push(t);
+      keptIds.add(t.id);
+    }
+  }
+  db.tasks = db.tasks.filter((t) => t.routineId !== r.id || keptIds.has(t.id));
+
+  save();
+  $('#routine-scrim').hidden = true;
+  routineEditing = null;
+  renderAll();
+});
+
+/* ----- 削除 ----- */
+
+function deleteRoutine(r, keepTasks) {
+  const rIndex = db.routines.indexOf(r);
+  const affected = routineTasks(r);
+  db.routines.splice(rIndex, 1);
+  if (keepTasks) affected.forEach((t) => { delete t.routineId; }); // ふつうの繰り返しタスクとして残す
+  else db.tasks = db.tasks.filter((t) => t.routineId !== r.id);
+  save(); renderAll();
+  showUndoToast(`「${r.title}」を削除しました`, () => {
+    db.routines.splice(Math.min(rIndex, db.routines.length), 0, r);
+    if (keepTasks) affected.forEach((t) => { t.routineId = r.id; });
+    else db.tasks.push(...affected);
+    save(); renderAll();
+  });
+}
+$('#rdel-keep').addEventListener('click', () => { $('#rdel-scrim').hidden = true; if (rdelTarget) deleteRoutine(rdelTarget, true); rdelTarget = null; });
+$('#rdel-all').addEventListener('click', () => { $('#rdel-scrim').hidden = true; if (rdelTarget) deleteRoutine(rdelTarget, false); rdelTarget = null; });
+$('#rdel-cancel').addEventListener('click', () => { $('#rdel-scrim').hidden = true; rdelTarget = null; });
+$('#rdel-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.hidden = true; rdelTarget = null; } });
+
+/* ----- 共有（エクスポート／インポート） ----- */
+
+function openShareSheet(r) {
+  $('#share-title').textContent = `共有: ${r.title}`;
+  const payload = {
+    taskCalendarRoutine: 1,
+    routine: { title: r.title, goal: r.goal, color: r.color, targetPerWeek: r.targetPerWeek },
+    items: routineTasks(r).map((t) => ({ title: t.title, repeat: t.repeat, time: t.time, minutes: t.minutes })),
+  };
+  const ta = $('#share-text');
+  ta.value = JSON.stringify(payload);
+  ta.readOnly = true;
+  $('#share-copy').hidden = false;
+  $('#share-import').hidden = true;
+  $('#share-hint').textContent = 'このテキストをコピーして、LINEやメールで送ってください。受け取った人は「読み込む」に貼り付けます。';
+  $('#share-scrim').hidden = false;
+}
+function openImportSheet() {
+  $('#share-title').textContent = 'ルーティンを読み込む';
+  const ta = $('#share-text');
+  ta.value = '';
+  ta.readOnly = false;
+  $('#share-copy').hidden = true;
+  $('#share-import').hidden = false;
+  $('#share-hint').textContent = '共有されたテキストを貼り付けて「読み込む」を押してください。読み込んだルーティンは一時停止の状態で入ります。';
+  $('#share-scrim').hidden = false;
+  ta.focus();
+}
+$('#share-copy').addEventListener('click', async () => {
+  const ta = $('#share-text');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    $('#share-hint').textContent = 'コピーしました！';
+  } catch (err) {
+    ta.select();
+    document.execCommand('copy');
+    $('#share-hint').textContent = 'コピーしました！';
+  }
+});
+$('#share-import').addEventListener('click', () => {
+  let data;
+  try {
+    data = JSON.parse($('#share-text').value);
+  } catch (err) { data = null; }
+  if (!data || data.taskCalendarRoutine !== 1 || !data.routine || typeof data.routine.title !== 'string' || !Array.isArray(data.items)) {
+    $('#share-hint').textContent = '読み込めませんでした。共有テキストをそのまま貼り付けているか確認してください。';
+    return;
+  }
+  let title = data.routine.title.slice(0, 60);
+  if (db.routines.some((x) => x.title === title)) title += '（2）';
+  const r = {
+    id: newId('r'),
+    title,
+    goal: typeof data.routine.goal === 'string' ? data.routine.goal.slice(0, 120) : null,
+    color: ACCENTS[data.routine.color] ? data.routine.color : 'green',
+    targetPerWeek: Math.min(7, Math.max(1, parseInt(data.routine.targetPerWeek, 10) || R_DEFAULT_TARGET)),
+    active: false,
+    pausedFrom: todayKey(), // 無効状態で入る（仕様§3）
+    startDate: todayKey(),
+    createdAt: Date.now(),
+  };
+  db.routines.push(r);
+  for (const it of data.items.slice(0, 30)) {
+    if (typeof it.title !== 'string' || !it.title.trim()) continue;
+    db.tasks.push({
+      id: newId('t'),
+      routineId: r.id,
+      title: it.title.trim().slice(0, 80),
+      time: typeof it.time === 'string' && /^\d\d:\d\d$/.test(it.time) ? it.time : null,
+      minutes: Number.isInteger(it.minutes) && it.minutes >= 1 && it.minutes <= 600 ? it.minutes : null,
+      repeat: REPEAT_LABEL[it.repeat] ? it.repeat : 'daily',
+      startDate: todayKey(),
+      doneDates: {}, exDates: [], memo: null, memoDates: {},
+      createdAt: Date.now(),
+    });
+  }
+  $('#share-scrim').hidden = true;
+  renderAll();
+  save();
+  showUndoToast(`「${r.title}」を読み込みました（一時停止中）`, () => {
+    db.routines = db.routines.filter((x) => x.id !== r.id);
+    db.tasks = db.tasks.filter((t) => t.routineId !== r.id);
+    save(); renderAll();
+  });
+});
+$('#share-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
 
 /* ========== PWA ========== */
 
