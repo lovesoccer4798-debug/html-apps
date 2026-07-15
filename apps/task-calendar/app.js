@@ -44,7 +44,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots' }, running: null };
 }
 
 function loadDb() {
@@ -548,6 +548,40 @@ function streakDays() {
   return n;
 }
 
+function goalKey() {
+  const c = ui.cursor;
+  if (ui.view === 'day') return `d:${toKey(c)}`;
+  if (ui.view === 'week') return `w:${toKey(startOfWeekMon(c))}`;
+  if (ui.view === 'month') return `m:${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, '0')}`;
+  return `y:${c.getFullYear()}`;
+}
+const GOAL_PLACEHOLDER = { day: '今日の目標を書く…', week: '今週の目標を書く…', month: '今月の目標を書く…', year: '今年の目標を書く…' };
+
+$('#goal-line').addEventListener('click', () => {
+  const line = $('#goal-line');
+  if (line.dataset.editing) return;
+  const k = goalKey();
+  line.dataset.editing = '1';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 60;
+  input.className = 'goal-input';
+  input.value = db.goals[k] || '';
+  input.placeholder = GOAL_PLACEHOLDER[ui.view];
+  line.textContent = '';
+  line.classList.remove('is-empty');
+  line.append(input);
+  input.focus();
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+  input.addEventListener('blur', () => {
+    const v = input.value.trim();
+    if (v) db.goals[k] = v; else delete db.goals[k];
+    save();
+    delete line.dataset.editing;
+    renderAll();
+  });
+});
+
 function renderCal() {
   document.querySelectorAll('.seg-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === ui.view));
   const c = ui.cursor;
@@ -576,6 +610,13 @@ function renderCal() {
   }
 
   if (ui.view !== 'week') $('#cal-title').classList.remove('small');
+
+  const goalLine = $('#goal-line');
+  if (!goalLine.dataset.editing) {
+    const g = db.goals[goalKey()];
+    goalLine.textContent = g || GOAL_PLACEHOLDER[ui.view];
+    goalLine.classList.toggle('is-empty', !g);
+  }
   const body = $('#cal-body');
   body.textContent = '';
   openSwipeEl = null;
