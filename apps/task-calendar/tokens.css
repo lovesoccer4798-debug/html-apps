@@ -1,65 +1,91 @@
-/* NEST Design Tokens — 見た目の「値」の唯一の正本（templates/app/tokens.css のDNAコピー）
-   値の意味・スケール方針は docs/design-guide.md。 */
-:root {
-  /* 色 — ライト */
-  --nest-bg: #faf6ef;         /* 基本の背景（迎える面） */
-  --nest-bg-alt: #f2ead9;     /* 作業面 */
-  --nest-ink: #33312b;        /* 本文 */
-  --nest-ink-soft: #6b675c;   /* 補助テキスト */
-  --nest-card: #ffffff;       /* カード面 */
-  --nest-line: #e8e1d3;       /* 罫線・境界 */
-  --nest-accent: #4c8c4a;     /* アクセント（巣の緑） */
-  --nest-accent-ink: #ffffff; /* アクセント上の文字 */
-  --nest-amber: #b97d1f;      /* 補助アクセント（琥珀） */
-  --nest-shadow: 0 2px 10px rgba(90, 80, 55, .08);
+/* Task Calendar Design Tokens — 見た目の「値」の唯一の正本。
+   配色はオーナー支給のデザインhandoff（Turn4=ダーク / Turn5=ライト）を正とする。
+   NEST共通トークンから独立する判断は docs/adr/20260715-task-calendar-v2-design.md。
+   テーマ切替: <html data-theme="light|dark">（未指定はOS追従）。
+   アクセント色（--tc-accent*）は設定に応じて app.js が :root へ上書きする。 */
 
-  /* 形 */
-  --nest-radius: 16px;
-  --nest-radius-pill: 999px;
+:root {
+  /* ライト（Turn 5） */
+  --tc-bg: #edf1f5;            /* 背景 */
+  --tc-surface: #ffffff;       /* カード面 */
+  --tc-surface2: #dde4eb;      /* セグメント地・チップ地・リング軌道 */
+  --tc-line: #dde4eb;          /* 境界線 */
+  --tc-ink: #2b3440;           /* テキスト主 */
+  --tc-ink2: #5a6b7d;          /* 副 */
+  --tc-ink3: #7a8698;          /* 弱 */
+  --tc-ink4: #9aa5b1;          /* 最弱・プレースホルダ */
+  --tc-check-border: #b9c2cc;  /* 未チェックの丸枠 */
+  --tc-shadow: 0 1px 3px rgba(40, 50, 65, .07);
+  --tc-scrim: rgba(30, 37, 45, .45); /* シート・オーバーレイの背景 */
+
+  /* アクセント（既定=グリーン。設定で app.js が上書き） */
+  --tc-accent: #2f9e6e;        /* プライマリ */
+  --tc-accent-bright: #4ed99a; /* リング進捗・強調数字 */
+  --tc-accent-ink: #0e2a1e;    /* アクセント上のテキスト */
+  --tc-accent-soft: color-mix(in srgb, var(--tc-accent) 13%, transparent);
+  --tc-accent-line: color-mix(in srgb, var(--tc-accent) 55%, transparent);
+
+  /* 実行中カード / 深緑コンテナ — 両モード共通のブランド要素（handoff指定） */
+  --tc-deep: #123b2a;
+  --tc-deep-track: #2a5943;    /* 深緑内のリング軌道 */
+  --tc-deep-sub: #8fcbad;      /* 深緑上のサブテキスト */
+  --tc-deep-ink: #eaf6f0;      /* 深緑上の主テキスト */
+
+  --tc-danger: #d95b5b;        /* 削除 */
+
+  /* 形（handoff） */
+  --tc-r-card: 16px;
+  --tc-r-run: 20px;
+  --tc-r-cell: 12px;
+  --tc-r-sheet: 28px;
+  --tc-r-pill: 999px;
+
+  /* 書体 — Webフォントは読まない（ADR参照）。数字はモノスペース */
+  --tc-font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", "Meiryo", system-ui, sans-serif;
+  --tc-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
+
+/* フォント設定（設定画面の4択。端末内蔵フォントのみ — Webフォントは読まない） */
+:root[data-font="rounded"] {
+  --tc-font: "Hiragino Maru Gothic ProN", "HGMaruGothicMPRO", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+}
+:root[data-font="mincho"] {
+  --tc-font: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "MS PMincho", serif;
+}
+:root[data-font="mono"] {
+  --tc-font: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ダーク（Turn 4）— OS追従 */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --nest-bg: #23221e;
-    --nest-bg-alt: #201f1b;
-    --nest-ink: #ece8dd;
-    --nest-ink-soft: #b8b3a5;
-    --nest-card: #2c2b26;
-    --nest-line: #3d3b33;
-    --nest-accent: #6fae6d;
-    --nest-accent-ink: #1c2b1c;
-    --nest-amber: #d9a24a;
-    --nest-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+  :root:not([data-theme="light"]) {
+    --tc-bg: #1e252d;
+    --tc-surface: #262e38;
+    --tc-surface2: #313b47;
+    --tc-line: #313b47;
+    --tc-ink: #e8ecf1;
+    --tc-ink2: #8b96a3;
+    --tc-ink3: #556170;
+    --tc-ink4: #3e4954;
+    --tc-check-border: #3e4954;
+    --tc-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+    --tc-scrim: rgba(8, 12, 16, .6);
+    --tc-accent: #3fb07e;
   }
 }
 
-/* ---- Task Calendar 固有トークン ----
-   テーマカラーはオーナー指定のエメラルドグリーン #00C896（仕様書 §7 参照）。
-   #00C896 上の白文字はコントラスト不足のため、文字は濃いティール（--tc-accent-ink）を使う。 */
-:root {
-  --tc-accent: #00c896;        /* 主役のエメラルド */
-  --tc-accent-bright: #21e0af; /* グラデーションの中心（明るい側） */
-  --tc-accent-deep: #009f78;   /* グラデーションの外周・ホバー */
-  --tc-accent-ink: #04382b;    /* エメラルド上の文字（濃いティール） */
-  --tc-accent-soft: rgba(0, 200, 150, .13);  /* 淡い塗り（選択・達成セル） */
-  --tc-accent-line: rgba(0, 200, 150, .45);  /* 淡い枠線 */
-  --tc-danger: #c4574d;        /* 削除など */
-  --tc-sun: #c4574d;           /* 日曜の色 */
-  --tc-sat: #4a7dbb;           /* 土曜の色 */
-  --tc-hero-ink: #04382b;      /* ヒーロー帯の文字 */
-  --tc-hero-chip: rgba(255, 255, 255, .42); /* ヒーロー帯の統計チップ面 */
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --tc-accent: #00bd8d;
-    --tc-accent-bright: #17cf9e;
-    --tc-accent-deep: #008f6c;
-    --tc-accent-ink: #03291f;
-    --tc-accent-soft: rgba(0, 200, 150, .17);
-    --tc-accent-line: rgba(0, 200, 150, .5);
-    --tc-danger: #d97b72;
-    --tc-sun: #d97b72;
-    --tc-sat: #7ba3d4;
-    --tc-hero-ink: #032a20;
-    --tc-hero-chip: rgba(255, 255, 255, .5);
-  }
+/* ダーク — 手動指定 */
+:root[data-theme="dark"] {
+  --tc-bg: #1e252d;
+  --tc-surface: #262e38;
+  --tc-surface2: #313b47;
+  --tc-line: #313b47;
+  --tc-ink: #e8ecf1;
+  --tc-ink2: #8b96a3;
+  --tc-ink3: #556170;
+  --tc-ink4: #3e4954;
+  --tc-check-border: #3e4954;
+  --tc-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  --tc-scrim: rgba(8, 12, 16, .6);
+  --tc-accent: #3fb07e;
 }

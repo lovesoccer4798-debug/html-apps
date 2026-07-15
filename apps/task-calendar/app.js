@@ -2,12 +2,28 @@
 
 /* ========== constants ========== */
 
-const STORAGE_KEY = 'nest.task-calendar.v1';
+const STORAGE_V2 = 'nest.task-calendar.v2';
+const STORAGE_V1 = 'nest.task-calendar.v1';
 const BASE_TITLE = document.title;
-const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-const MAX_MONTH_DOTS = 4;
+const WD_JA = ['日', '月', '火', '水', '木', '金', '土'];
+const WD_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const MONTH_EN = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' };
+const MAX_MONTH_DOTS = 2;      // handoff: ドットは最大2個+
 const UNDO_TOAST_MS = 6000;
-const RING_CIRCUMFERENCE = 2 * Math.PI * 88; // must match r="88" in index.html
+const SWIPE_OPEN_PX = 144;     // 編集72px+削除72px
+const FOCUS_CIRC = 2 * Math.PI * 120; // index.htmlの r="120" と一致
+const RUN_CIRC = 2 * Math.PI * 40;    // 実行中カードの r="40" と一致
+
+/* 設定で選べるアクセント（枠・チェック・ボタンの色）。light/darkはテーマごとの主色 */
+const ACCENTS = {
+  green:  { name: 'グリーン', light: '#2f9e6e', dark: '#3fb07e', bright: '#4ed99a', ink: '#0e2a1e' },
+  teal:   { name: 'ティール', light: '#2b9ea8', dark: '#45b3bd', bright: '#6ed2db', ink: '#082f33' },
+  blue:   { name: 'ブルー',   light: '#3d7fd9', dark: '#5b93e0', bright: '#7fb3f0', ink: '#0d2440' },
+  purple: { name: 'パープル', light: '#7c6bd9', dark: '#9184e0', bright: '#afa3f0', ink: '#201a45' },
+  orange: { name: 'オレンジ', light: '#d9822b', dark: '#e09a4a', bright: '#f0b36e', ink: '#3a2408' },
+  pink:   { name: 'ピンク',   light: '#d95b8a', dark: '#e07aa3', bright: '#f09ec0', ink: '#40122a' },
+};
 
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
@@ -17,466 +33,1062 @@ const ICONS = {
   pause: `<svg ${ICON_ATTRS}><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>`,
   clock: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
   trash: `<svg ${ICON_ATTRS}><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  pencil: `<svg ${ICON_ATTRS}><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
+  repeat: `<svg ${ICON_ATTRS}><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
+  calendar: `<svg ${ICON_ATTRS}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>`,
+  sprout: `<svg ${ICON_ATTRS}><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg>`,
+  maximize: `<svg ${ICON_ATTRS}><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
 };
 
-/* ========== state ========== */
+/* ========== persistent data ========== */
 
-const state = {
-  tasks: loadTasks(),
-  view: 'day',          // 'day' | 'week' | 'month'
-  cursor: new Date(),   // the date the views are centered on
-  justToggledId: null,  // replay the check "pop" only on the toggled task
-  justAddedId: null,    // replay the row "rise" only on the added task
-};
+function defaultDb() {
+  return { tasks: [], events: [], notes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic' }, running: null };
+}
 
-function loadTasks() {
+function loadDb() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
-    return Array.isArray(data.tasks) ? data.tasks : [];
+    const raw = localStorage.getItem(STORAGE_V2);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return { ...defaultDb(), ...data, settings: { ...defaultDb().settings, ...(data.settings || {}) } };
+    }
+    const v1raw = localStorage.getItem(STORAGE_V1);
+    if (v1raw) { // v1からの移行（v1キーは残す）
+      const v1 = JSON.parse(v1raw);
+      const db = defaultDb();
+      if (Array.isArray(v1.tasks)) db.tasks = v1.tasks.map((t) => ({ time: null, ...t }));
+      return db;
+    }
   } catch (err) {
     console.warn('Task Calendar: failed to load, starting empty', err);
-    return [];
+  }
+  return defaultDb();
+}
+
+const db = loadDb();
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_V2, JSON.stringify(db));
+  } catch (err) {
+    console.warn('Task Calendar: failed to save', err); // keep working in-memory
   }
 }
 
-function saveTasks() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks: state.tasks }));
-  } catch (err) {
-    // keep working in-memory (spec §5)
-    console.warn('Task Calendar: failed to save', err);
-  }
-}
+/* ========== ui state (not persisted) ========== */
+
+const ui = {
+  screen: 'cal',            // 'cal' | 'insights' | 'settings'
+  prevScreen: 'cal',
+  view: 'day',              // 'day' | 'week' | 'month'
+  cursor: new Date(),
+  selectedKey: null,        // month view: selected date key
+  selectedItemId: null,     // accent-framed item
+  justToggledId: null,
+  justAddedId: null,
+  sheetType: 'task',
+  editing: null,            // {ref, kind, key} while edit sheet is open
+  confirmTarget: null,      // recurring occurrence pending delete
+  insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
+};
 
 /* ========== date helpers (local timezone) ========== */
 
 function toKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-function addDays(d, n) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+function fromKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
-function startOfWeek(d) { // week starts on Sunday
-  return addDays(d, -d.getDay());
+function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+function startOfWeekMon(d) { return addDays(d, -((d.getDay() + 6) % 7)); } // handoffは月曜はじまり
+function todayKey() { return toKey(new Date()); }
+
+/* ========== occurrences（繰り返しの展開） ========== */
+
+function occursOn(t, key) {
+  if (!t.repeat) return t.date === key;
+  if (key < t.startDate || (t.exDates || []).includes(key)) return false;
+  const d = fromKey(key);
+  const s = fromKey(t.startDate);
+  if (t.repeat === 'daily') return true;
+  if (t.repeat === 'weekly') return d.getDay() === s.getDay();
+  if (t.repeat === 'monthly') return d.getDate() === s.getDate(); // 31日など存在しない月は自然にスキップ
+  if (t.repeat === 'yearly') return d.getDate() === s.getDate() && d.getMonth() === s.getMonth();
+  return false;
 }
-function todayKey() {
-  return toKey(new Date());
+function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
+function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+function memoFor(it) {
+  const r = it.ref;
+  if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
+  return r.memo || null;
 }
-function tasksOn(key) {
-  return state.tasks
-    .filter((t) => t.date === key)
-    .sort((a, b) => a.createdAt - b.createdAt);
+
+function itemsFor(key) {
+  const items = [];
+  for (const t of db.tasks) {
+    if (!occursOn(t, key)) continue;
+    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: t.time || '', minutes: t.minutes || null, repeat: t.repeat || null, done: taskDoneOn(t, key) });
+  }
+  for (const e of db.events) {
+    if (e.date !== key) continue;
+    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: e.time || '', minutes: null, repeat: null, done: false });
+  }
+  return items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99') || (a.ref.createdAt || 0) - (b.ref.createdAt || 0));
+}
+function tasksStatsFor(key) {
+  const tasks = itemsFor(key).filter((i) => i.kind === 'task');
+  return { total: tasks.length, done: tasks.filter((i) => i.done).length };
 }
 
 /* ========== dom ========== */
 
 const $ = (sel) => document.querySelector(sel);
-const els = {
-  statToday: $('#stat-today'),
-  statStreak: $('#stat-streak'),
-  statTotal: $('#stat-total'),
-  heading: $('#heading'),
-  views: {
-    day: $('#view-day'),
-    week: $('#view-week'),
-    month: $('#view-month'),
-  },
-  addForm: $('#add-form'),
-  addTitle: $('#add-title'),
-  addMinutes: $('#add-minutes'),
-  timePresets: $('#time-presets'),
-  dayProgress: $('#day-progress'),
-  barFill: $('#bar-fill'),
-  barText: $('#bar-text'),
-  celebrate: $('#celebrate'),
-  dayList: $('#day-list'),
-  dayEmpty: $('#day-empty'),
-  weekGrid: $('#week-grid'),
-  monthWeekdays: $('#month-weekdays'),
-  monthGrid: $('#month-grid'),
-  timerOverlay: $('#timer-overlay'),
-  timerCard: document.querySelector('.timer-card'),
-  timerTask: $('#timer-task'),
-  timerTime: $('#timer-time'),
-  timerMsg: $('#timer-msg'),
-  timerToggle: $('#timer-toggle'),
-  ringFg: $('#ring-fg'),
-  toast: $('#toast'),
-  toastText: $('#toast-text'),
-  toastUndo: $('#toast-undo'),
-};
-
-function el(tag, className) {
+function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
   return node;
 }
 
-/* ========== task operations ========== */
+/* ========== theme & accent ========== */
 
-function addTask(title, minutes) {
-  const id = `t${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
-  state.tasks.push({
-    id,
-    title,
-    date: toKey(state.cursor),
-    minutes,
-    done: false,
-    doneAt: null,
-    createdAt: Date.now(),
-  });
-  saveTasks();
-  state.justAddedId = id;
-  renderAll();
-  state.justAddedId = null;
+function effectiveDark() {
+  const t = db.settings.theme;
+  return t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 }
-
-function toggleDone(id) {
-  const task = state.tasks.find((t) => t.id === id);
-  if (!task) return;
-  task.done = !task.done;
-  task.doneAt = task.done ? Date.now() : null;
-  state.justToggledId = task.done ? id : null;
-  saveTasks();
-  renderAll();
-  state.justToggledId = null;
+function applyTheme() {
+  const t = db.settings.theme;
+  if (t === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  applyAccent();
 }
-
-function removeTask(id) {
-  const index = state.tasks.findIndex((t) => t.id === id);
-  if (index === -1) return;
-  const [removed] = state.tasks.splice(index, 1);
-  saveTasks();
-  renderAll();
-  showUndoToast(`「${removed.title}」を削除しました`, () => {
-    state.tasks.splice(Math.min(index, state.tasks.length), 0, removed);
-    saveTasks();
-    renderAll();
-  });
+function applyAccent() {
+  const a = ACCENTS[db.settings.accent] || ACCENTS.green;
+  const rs = document.documentElement.style;
+  if (db.settings.accent === 'green') { // 既定色はtokens.cssのテーマ切替に任せる
+    rs.removeProperty('--tc-accent');
+    rs.removeProperty('--tc-accent-bright');
+    rs.removeProperty('--tc-accent-ink');
+    return;
+  }
+  rs.setProperty('--tc-accent', effectiveDark() ? a.dark : a.light);
+  rs.setProperty('--tc-accent-bright', a.bright);
+  rs.setProperty('--tc-accent-ink', a.ink);
 }
+function applyFont() {
+  if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
+  else document.documentElement.dataset.font = db.settings.font;
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); });
 
 /* ========== undo toast ========== */
 
 let toastTimer = null;
 let undoAction = null;
-
 function showUndoToast(text, onUndo) {
-  els.toastText.textContent = text;
+  $('#toast-text').textContent = text;
   undoAction = onUndo;
-  els.toast.hidden = false;
+  $('#toast').hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(hideToast, UNDO_TOAST_MS);
 }
 function hideToast() {
-  els.toast.hidden = true;
+  $('#toast').hidden = true;
   undoAction = null;
   clearTimeout(toastTimer);
 }
-els.toastUndo.addEventListener('click', () => {
+$('#toast-undo').addEventListener('click', () => {
   if (undoAction) undoAction();
   hideToast();
 });
 
-/* ========== rendering ========== */
+/* ========== swipe（左スライドで編集／削除） ========== */
 
-function renderAll() {
-  renderStats();
-  renderHeading();
-  for (const [name, section] of Object.entries(els.views)) {
-    section.hidden = name !== state.view;
-  }
-  if (state.view === 'day') renderDay();
-  if (state.view === 'week') renderWeek();
-  if (state.view === 'month') renderMonth();
+let openSwipeEl = null;
+function closeOpenSwipe() {
+  if (!openSwipeEl) return;
+  openSwipeEl.querySelector('.swipe-content').style.transform = '';
+  openSwipeEl = null;
 }
+function makeSwipe(item, { onEdit, onDelete }) {
+  const wrap = el('div', 'swipe');
+  const actions = el('div', 'swipe-actions');
+  const editBtn = el('button', 'swipe-act edit');
+  editBtn.type = 'button';
+  editBtn.innerHTML = `${ICONS.pencil}<span>編集</span>`;
+  editBtn.addEventListener('click', () => { closeOpenSwipe(); onEdit(); });
+  const delBtn = el('button', 'swipe-act del');
+  delBtn.type = 'button';
+  delBtn.innerHTML = `${ICONS.trash}<span>削除</span>`;
+  delBtn.addEventListener('click', () => { closeOpenSwipe(); onDelete(); });
+  actions.append(editBtn, delBtn);
 
-function renderStats() {
-  const todays = tasksOn(todayKey());
-  const doneToday = todays.filter((t) => t.done).length;
-  els.statToday.textContent = `${doneToday}/${todays.length}`;
-  els.statStreak.textContent = `${streakDays()}日`;
-  els.statTotal.textContent = String(state.tasks.filter((t) => t.done).length);
-}
+  const content = el('div', 'swipe-content');
+  content.append(item);
+  wrap.append(actions, content);
 
-/* consecutive days (ending today, or yesterday if today has none yet)
-   with at least one completed task — the habit-building meter */
-function streakDays() {
-  const doneDates = new Set(state.tasks.filter((t) => t.done).map((t) => t.date));
-  let d = new Date();
-  if (!doneDates.has(toKey(d))) d = addDays(d, -1);
-  let n = 0;
-  while (doneDates.has(toKey(d))) {
-    n += 1;
-    d = addDays(d, -1);
-  }
-  return n;
-}
+  let startX = 0;
+  let startY = 0;
+  let base = 0;
+  let dragging = false;
+  let horizontal = false;
 
-function renderHeading() {
-  const c = state.cursor;
-  els.heading.textContent = '';
-  if (state.view === 'day') {
-    els.heading.append(`${c.getFullYear()}年${c.getMonth() + 1}月${c.getDate()}日（${WEEKDAYS[c.getDay()]}）`);
-    if (toKey(c) === todayKey()) {
-      const badge = el('span', 'today-badge');
-      badge.textContent = '今日';
-      els.heading.append(badge);
+  content.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    startX = e.clientX;
+    startY = e.clientY;
+    base = openSwipeEl === wrap ? -SWIPE_OPEN_PX : 0;
+    dragging = true;
+    horizontal = false;
+    if (openSwipeEl && openSwipeEl !== wrap) closeOpenSwipe();
+  });
+  content.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!horizontal) {
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) return; // 縦スクロールを優先
+      horizontal = true;
+      content.setPointerCapture(e.pointerId);
+      content.style.transition = 'none';
     }
-  } else if (state.view === 'week') {
-    const start = startOfWeek(c);
-    const end = addDays(start, 6);
-    const endLabel = start.getMonth() === end.getMonth()
-      ? `${end.getDate()}日`
-      : `${end.getMonth() + 1}月${end.getDate()}日`;
-    els.heading.append(`${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日〜${endLabel}`);
+    const x = Math.min(0, Math.max(-SWIPE_OPEN_PX - 24, base + dx));
+    content.style.transform = `translateX(${x}px)`;
+  });
+  const finish = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    if (!horizontal) return;
+    content.style.transition = '';
+    const dx = e.clientX - startX;
+    const open = base + dx < -SWIPE_OPEN_PX / 2;
+    content.style.transform = open ? `translateX(${-SWIPE_OPEN_PX}px)` : '';
+    openSwipeEl = open ? wrap : (openSwipeEl === wrap ? null : openSwipeEl);
+    content.dataset.suppressClick = '1'; // スワイプ直後の誤タップを防ぐ
+    setTimeout(() => { delete content.dataset.suppressClick; }, 80);
+  };
+  content.addEventListener('pointerup', finish);
+  content.addEventListener('pointercancel', finish);
+  content.addEventListener('click', (e) => {
+    if (content.dataset.suppressClick) { e.stopPropagation(); return; }
+    if (openSwipeEl === wrap) { closeOpenSwipe(); e.stopPropagation(); }
+  }, true);
+
+  return wrap;
+}
+
+/* ========== item operations ========== */
+
+function toggleItem(it) {
+  const t = it.ref;
+  if (t.repeat) {
+    t.doneDates = t.doneDates || {};
+    if (t.doneDates[it.key]) delete t.doneDates[it.key];
+    else t.doneDates[it.key] = Date.now();
   } else {
-    els.heading.append(`${c.getFullYear()}年${c.getMonth() + 1}月`);
+    t.done = !t.done;
+    t.doneAt = t.done ? Date.now() : null;
   }
+  ui.justToggledId = taskDoneOn(t, it.key) ? it.id : null;
+  save();
+  renderAll();
+  ui.justToggledId = null;
 }
 
-/* ----- day view ----- */
-
-function renderDay() {
-  const key = toKey(state.cursor);
-  const tasks = tasksOn(key);
-  const done = tasks.filter((t) => t.done).length;
-
-  els.dayProgress.hidden = tasks.length === 0;
-  els.barFill.style.width = tasks.length ? `${(done / tasks.length) * 100}%` : '0';
-  els.barText.textContent = `${done}/${tasks.length} 完了`;
-  els.celebrate.hidden = !(tasks.length > 0 && done === tasks.length);
-  els.dayEmpty.hidden = tasks.length !== 0;
-
-  els.dayList.textContent = '';
-  for (const task of tasks) els.dayList.append(taskRow(task));
+function deleteItem(it) {
+  if (it.kind === 'event') {
+    const index = db.events.indexOf(it.ref);
+    db.events.splice(index, 1);
+    save(); renderAll();
+    showUndoToast(`「${it.title}」を削除しました`, () => {
+      db.events.splice(Math.min(index, db.events.length), 0, it.ref);
+      save(); renderAll();
+    });
+    return;
+  }
+  if (it.ref.repeat) { // 繰り返しは「この回のみ／すべて」を選ぶ
+    ui.confirmTarget = it;
+    $('#confirm-name').textContent = `「${it.title}」（${REPEAT_LABEL[it.ref.repeat]}）`;
+    $('#confirm-scrim').hidden = false;
+    return;
+  }
+  const index = db.tasks.indexOf(it.ref);
+  db.tasks.splice(index, 1);
+  save(); renderAll();
+  showUndoToast(`「${it.title}」を削除しました`, () => {
+    db.tasks.splice(Math.min(index, db.tasks.length), 0, it.ref);
+    save(); renderAll();
+  });
 }
 
-function checkButton(task) {
+$('#del-one').addEventListener('click', () => {
+  const it = ui.confirmTarget;
+  closeConfirm();
+  if (!it) return;
+  it.ref.exDates = it.ref.exDates || [];
+  it.ref.exDates.push(it.key);
+  save(); renderAll();
+  showUndoToast('この回のみ削除しました', () => {
+    it.ref.exDates = it.ref.exDates.filter((k) => k !== it.key);
+    save(); renderAll();
+  });
+});
+$('#del-all').addEventListener('click', () => {
+  const it = ui.confirmTarget;
+  closeConfirm();
+  if (!it) return;
+  const index = db.tasks.indexOf(it.ref);
+  db.tasks.splice(index, 1);
+  save(); renderAll();
+  showUndoToast(`「${it.title}」の繰り返しを削除しました`, () => {
+    db.tasks.splice(Math.min(index, db.tasks.length), 0, it.ref);
+    save(); renderAll();
+  });
+});
+$('#del-cancel').addEventListener('click', closeConfirm);
+function closeConfirm() {
+  $('#confirm-scrim').hidden = true;
+  ui.confirmTarget = null;
+}
+$('#confirm-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeConfirm(); });
+
+/* ========== item card ========== */
+
+function checkButton(it) {
   const btn = el('button', 'check');
   btn.type = 'button';
   btn.setAttribute('role', 'checkbox');
-  btn.setAttribute('aria-checked', String(task.done));
-  btn.setAttribute('aria-label', task.done ? `「${task.title}」を未完了に戻す` : `「${task.title}」を完了にする`);
+  btn.setAttribute('aria-checked', String(it.done));
+  btn.setAttribute('aria-label', it.done ? `「${it.title}」を未完了に戻す` : `「${it.title}」を完了にする`);
   btn.innerHTML = ICONS.check;
-  if (task.id === state.justToggledId) btn.classList.add('pop');
-  btn.addEventListener('click', () => toggleDone(task.id));
+  if (it.id === ui.justToggledId) btn.classList.add('pop');
+  btn.addEventListener('click', (e) => { e.stopPropagation(); toggleItem(it); });
   return btn;
 }
 
-function taskRow(task) {
-  const li = el('li', task.done ? 'task is-done' : 'task');
-  if (task.id === state.justAddedId) li.classList.add('rise');
-  li.append(checkButton(task));
+function buildItemCard(it, { compact = false, showTime = false } = {}) {
+  const card = el('div', `item is-${it.kind}${it.done ? ' is-done' : ''}${ui.selectedItemId === it.id ? ' is-selected' : ''}`);
+  if (it.id === ui.justAddedId) card.classList.add('rise');
 
-  const title = el('span', 'task-title');
-  title.textContent = task.title;
-  li.append(title);
-
-  if (task.minutes) {
-    const chip = el('span', 'time-chip');
-    chip.innerHTML = ICONS.clock;
-    chip.append(` ${task.minutes}分`);
-    li.append(chip);
-    if (!task.done) {
-      const start = el('button', 'start-btn');
-      start.type = 'button';
-      start.innerHTML = ICONS.play;
-      start.append(' 開始');
-      start.addEventListener('click', () => openTimer(task.id));
-      li.append(start);
-    }
+  if (it.kind === 'task') {
+    card.append(checkButton(it));
+  } else {
+    const mark = el('span', 'event-mark');
+    mark.innerHTML = ICONS.calendar;
+    card.append(mark);
   }
 
-  const del = el('button', 'del-btn');
-  del.type = 'button';
-  del.setAttribute('aria-label', `「${task.title}」を削除`);
-  del.innerHTML = ICONS.trash;
-  del.addEventListener('click', () => removeTask(task.id));
-  li.append(del);
+  const main = el('div', 'item-main');
+  main.append(el('span', 'item-title', it.title));
+  const memo = memoFor(it);
+  if (memo && !compact) main.append(el('span', 'item-memo', memo));
+  card.append(main);
 
-  return li;
-}
-
-/* ----- week view ----- */
-
-function renderWeek() {
-  const start = startOfWeek(state.cursor);
-  els.weekGrid.textContent = '';
-
-  for (let i = 0; i < 7; i += 1) {
-    const day = addDays(start, i);
-    const key = toKey(day);
-    const isToday = key === todayKey();
-
-    const col = el('div', isToday ? 'week-day is-today' : 'week-day');
-
-    const head = el('button', 'week-day-head');
-    head.type = 'button';
-    head.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日をデイリー表示で開く`);
-    const wd = el('span', `wd ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}`.trim());
-    wd.textContent = WEEKDAYS[i];
-    const dnum = el('span', 'dnum');
-    dnum.textContent = String(day.getDate());
-    head.append(wd, dnum);
-    head.addEventListener('click', () => {
-      state.cursor = day;
-      setView('day');
-    });
-    col.append(head);
-
-    const list = el('ul', 'week-tasks');
-    for (const task of tasksOn(key)) {
-      const item = el('li', task.done ? 'week-task is-done' : 'week-task');
-      item.append(checkButton(task));
-      const title = el('span', 'w-title');
-      title.textContent = task.title;
-      title.title = task.title;
-      item.append(title);
-      list.append(item);
-    }
-    col.append(list);
-    els.weekGrid.append(col);
+  if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
+  if (showTime && it.time) {
+    const c = el('span', 'chip mono');
+    c.innerHTML = ICONS.clock;
+    c.append(` ${it.time}`);
+    card.append(c);
   }
-}
-
-/* ----- month view ----- */
-
-function renderMonth() {
-  const c = state.cursor;
-  const first = new Date(c.getFullYear(), c.getMonth(), 1);
-  const gridStart = startOfWeek(first);
-  els.monthGrid.textContent = '';
-
-  for (let i = 0; i < 42; i += 1) {
-    const day = addDays(gridStart, i);
-    const key = toKey(day);
-    const tasks = tasksOn(key);
-    const done = tasks.filter((t) => t.done).length;
-    const isOther = day.getMonth() !== c.getMonth();
-    const isToday = key === todayKey();
-    const isComplete = tasks.length > 0 && done === tasks.length;
-
-    const cell = el('button', [
-      'month-cell',
-      isOther ? 'is-other' : '',
-      isToday ? 'is-today' : '',
-      isComplete && !isOther ? 'is-complete' : '',
-    ].filter(Boolean).join(' '));
-    cell.type = 'button';
-    cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日（タスク${tasks.length}件・完了${done}件）をデイリー表示で開く`);
-
-    const dnum = el('span', `dnum ${day.getDay() === 0 ? 'sun' : day.getDay() === 6 ? 'sat' : ''}`.trim());
-    dnum.textContent = String(day.getDate());
-    cell.append(dnum);
-
-    if (tasks.length > 0) {
-      const dots = el('span', 'cell-dots');
-      for (const task of tasks.slice(0, MAX_MONTH_DOTS)) {
-        dots.append(el('span', task.done ? 'dot done' : 'dot'));
-      }
-      if (tasks.length > MAX_MONTH_DOTS) {
-        const more = el('span', 'dot-more');
-        more.textContent = `+${tasks.length - MAX_MONTH_DOTS}`;
-        dots.append(more);
-      }
-      cell.append(dots);
-    }
-
-    cell.addEventListener('click', () => {
-      state.cursor = day;
-      setView('day');
-    });
-    els.monthGrid.append(cell);
+  if (it.repeat) {
+    const c = el('span', 'chip');
+    c.innerHTML = ICONS.repeat;
+    c.append(` ${REPEAT_LABEL[it.repeat]}`);
+    card.append(c);
   }
-}
+  if (it.minutes && !compact) {
+    const c = el('span', 'chip mono');
+    c.innerHTML = ICONS.clock;
+    c.append(` ${it.minutes}分`);
+    card.append(c);
+  }
+  if (it.kind === 'task' && it.minutes && !it.done) {
+    const play = el('button', 'play-btn');
+    play.type = 'button';
+    play.setAttribute('aria-label', `「${it.title}」のタイマーを開始`);
+    play.innerHTML = ICONS.play;
+    play.addEventListener('click', (e) => { e.stopPropagation(); startTimer(it); });
+    card.append(play);
+  }
 
-/* ========== view switching & date navigation ========== */
-
-function setView(view) {
-  state.view = view;
-  document.querySelectorAll('.seg-btn').forEach((btn) => {
-    const active = btn.dataset.view === view;
-    btn.classList.toggle('is-active', active);
-    btn.setAttribute('aria-selected', String(active));
+  // タップで選択（アクセント色の枠）— 設定で色を変えられる
+  card.addEventListener('click', () => {
+    ui.selectedItemId = ui.selectedItemId === it.id ? null : it.id;
+    renderAll();
   });
+
+  return makeSwipe(card, {
+    onEdit: () => openSheet('edit', { item: it }),
+    onDelete: () => deleteItem(it),
+  });
+}
+
+/* ========== screens & navigation ========== */
+
+function setScreen(screen) {
+  if (screen === 'settings' && ui.screen !== 'settings') ui.prevScreen = ui.screen;
+  ui.screen = screen;
   renderAll();
 }
 
-function navigate(dir) { // dir: -1 | +1
-  const c = state.cursor;
-  if (state.view === 'day') state.cursor = addDays(c, dir);
-  else if (state.view === 'week') state.cursor = addDays(c, dir * 7);
-  else state.cursor = new Date(c.getFullYear(), c.getMonth() + dir, 1);
-  renderAll();
-}
+document.querySelectorAll('[data-goto="settings"]').forEach((b) => b.addEventListener('click', () => setScreen('settings')));
+$('#settings-back').addEventListener('click', () => setScreen(ui.prevScreen));
+$('#bottomnav').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-nav]');
+  if (!btn) return;
+  const nav = btn.dataset.nav;
+  if (nav === 'today') { ui.view = 'day'; ui.cursor = new Date(); setScreen('cal'); }
+  if (nav === 'calendar') { ui.view = 'month'; ui.selectedKey = ui.selectedKey || todayKey(); setScreen('cal'); }
+  if (nav === 'insights') setScreen('insights');
+});
 
 document.querySelectorAll('.seg-btn').forEach((btn) => {
-  btn.addEventListener('click', () => setView(btn.dataset.view));
+  btn.addEventListener('click', () => { ui.view = btn.dataset.view; renderAll(); });
 });
 $('#nav-prev').addEventListener('click', () => navigate(-1));
 $('#nav-next').addEventListener('click', () => navigate(1));
 $('#nav-today').addEventListener('click', () => {
-  state.cursor = new Date();
+  ui.cursor = new Date();
+  ui.selectedKey = todayKey();
   renderAll();
 });
-
-/* ========== add form ========== */
-
-els.addForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const title = els.addTitle.value.trim();
-  if (!title) {
-    els.addTitle.classList.remove('shake');
-    // restart the shake animation even on repeated empty submits
-    void els.addTitle.offsetWidth;
-    els.addTitle.classList.add('shake');
-    els.addTitle.focus();
-    return;
+function navigate(dir) {
+  const c = ui.cursor;
+  if (ui.view === 'day') ui.cursor = addDays(c, dir);
+  else if (ui.view === 'week') ui.cursor = addDays(c, dir * 7);
+  else if (ui.view === 'year') ui.cursor = new Date(c.getFullYear() + dir, 0, 1);
+  else {
+    ui.cursor = new Date(c.getFullYear(), c.getMonth() + dir, 1);
+    ui.selectedKey = toKey(ui.cursor);
   }
-  const rawMinutes = parseInt(els.addMinutes.value, 10);
-  const minutes = Number.isInteger(rawMinutes) && rawMinutes >= 1 && rawMinutes <= 600 ? rawMinutes : null;
-  addTask(title, minutes);
-  els.addTitle.value = '';
-  els.addMinutes.value = '';
-  syncPresets();
-  els.addTitle.focus();
-});
-
-els.timePresets.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-min]');
-  if (!btn) return;
-  els.addMinutes.value = btn.dataset.min;
-  syncPresets();
-});
-els.addMinutes.addEventListener('input', syncPresets);
-
-function syncPresets() {
-  els.timePresets.querySelectorAll('button').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.min === els.addMinutes.value);
-  });
+  renderAll();
 }
 
-/* ========== countdown timer ========== */
+/* ========== rendering ========== */
 
-const timer = {
-  taskId: null,
-  totalMs: 0,
-  remainingMs: 0,
-  endAt: null,       // timestamp-based so background tabs stay accurate
-  intervalId: null,
-  finished: false,
+function renderAll() {
+  $('#scr-cal').hidden = ui.screen !== 'cal';
+  $('#scr-insights').hidden = ui.screen !== 'insights';
+  $('#scr-settings').hidden = ui.screen !== 'settings';
+  $('#fab').hidden = ui.screen === 'settings';
+
+  const streak = String(streakDays());
+  $('#chip-streak').textContent = streak;
+  $('#chip-streak2').textContent = streak;
+
+  document.querySelectorAll('#bottomnav button').forEach((b) => {
+    const nav = b.dataset.nav;
+    const active = (nav === 'today' && ui.screen === 'cal' && ui.view === 'day')
+      || (nav === 'calendar' && ui.screen === 'cal' && ui.view !== 'day')
+      || (nav === 'insights' && ui.screen === 'insights');
+    b.classList.toggle('is-active', active);
+  });
+
+  if (ui.screen === 'cal') renderCal();
+  if (ui.screen === 'insights') renderInsights();
+  if (ui.screen === 'settings') renderSettings();
+}
+
+function streakDays() {
+  const doneKeys = new Set();
+  for (const t of db.tasks) {
+    if (t.repeat) Object.keys(t.doneDates || {}).forEach((k) => doneKeys.add(k));
+    else if (t.done) doneKeys.add(t.date);
+  }
+  let d = new Date();
+  if (!doneKeys.has(toKey(d))) d = addDays(d, -1);
+  let n = 0;
+  while (doneKeys.has(toKey(d))) { n += 1; d = addDays(d, -1); }
+  return n;
+}
+
+function renderCal() {
+  document.querySelectorAll('.seg-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === ui.view));
+  const c = ui.cursor;
+  const eyebrow = $('#cal-eyebrow');
+  const title = $('#cal-title-text');
+  if (ui.view === 'year') {
+    eyebrow.textContent = `YEAR ${c.getFullYear()}`;
+    title.textContent = `${c.getFullYear()}年`;
+  } else if (ui.view === 'day') {
+    const isToday = toKey(c) === todayKey();
+    eyebrow.textContent = `${WD_EN[c.getDay()]} · ${MONTH_EN[c.getMonth()]} ${c.getDate()}${isToday ? ' · TODAY' : ''}`;
+    title.textContent = `${c.getMonth() + 1}月${c.getDate()}日（${WD_JA[c.getDay()]}）`;
+  } else if (ui.view === 'week') {
+    const s = startOfWeekMon(c);
+    const e2 = addDays(s, 6);
+    eyebrow.textContent = s.getMonth() === e2.getMonth()
+      ? `${MONTH_EN[s.getMonth()]} ${s.getDate()} — ${e2.getDate()}`
+      : `${MONTH_EN[s.getMonth()].slice(0, 3)} ${s.getDate()} — ${MONTH_EN[e2.getMonth()].slice(0, 3)} ${e2.getDate()}`;
+    title.textContent = s.getMonth() === e2.getMonth()
+      ? `${s.getMonth() + 1}月${s.getDate()}日〜${e2.getDate()}日`
+      : `${s.getMonth() + 1}月${s.getDate()}日〜${e2.getMonth() + 1}月${e2.getDate()}日`;
+  } else {
+    eyebrow.textContent = `${MONTH_EN[c.getMonth()]} ${c.getFullYear()}`;
+    title.textContent = `${c.getFullYear()}年${c.getMonth() + 1}月`;
+  }
+
+  const body = $('#cal-body');
+  body.textContent = '';
+  openSwipeEl = null;
+  if (ui.view === 'day') renderDay(body);
+  if (ui.view === 'week') renderWeek(body);
+  if (ui.view === 'month') renderMonth(body);
+  if (ui.view === 'year') renderYear(body);
+}
+
+/* ----- day（タイムライン） ----- */
+
+function renderDay(body) {
+  const key = toKey(ui.cursor);
+  if (db.running) body.append(buildRunCard());
+
+  const items = itemsFor(key);
+  const stats = tasksStatsFor(key);
+  if (stats.total > 0 && stats.done === stats.total) {
+    const cel = el('div', 'celebrate');
+    cel.innerHTML = `${ICONS.sprout}<p><strong>この日のタスク、ぜんぶ完了！</strong>ひとつずつ積み上がっています。</p>`;
+    body.append(cel);
+  }
+
+  if (items.length === 0) {
+    body.append(el('p', 'empty', 'まだ何もありません。右下の「＋」からタスクや予定を追加してみましょう。'));
+    return;
+  }
+  const tl = el('div', 'tl');
+  for (const it of items) {
+    const row = el('div', `tl-row${it.done ? ' is-done' : ''}${it.kind === 'event' ? ' is-event' : ''}`);
+    row.append(el('span', 'tl-time mono', it.time || ''));
+    row.append(el('span', 'tl-rail'));
+    const slot = el('div', 'tl-item');
+    slot.append(buildItemCard(it));
+    row.append(slot);
+    tl.append(row);
+  }
+  body.append(tl);
+}
+
+/* ----- week ----- */
+
+function renderWeek(body) {
+  const start = startOfWeekMon(ui.cursor);
+  for (let i = 0; i < 7; i += 1) {
+    const day = addDays(start, i);
+    const key = toKey(day);
+    const row = el('div', 'wk-row');
+
+    const dateBlock = el('button', `wk-date${key === todayKey() ? ' is-today' : ''}`);
+    dateBlock.type = 'button';
+    dateBlock.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日をデイリー表示で開く`);
+    dateBlock.append(el('span', 'dnum', String(day.getDate())));
+    dateBlock.append(el('span', `wd${day.getDay() === 0 ? ' sun' : ''}`, WD_EN[day.getDay()]));
+    dateBlock.addEventListener('click', () => { ui.cursor = day; ui.view = 'day'; renderAll(); });
+    row.append(dateBlock);
+
+    const main = el('div', 'wk-main');
+    const items = itemsFor(key);
+    if (items.length === 0) {
+      const empty = el('button', 'wk-empty', '予定なし — タップして追加');
+      empty.type = 'button';
+      empty.addEventListener('click', () => openSheet('add', { dateKey: key }));
+      main.append(empty);
+    } else {
+      for (const it of items) main.append(buildItemCard(it, { compact: true, showTime: true }));
+      const stats = tasksStatsFor(key);
+      if (stats.total > 0) {
+        const bar = el('div', 'wk-bar');
+        const fill = el('div', 'wk-bar-fill');
+        fill.style.width = `${(stats.done / stats.total) * 100}%`;
+        bar.append(fill);
+        main.append(bar);
+      }
+    }
+    row.append(main);
+    body.append(row);
+  }
+}
+
+/* ----- month ----- */
+
+function renderMonth(body) {
+  const c = ui.cursor;
+  const head = el('div', 'mo-head');
+  ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].forEach((w) => head.append(el('span', '', w)));
+  body.append(head);
+
+  const grid = el('div', 'mo-grid');
+  const first = new Date(c.getFullYear(), c.getMonth(), 1);
+  const gridStart = startOfWeekMon(first);
+  for (let i = 0; i < 42; i += 1) {
+    const day = addDays(gridStart, i);
+    const key = toKey(day);
+    const items = itemsFor(key);
+    const isOther = day.getMonth() !== c.getMonth();
+    const cell = el('button', [
+      'mo-cell',
+      isOther ? 'is-other' : '',
+      key === todayKey() ? 'is-today' : '',
+      key === ui.selectedKey ? 'is-selected' : '',
+    ].filter(Boolean).join(' '));
+    cell.type = 'button';
+    cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
+    cell.append(el('span', 'dnum', String(day.getDate())));
+    const dots = el('span', 'mo-dots');
+    for (const it of items.slice(0, MAX_MONTH_DOTS)) {
+      dots.append(el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`));
+    }
+    if (items.length > MAX_MONTH_DOTS) dots.append(el('span', 'mdot-more', '+'));
+    cell.append(dots);
+    cell.addEventListener('click', () => { ui.selectedKey = key; renderAll(); });
+    grid.append(cell);
+  }
+  body.append(grid);
+
+  // 選択日のプレビュー
+  const key = ui.selectedKey || todayKey();
+  const day = fromKey(key);
+  const items = itemsFor(key);
+  const stats = tasksStatsFor(key);
+  const headRow = el('div', 'preview-head');
+  headRow.append(el('span', 'preview-title', `${day.getMonth() + 1}月${day.getDate()}日（${WD_JA[day.getDay()]}）`));
+  headRow.append(el('span', 'preview-count mono', stats.total ? `${stats.done}/${stats.total} done` : ''));
+  body.append(headRow);
+  const stack = el('div', 'stack');
+  if (items.length === 0) {
+    stack.append(el('p', 'empty', 'この日はまだ何もありません。'));
+  } else {
+    for (const it of items) stack.append(buildItemCard(it, { compact: true, showTime: true }));
+  }
+  body.append(stack);
+}
+
+/* ----- year（ヒートマップ） ----- */
+
+function doneCountMapForYear(y) {
+  const prefix = `${y}-`;
+  const map = {};
+  for (const t of db.tasks) {
+    if (t.repeat) {
+      for (const k of Object.keys(t.doneDates || {})) if (k.startsWith(prefix)) map[k] = (map[k] || 0) + 1;
+    } else if (t.done && t.date && t.date.startsWith(prefix)) {
+      map[t.date] = (map[t.date] || 0) + 1;
+    }
+  }
+  return map;
+}
+
+function renderYear(body) {
+  const y = ui.cursor.getFullYear();
+  const map = doneCountMapForYear(y);
+  const totalDone = Object.values(map).reduce((s, n) => s + n, 0);
+  const activeDays = Object.keys(map).length;
+  const tKey = todayKey();
+
+  const stats = el('div', 'yr-stats');
+  const s1 = el('span'); s1.append('完了 '); s1.append(el('b', '', String(totalDone))); s1.append(' 回');
+  const s2 = el('span'); s2.append('実行した日 '); s2.append(el('b', '', String(activeDays))); s2.append(' 日');
+  stats.append(s1, s2);
+  body.append(stats);
+
+  const card = el('div', 'card');
+  for (let m = 0; m < 12; m += 1) {
+    const row = el('div', 'yr-month-row');
+    row.append(el('span', 'yr-label', `${m + 1}月`));
+    const cells = el('div', 'yr-cells');
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d += 1) {
+      const key = toKey(new Date(y, m, d));
+      const n = map[key] || 0;
+      const lv = n >= 3 ? 'lv3' : n === 2 ? 'lv2' : n === 1 ? 'lv1' : '';
+      const cell = el('button', `yr-cell ${lv}${key === tKey ? ' is-today' : ''}`.trim());
+      cell.type = 'button';
+      cell.setAttribute('aria-label', `${m + 1}月${d}日（完了${n}件）を開く`);
+      cell.addEventListener('click', () => {
+        ui.cursor = new Date(y, m, d);
+        ui.view = 'day';
+        renderAll();
+      });
+      cells.append(cell);
+    }
+    row.append(cells);
+    card.append(row);
+  }
+  const legend = el('div', 'yr-legend');
+  legend.append('少');
+  ['', 'lv1', 'lv2', 'lv3'].forEach((lv) => legend.append(el('span', `yr-cell ${lv}`.trim())));
+  legend.append('多');
+  card.append(legend);
+  body.append(card);
+}
+
+/* ----- 年月ピッカー ----- */
+
+let pickerYear = new Date().getFullYear();
+
+function openPicker() {
+  pickerYear = ui.cursor.getFullYear();
+  renderPicker();
+  $('#picker-scrim').hidden = false;
+}
+function closePicker() { $('#picker-scrim').hidden = true; }
+function renderPicker() {
+  $('#py-val').textContent = String(pickerYear);
+  const grid = $('#pm-grid');
+  grid.textContent = '';
+  const now = new Date();
+  for (let m = 0; m < 12; m += 1) {
+    const btn = el('button', 'pm-btn');
+    btn.type = 'button';
+    btn.textContent = `${m + 1}月`;
+    if (pickerYear === ui.cursor.getFullYear() && m === ui.cursor.getMonth()) btn.classList.add('is-active');
+    if (pickerYear === now.getFullYear() && m === now.getMonth()) btn.classList.add('is-current');
+    btn.addEventListener('click', () => {
+      // 日は維持しつつ、月末を超える場合は丸める（例: 31日→2月28日）
+      const day = Math.min(ui.cursor.getDate(), new Date(pickerYear, m + 1, 0).getDate());
+      ui.cursor = new Date(pickerYear, m, day);
+      ui.selectedKey = toKey(new Date(pickerYear, m, 1));
+      closePicker();
+      renderAll();
+    });
+    grid.append(btn);
+  }
+}
+$('#cal-title').addEventListener('click', openPicker);
+$('#py-prev').addEventListener('click', () => { pickerYear -= 1; renderPicker(); });
+$('#py-next').addEventListener('click', () => { pickerYear += 1; renderPicker(); });
+$('#picker-today').addEventListener('click', () => {
+  ui.cursor = new Date();
+  ui.selectedKey = todayKey();
+  closePicker();
+  renderAll();
+});
+$('#picker-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePicker(); });
+
+/* ----- insights（振り返り） ----- */
+
+function periodDays(period) {
+  const now = new Date();
+  let start;
+  let count;
+  if (period === 'week') { start = startOfWeekMon(now); count = 7; }
+  else if (period === 'month') { start = new Date(now.getFullYear(), now.getMonth(), 1); count = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); }
+  else { start = new Date(now.getFullYear(), 0, 1); count = Math.round((new Date(now.getFullYear() + 1, 0, 1) - start) / 86400000); }
+  const keys = [];
+  for (let i = 0; i < count; i += 1) keys.push(toKey(addDays(start, i)));
+  return keys;
+}
+
+function renderInsights() {
+  const body = $('#insights-body');
+  body.textContent = '';
+  const tKey = todayKey();
+  const period = ui.insightsPeriod;
+
+  // 期間セグメント（週／月／年）
+  const seg = el('div', 'seg period-seg');
+  [['week', '週'], ['month', '月'], ['year', '年']].forEach(([v, label]) => {
+    const b = el('button', `seg-btn${period === v ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { ui.insightsPeriod = v; renderAll(); });
+    seg.append(b);
+  });
+  body.append(seg);
+
+  const keys = periodDays(period);
+  const perDay = keys.map((key) => ({ key, ...tasksStatsFor(key) }));
+  const total = perDay.reduce((s, d) => s + d.total, 0);
+  const done = perDay.reduce((s, d) => s + d.done, 0);
+  const rate = total ? Math.round((done / total) * 100) : null;
+  const periodLabel = { week: '今週', month: '今月', year: '今年' }[period];
+
+  const stats = el('div', 'stats-row');
+  const c1 = el('div', 'stat-card deep');
+  c1.innerHTML = `<div class="stat-num">${rate === null ? '--' : `${rate}<small>%</small>`}</div><div class="stat-label">${periodLabel}の完了率（${done}/${total}）</div>`;
+  const c2 = el('div', 'stat-card');
+  c2.innerHTML = `<div class="stat-num">${streakDays()}<small>日</small></div><div class="stat-label">連続達成</div>`;
+  const c3 = el('div', 'stat-card');
+  c3.innerHTML = `<div class="stat-num">${done}<small>件</small></div><div class="stat-label">${periodLabel}の完了数</div>`;
+  stats.append(c1, c2, c3);
+  body.append(stats);
+
+  // 完了の棒グラフ（週=曜日別／月=週別／年=月別）
+  let cols;
+  if (period === 'week') {
+    cols = perDay.map((d, i) => ({ label: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'][i], done: d.done, now: d.key === tKey }));
+  } else if (period === 'month') {
+    cols = [];
+    perDay.forEach((d, i) => {
+      const w = Math.floor(i / 7);
+      cols[w] = cols[w] || { label: `W${w + 1}`, done: 0, now: false };
+      cols[w].done += d.done;
+      if (d.key === tKey) cols[w].now = true;
+    });
+  } else {
+    cols = Array.from({ length: 12 }, (_, m) => ({ label: String(m + 1), done: 0, now: m === new Date().getMonth() }));
+    perDay.forEach((d) => { cols[Number(d.key.slice(5, 7)) - 1].done += d.done; });
+  }
+  const chart = el('div', 'card chart-card');
+  chart.append(el('p', 'section-label', `${periodLabel}の完了`));
+  const bars = el('div', 'bars');
+  const maxDone = Math.max(1, ...cols.map((c) => c.done));
+  for (const c of cols) {
+    const col = el('div', `bar-col${c.now ? ' is-today' : ''}`);
+    const bar = el('div', `bar${c.done > 0 ? ' hot' : ''}`);
+    bar.style.height = `${Math.max(4, (c.done / maxDone) * 100)}%`;
+    bar.title = `${c.done}件完了`;
+    col.append(bar, el('span', 'bar-label', c.label));
+    bars.append(col);
+  }
+  chart.append(bars);
+  body.append(chart);
+
+  // できたこと（期間内・新しい順に最大15件）
+  const doneItems = [];
+  for (let i = keys.length - 1; i >= 0 && doneItems.length < 15; i -= 1) {
+    if (keys[i] > tKey) continue; // 未来の日はスキップ
+    const dayDone = itemsFor(keys[i]).filter((it) => it.kind === 'task' && it.done);
+    for (const it of dayDone.reverse()) {
+      if (doneItems.length < 15) doneItems.push(it);
+    }
+  }
+  const doneCard = el('div', 'card chart-card');
+  doneCard.append(el('p', 'section-label', `できたこと ✓ ${done}`));
+  if (doneItems.length === 0) {
+    doneCard.append(el('p', 'hint', '完了したタスクがここに並びます。まずはひとつ。'));
+  } else {
+    for (const it of doneItems) {
+      const row = el('div', 'done-row');
+      row.innerHTML = ICONS.check;
+      const main = el('div', 'dr-main');
+      main.append(el('span', 'dr-title', it.title));
+      const m = memoFor(it);
+      if (m) main.append(el('span', 'dr-memo', m));
+      row.append(main);
+      const at = taskDoneAt(it.ref, it.key);
+      const d = fromKey(it.key);
+      row.append(el('span', 'dr-time', it.key === tKey && at
+        ? new Date(at).toTimeString().slice(0, 5)
+        : `${d.getMonth() + 1}/${d.getDate()}`));
+      doneCard.append(row);
+    }
+  }
+  body.append(doneCard);
+
+  // 今日のひとこと
+  const note = el('div', 'card note-card');
+  note.append(el('p', 'section-label', '今日のひとこと'));
+  const ta = document.createElement('textarea');
+  ta.placeholder = '今日できたこと・気づきをひとこと。';
+  ta.value = db.notes[tKey] || '';
+  let noteTimer = null;
+  ta.addEventListener('input', () => {
+    db.notes[tKey] = ta.value;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(save, 300);
+  });
+  note.append(ta);
+  body.append(note);
+}
+
+/* ----- settings ----- */
+
+function renderSettings() {
+  document.querySelectorAll('#theme-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
+  });
+  document.querySelectorAll('#font-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
+  });
+  const grid = $('#accent-grid');
+  grid.textContent = '';
+  for (const [id, a] of Object.entries(ACCENTS)) {
+    const sw = el('button', `accent-swatch${db.settings.accent === id ? ' is-active' : ''}`);
+    sw.type = 'button';
+    sw.style.background = effectiveDark() ? a.dark : a.light;
+    sw.setAttribute('aria-label', a.name);
+    sw.title = a.name;
+    if (db.settings.accent === id) sw.innerHTML = ICONS.check;
+    sw.addEventListener('click', () => {
+      db.settings.accent = id;
+      save(); applyAccent(); renderAll();
+    });
+    grid.append(sw);
+  }
+  const repeats = db.tasks.filter((t) => t.repeat).length;
+  let doneCount = 0;
+  for (const t of db.tasks) doneCount += t.repeat ? Object.keys(t.doneDates || {}).length : (t.done ? 1 : 0);
+  $('#data-summary').textContent = `タスク ${db.tasks.length}件（うち繰り返し ${repeats}）・予定 ${db.events.length}件・これまでの完了 ${doneCount}回`;
+}
+document.querySelectorAll('#theme-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.theme = b.dataset.themeOpt;
+    save(); applyTheme(); renderAll();
+  });
+});
+document.querySelectorAll('#font-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.font = b.dataset.fontOpt;
+    save(); applyFont(); renderAll();
+  });
+});
+
+/* ========== add / edit sheet ========== */
+
+const sheetEls = {
+  scrim: $('#sheet-scrim'),
+  title: $('#sheet-title'),
+  typeSeg: $('#type-seg'),
+  fTitle: $('#f-title'),
+  fDate: $('#f-date'),
+  fTime: $('#f-time'),
+  fMinutes: $('#f-minutes'),
+  fRepeat: $('#f-repeat'),
+  fMemo: $('#f-memo'),
+  taskOnly: $('#task-only-fields'),
+  repeatHint: $('#repeat-hint'),
 };
+
+function openSheet(mode, { item = null, dateKey = null } = {}) {
+  ui.editing = mode === 'edit' ? item : null;
+  ui.sheetType = item ? item.kind : 'task';
+  sheetEls.title.textContent = mode === 'edit' ? '編集' : '追加';
+  sheetEls.typeSeg.hidden = mode === 'edit'; // 種類はあとから変えない
+  syncSheetType();
+
+  if (item) {
+    const r = item.ref;
+    sheetEls.fTitle.value = r.title;
+    sheetEls.fDate.value = r.repeat ? r.startDate : r.date;
+    sheetEls.fTime.value = r.time || '';
+    sheetEls.fMinutes.value = r.minutes || '';
+    sheetEls.fRepeat.value = r.repeat || '';
+    sheetEls.fMemo.value = memoFor(item) || '';
+    sheetEls.repeatHint.hidden = !r.repeat;
+  } else {
+    sheetEls.fTitle.value = '';
+    sheetEls.fDate.value = dateKey || (ui.view === 'month' ? (ui.selectedKey || todayKey()) : toKey(ui.cursor));
+    sheetEls.fTime.value = '';
+    sheetEls.fMinutes.value = '';
+    sheetEls.fRepeat.value = '';
+    sheetEls.fMemo.value = '';
+    sheetEls.repeatHint.hidden = true;
+  }
+  sheetEls.scrim.hidden = false;
+  sheetEls.fTitle.focus();
+}
+function closeSheet() {
+  sheetEls.scrim.hidden = true;
+  ui.editing = null;
+}
+sheetEls.scrim.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSheet(); });
+
+sheetEls.typeSeg.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-type]');
+  if (!btn) return;
+  ui.sheetType = btn.dataset.type;
+  syncSheetType();
+});
+function syncSheetType() {
+  sheetEls.typeSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b.dataset.type === ui.sheetType));
+  sheetEls.taskOnly.hidden = ui.sheetType !== 'task';
+}
+
+$('#fab').addEventListener('click', () => openSheet('add', {}));
+
+$('#sheet-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const title = sheetEls.fTitle.value.trim();
+  if (!title) {
+    sheetEls.fTitle.classList.remove('shake');
+    void sheetEls.fTitle.offsetWidth; // 連続submitでも振動し直す
+    sheetEls.fTitle.classList.add('shake');
+    sheetEls.fTitle.focus();
+    return;
+  }
+  const dateKey = sheetEls.fDate.value || todayKey();
+  const time = sheetEls.fTime.value || null;
+  const rawMin = parseInt(sheetEls.fMinutes.value, 10);
+  const minutes = Number.isInteger(rawMin) && rawMin >= 1 && rawMin <= 600 ? rawMin : null;
+  const repeat = sheetEls.fRepeat.value || null;
+  const memo = sheetEls.fMemo.value.trim() || null;
+
+  if (ui.editing) {
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo });
+  } else if (ui.sheetType === 'event') {
+    const ev = { id: newId('e'), title, date: dateKey, time, memo, createdAt: Date.now() };
+    db.events.push(ev);
+    ui.justAddedId = `${ev.id}@${dateKey}`;
+  } else if (repeat) {
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, createdAt: Date.now() };
+    db.tasks.push(t);
+    ui.justAddedId = `${t.id}@${dateKey}`;
+  } else {
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, createdAt: Date.now() };
+    db.tasks.push(t);
+    ui.justAddedId = `${t.id}@${dateKey}`;
+  }
+  save();
+  closeSheet();
+  renderAll();
+  ui.justAddedId = null;
+});
+
+function newId(prefix) {
+  return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo }) {
+  const r = item.ref;
+  r.title = title;
+  r.time = time;
+  if (item.kind === 'event') {
+    r.date = dateKey;
+    r.memo = memo;
+    return;
+  }
+  if (r.repeat && repeat) { // 繰り返しのメモは「この日の分」として保存（日記になる）
+    r.memoDates = r.memoDates || {};
+    if (memo) r.memoDates[item.key] = memo;
+    else delete r.memoDates[item.key];
+  } else {
+    r.memo = memo;
+  }
+  r.minutes = minutes;
+  const wasRepeat = Boolean(r.repeat);
+  const nowRepeat = Boolean(repeat);
+  if (nowRepeat) {
+    r.repeat = repeat;
+    r.startDate = dateKey;
+    r.exDates = r.exDates || [];
+    if (!wasRepeat) { // 単発→繰り返しへ変換
+      r.doneDates = r.done && r.date ? { [r.date]: r.doneAt || Date.now() } : {};
+      delete r.date; delete r.done; delete r.doneAt;
+    }
+  } else if (wasRepeat) { // 繰り返し→単発へ変換（この画面の日付の1件にする）
+    r.date = dateKey;
+    r.done = Boolean((r.doneDates || {})[dateKey]);
+    r.doneAt = (r.doneDates || {})[dateKey] || null;
+    delete r.repeat; delete r.startDate; delete r.doneDates; delete r.exDates;
+  } else {
+    r.date = dateKey;
+  }
+}
+
+/* ========== countdown timer（実行中は1つ・復元可能） ========== */
+
+let tickId = null;
 
 let audioCtx = null;
 function ensureAudio() { // must be called from a user gesture (autoplay policy)
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-  } catch (err) {
-    audioCtx = null;
-  }
+  } catch (err) { audioCtx = null; }
 }
 function chime() {
   if (!audioCtx) return;
@@ -491,13 +1103,12 @@ function chime() {
       gain.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
       osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t);
-      osc.stop(t + 1);
+      osc.start(t); osc.stop(t + 1);
     });
   } catch (err) { /* sound is a garnish — never break the timer for it */ }
 }
 
-function formatMs(ms) {
+function fmtMs(ms) {
   const totalSec = Math.max(0, Math.ceil(ms / 1000));
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -507,112 +1118,181 @@ function formatMs(ms) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-function openTimer(taskId) {
-  const task = state.tasks.find((t) => t.id === taskId);
-  if (!task || !task.minutes) return;
+function remainingMs() {
+  const r = db.running;
+  if (!r) return 0;
+  return r.paused || r.finished ? (r.remainingMs || 0) : Math.max(0, r.endAt - Date.now());
+}
+
+function startTimer(it) {
   ensureAudio();
-  timer.taskId = taskId;
-  timer.totalMs = task.minutes * 60 * 1000;
-  timer.remainingMs = timer.totalMs;
-  timer.finished = false;
-  els.timerTask.textContent = task.title;
-  els.timerCard.classList.remove('is-finished');
-  els.timerMsg.textContent = ' ';
-  els.timerOverlay.hidden = false;
-  document.body.style.overflow = 'hidden';
-  resumeTimer();
+  db.running = {
+    taskId: it.ref.id,
+    dateKey: it.key,
+    title: it.title,
+    time: it.time || null,
+    totalMs: it.minutes * 60 * 1000,
+    endAt: Date.now() + it.minutes * 60 * 1000,
+    remainingMs: null,
+    paused: false,
+    finished: false,
+  };
+  save();
+  startTick();
+  openFocus();
+  renderAll();
 }
 
-function updateTimerDisplay() {
-  const label = formatMs(timer.remainingMs);
-  els.timerTime.textContent = label;
-  const progress = timer.totalMs > 0 ? timer.remainingMs / timer.totalMs : 0;
-  els.ringFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - progress));
-  document.title = `${label}｜${BASE_TITLE}`;
-}
-
-function resumeTimer() {
-  timer.endAt = Date.now() + timer.remainingMs;
-  clearInterval(timer.intervalId);
-  timer.intervalId = setInterval(tickTimer, 200);
-  els.timerToggle.innerHTML = ICONS.pause;
-  els.timerToggle.setAttribute('aria-label', '一時停止');
-  els.timerMsg.textContent = ' ';
-  updateTimerDisplay();
+function startTick() {
+  clearInterval(tickId);
+  tickId = setInterval(() => {
+    const r = db.running;
+    if (!r || r.paused || r.finished) return;
+    if (r.endAt - Date.now() <= 0) finishTimer();
+    updateTimerUI();
+  }, 200);
 }
 
 function pauseTimer() {
-  timer.remainingMs = Math.max(0, timer.endAt - Date.now());
-  clearInterval(timer.intervalId);
-  timer.intervalId = null;
-  els.timerToggle.innerHTML = ICONS.play;
-  els.timerToggle.setAttribute('aria-label', '再開');
-  els.timerMsg.textContent = '一時停止中';
-  updateTimerDisplay();
+  const r = db.running;
+  if (!r || r.paused || r.finished) return;
+  r.remainingMs = Math.max(0, r.endAt - Date.now());
+  r.endAt = null;
+  r.paused = true;
+  save();
+  updateTimerUI();
 }
-
-function tickTimer() {
-  timer.remainingMs = timer.endAt - Date.now();
-  if (timer.remainingMs <= 0) {
-    finishTimer();
-    return;
-  }
-  updateTimerDisplay();
+function resumeTimer() {
+  const r = db.running;
+  if (!r) return;
+  if (r.finished) { r.finished = false; r.remainingMs = r.totalMs; } // もう一度
+  r.endAt = Date.now() + (r.remainingMs ?? r.totalMs);
+  r.remainingMs = null;
+  r.paused = false;
+  save();
+  updateTimerUI();
 }
-
 function finishTimer() {
-  timer.remainingMs = 0;
-  clearInterval(timer.intervalId);
-  timer.intervalId = null;
-  timer.finished = true;
-  els.timerCard.classList.add('is-finished');
-  els.timerMsg.textContent = '時間になりました。おつかれさま！';
-  els.timerToggle.innerHTML = ICONS.play;
-  els.timerToggle.setAttribute('aria-label', 'もう一度');
-  updateTimerDisplay();
+  const r = db.running;
+  if (!r) return;
+  r.finished = true;
+  r.paused = false;
+  r.remainingMs = 0;
+  r.endAt = null;
+  save();
   chime();
+  updateTimerUI();
 }
-
-function resetTimer() {
-  clearInterval(timer.intervalId);
-  timer.intervalId = null;
-  timer.remainingMs = timer.totalMs;
-  timer.finished = false;
-  els.timerCard.classList.remove('is-finished');
-  els.timerToggle.innerHTML = ICONS.play;
-  els.timerToggle.setAttribute('aria-label', '開始');
-  els.timerMsg.textContent = 'リセットしました';
-  updateTimerDisplay();
-}
-
-function closeTimer() {
-  clearInterval(timer.intervalId);
-  timer.intervalId = null;
-  timer.taskId = null;
-  els.timerOverlay.hidden = true;
-  document.body.style.overflow = '';
+function stopTimer() { // 実行を中断してリセット（タスクは未完了のまま）
+  db.running = null;
+  save();
+  closeFocus();
   document.title = BASE_TITLE;
+  renderAll();
+}
+function completeRunning() {
+  const r = db.running;
+  if (!r) return;
+  const t = db.tasks.find((x) => x.id === r.taskId);
+  if (t && !taskDoneOn(t, r.dateKey)) {
+    if (t.repeat) { t.doneDates = t.doneDates || {}; t.doneDates[r.dateKey] = Date.now(); }
+    else { t.done = true; t.doneAt = Date.now(); }
+  }
+  db.running = null;
+  save();
+  closeFocus();
+  document.title = BASE_TITLE;
+  renderAll();
 }
 
-els.timerToggle.addEventListener('click', () => {
-  if (timer.finished) {
-    resetTimer();
-    resumeTimer();
-  } else if (timer.intervalId) {
-    pauseTimer();
-  } else {
-    resumeTimer();
+function updateTimerUI() {
+  const r = db.running;
+  if (!r) return;
+  const rem = remainingMs();
+  const label = fmtMs(rem);
+  const progress = r.totalMs > 0 ? rem / r.totalMs : 0;
+  document.title = r.paused ? BASE_TITLE : `${label}｜${BASE_TITLE}`;
+
+  const focus = $('#focus');
+  if (!focus.hidden) {
+    $('#focus-time').textContent = label;
+    $('#ring-fg').style.strokeDashoffset = String(FOCUS_CIRC * (1 - progress));
+    focus.classList.toggle('is-paused', r.paused && !r.finished);
+    focus.classList.toggle('is-finished', r.finished);
+    $('#timer-toggle').innerHTML = (r.paused || r.finished) ? ICONS.play : ICONS.pause;
+    $('#focus-set').textContent = r.finished
+      ? 'おつかれさま！'
+      : `SET ${Math.round(r.totalMs / 60000)}分${r.time ? ` ・ ${r.time}` : ''}`;
   }
+  const runFg = document.querySelector('.run-card .rr-fg');
+  if (runFg) {
+    runFg.style.strokeDashoffset = String(RUN_CIRC * (1 - progress));
+    const timeEl = document.querySelector('.run-card .run-time');
+    if (timeEl) timeEl.textContent = label;
+  }
+}
+
+function buildRunCard() {
+  const r = db.running;
+  const card = el('div', 'run-card');
+  card.setAttribute('role', 'button');
+  card.innerHTML = `
+    <span class="run-ringwrap">
+      <svg class="run-ring" viewBox="0 0 88 88" aria-hidden="true">
+        <circle class="rr-bg" cx="44" cy="44" r="40"/>
+        <circle class="rr-fg" cx="44" cy="44" r="40"/>
+      </svg>
+      ${r.paused || r.finished ? ICONS.play : ICONS.pause}
+    </span>
+    <span class="run-info">
+      <span class="run-title"></span>
+      <div class="run-time mono">--:--</div>
+      <span class="run-set mono">SET ${Math.round(r.totalMs / 60000)}分${r.finished ? ' ・ 時間になりました' : r.paused ? ' ・ 一時停止中' : ''}</span>
+    </span>
+    <button class="run-expand" aria-label="フォーカス画面を開く">${ICONS.maximize}</button>`;
+  card.querySelector('.run-title').textContent = r.title;
+  card.addEventListener('click', () => { openFocus(); });
+  setTimeout(updateTimerUI, 0);
+  return card;
+}
+
+function openFocus() {
+  const r = db.running;
+  if (!r) return;
+  $('#focus-task').textContent = r.title;
+  $('#focus').hidden = false;
+  document.body.style.overflow = 'hidden';
+
+  // 「つぎ」= 今日の未完了・時間つきタスクのうち実行中でないもの
+  const next = itemsFor(todayKey()).find((i) => i.kind === 'task' && !i.done && i.minutes && i.ref.id !== r.taskId);
+  $('#focus-next').hidden = !next;
+  if (next) {
+    $('#focus-next-title').textContent = next.title;
+    $('#focus-next-time').textContent = next.time || `${next.minutes}分`;
+  }
+  updateTimerUI();
+}
+function closeFocus() {
+  $('#focus').hidden = true;
+  document.body.style.overflow = '';
+}
+
+$('#focus-close').addEventListener('click', () => { closeFocus(); renderAll(); }); // タイマーは走り続ける
+$('#timer-stop').addEventListener('click', stopTimer);
+$('#timer-done').addEventListener('click', completeRunning);
+$('#timer-toggle').addEventListener('click', () => {
+  const r = db.running;
+  if (!r) return;
+  if (r.paused || r.finished) resumeTimer();
+  else pauseTimer();
 });
-$('#timer-reset').addEventListener('click', resetTimer);
-$('#timer-close').addEventListener('click', closeTimer);
-$('#timer-done').addEventListener('click', () => {
-  const task = state.tasks.find((t) => t.id === timer.taskId);
-  closeTimer();
-  if (task && !task.done) toggleDone(task.id);
-});
+
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !els.timerOverlay.hidden) closeTimer();
+  if (e.key !== 'Escape') return;
+  if (!$('#focus').hidden) { closeFocus(); renderAll(); return; }
+  if (!sheetEls.scrim.hidden) { closeSheet(); return; }
+  if (!$('#confirm-scrim').hidden) { closeConfirm(); return; }
+  if (!$('#picker-scrim').hidden) closePicker();
 });
 
 /* ========== PWA ========== */
@@ -628,9 +1308,18 @@ if ('serviceWorker' in navigator) {
 
 /* ========== init ========== */
 
-for (let i = 0; i < 7; i += 1) {
-  const wd = el('span', i === 0 ? 'sun' : i === 6 ? 'sat' : '');
-  wd.textContent = WEEKDAYS[i];
-  els.monthWeekdays.append(wd);
+applyTheme();
+applyFont();
+// 実行中タイマーの復元（リロード・再起動後）
+if (db.running) {
+  const r = db.running;
+  if (!r.paused && !r.finished && r.endAt && r.endAt - Date.now() <= 0) {
+    r.finished = true;
+    r.remainingMs = 0;
+    r.endAt = null;
+    save();
+  }
+  startTick();
 }
+ui.selectedKey = todayKey();
 renderAll();
