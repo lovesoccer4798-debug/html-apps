@@ -47,13 +47,13 @@
 
 /* フォント設定（設定画面の4択。端末内蔵フォントのみ — Webフォントは読まない） */
 :root[data-font="rounded"] {
-  --tc-font: "Hiragino Maru Gothic ProN", "HGMaruGothicMPRO", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  --tc-font: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", "HGMaruGothicMPRO", "BIZ UDGothic", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
 }
 :root[data-font="mincho"] {
-  --tc-font: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "MS PMincho", serif;
+  --tc-font: "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", "YuMincho", "BIZ UDMincho", "Noto Serif CJK JP", "Noto Serif JP", "MS PMincho", serif;
 }
 :root[data-font="mono"] {
-  --tc-font: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --tc-font: "Osaka-Mono", "Noto Sans Mono CJK JP", "MS Gothic", "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 /* ダーク（Turn 4）— OS追従 */

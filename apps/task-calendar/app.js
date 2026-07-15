@@ -179,6 +179,22 @@ function applyAccent() {
   rs.setProperty('--tc-accent-bright', a.bright);
   rs.setProperty('--tc-accent-ink', a.ink);
 }
+/* 端末にその書体（日本語）が入っているかの目安。document.fonts.check が使えない環境では判定しない */
+const FONT_PROBES = {
+  rounded: ['Hiragino Maru Gothic ProN', 'HGMaruGothicMPRO', 'BIZ UDGothic'],
+  mincho: ['Hiragino Mincho ProN', 'Yu Mincho', 'BIZ UDMincho', 'Noto Serif CJK JP', 'Noto Serif JP', 'MS PMincho'],
+  mono: ['Osaka-Mono', 'Noto Sans Mono CJK JP', 'MS Gothic'],
+};
+function fontMissing(opt) {
+  const probes = FONT_PROBES[opt];
+  if (!probes || !document.fonts || !document.fonts.check) return false;
+  try {
+    return probes.every((f) => !document.fonts.check(`12px "${f}"`));
+  } catch (err) {
+    return false;
+  }
+}
+
 function applyFont() {
   if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
   else document.documentElement.dataset.font = db.settings.font;
@@ -903,6 +919,14 @@ function renderSettings() {
   });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
+    const missing = fontMissing(b.dataset.fontOpt);
+    let mark = b.querySelector('.miss-mark');
+    if (missing && !mark) {
+      mark = el('span', 'miss-mark', '＊');
+      b.append(mark);
+    } else if (!missing && mark) {
+      mark.remove();
+    }
   });
   const grid = $('#accent-grid');
   grid.textContent = '';

@@ -750,3 +750,16 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .sheet textarea::placeholder { color: var(--tc-ink4); }
 .sheet textarea:focus { outline: none; border-color: var(--tc-accent); box-shadow: 0 0 0 3px var(--tc-accent-soft); }
+
+/* ---------- v3.1: フォントプレビュー ---------- */
+
+.font-preview {
+  font-family: var(--tc-font);
+  font-size: 16px;
+  background: var(--tc-bg);
+  border: 1.5px dashed var(--tc-line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-top: 12px;
+}
+.theme-seg button .miss-mark { color: var(--tc-danger); font-weight: 700; }
