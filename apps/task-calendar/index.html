@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="tokens.css?v=8">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 
@@ -44,6 +44,7 @@
         <button class="seg-btn" data-view="month" role="tab">月</button>
         <button class="seg-btn" data-view="year" role="tab">年</button>
       </nav>
+      <button class="goal-line" id="goal-line" type="button"></button>
     </header>
     <div class="body" id="cal-body"></div>
   </section>
@@ -103,6 +104,15 @@
         <p class="hint" id="font-hint">端末に入っている書体を使います。「＊」が付く書体はこの端末に日本語書体がなく、数字・英字だけ変わります。</p>
       </div>
 
+      <p class="section-label">文字サイズ</p>
+      <div class="card">
+        <div class="theme-seg" id="size-seg">
+          <button data-size-opt="large">大（今のまま）</button>
+          <button data-size-opt="medium">中</button>
+          <button data-size-opt="small">小</button>
+        </div>
+      </div>
+
       <p class="section-label">データ</p>
       <div class="card">
         <p class="data-line" id="data-summary"></p>
@@ -142,6 +152,7 @@
 <div class="sheet-scrim" id="sheet-scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="sheet-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     <h2 class="sheet-title" id="sheet-title">追加</h2>
     <form id="sheet-form" autocomplete="off">
       <div class="type-seg" id="type-seg">
@@ -176,6 +187,8 @@
           </select>
         </div>
       </div>
+      <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
+      <div class="r-colors" id="f-colors"></div>
       <label class="f-label" for="f-memo">メモ（任意）</label>
       <textarea id="f-memo" rows="2" maxlength="500" placeholder="ふりかえり用のひとこと・気づきなど"></textarea>
       <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます（メモだけはこの日の分として保存）。</p>
@@ -200,6 +213,7 @@
 <div class="sheet-scrim" id="routine-scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="r-sheet-title">
     <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="r-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     <h2 class="sheet-title" id="r-sheet-title">新しいルーティン</h2>
     <form id="r-form" autocomplete="off">
       <label class="f-label" for="r-title">タイトル</label>
@@ -234,6 +248,7 @@
 <div class="sheet-scrim" id="share-scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="share-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     <h2 class="sheet-title" id="share-title">共有</h2>
     <textarea id="share-text" rows="6" placeholder="ここに共有テキストを貼り付け"></textarea>
     <button class="cta" id="share-copy" hidden>テキストをコピー</button>
@@ -306,6 +321,6 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

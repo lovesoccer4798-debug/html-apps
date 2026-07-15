@@ -44,7 +44,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], settings: { theme: 'auto', accent: 'green', font: 'gothic' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large' }, running: null };
 }
 
 function loadDb() {
@@ -105,6 +105,26 @@ function fromKey(key) {
 }
 function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
 function startOfWeekMon(d) { return addDays(d, -((d.getDay() + 6) % 7)); } // handoffは月曜はじまり
+/* 日本の祝日（主要な固定・ハッピーマンデー・春分秋分の近似式＋振替休日） */
+function jpHolidayBase(d) {
+  const y = d.getFullYear(); const m = d.getMonth() + 1; const day = d.getDate(); const w = d.getDay();
+  const nthMon = (n) => w === 1 && Math.ceil(day / 7) === n;
+  const shunbun = Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  const shubun = Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+  return (m === 1 && day === 1) || (m === 2 && (day === 11 || day === 23)) || (m === 4 && day === 29)
+    || (m === 5 && day >= 3 && day <= 5) || (m === 8 && day === 11) || (m === 11 && (day === 3 || day === 23))
+    || (m === 1 && nthMon(2)) || (m === 7 && nthMon(3)) || (m === 9 && nthMon(3)) || (m === 10 && nthMon(2))
+    || (m === 3 && day === shunbun) || (m === 9 && day === shubun);
+}
+function isJpHoliday(d) {
+  if (jpHolidayBase(d)) return true;
+  return d.getDay() === 1 && jpHolidayBase(addDays(d, -1)); // 振替休日
+}
+function dayColorClass(d) {
+  if (d.getDay() === 0 || isJpHoliday(d)) return ' sun';
+  if (d.getDay() === 6) return ' sat';
+  return '';
+}
 function todayKey() { return toKey(new Date()); }
 
 /* ========== occurrences（繰り返しの展開） ========== */
@@ -126,6 +146,16 @@ function occursOn(t, key) {
 }
 function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
 function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+/* 予定表モード等で使う色: 自分の色 > ルーティンの色 > なし */
+function itemColor(it) {
+  const pick = (id) => (ACCENTS[id] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+  if (it.ref.color) return pick(it.ref.color);
+  if (it.kind === 'task' && it.ref.routineId) {
+    const r = db.routines.find((x) => x.id === it.ref.routineId);
+    if (r) return pick(r.color);
+  }
+  return null;
+}
 function memoFor(it) {
   const r = it.ref;
   if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
@@ -200,6 +230,11 @@ function fontMissing(opt) {
   }
 }
 
+function applySize() {
+  const v = db.settings.fontSize;
+  if (!v || v === 'large') delete document.documentElement.dataset.fontsize;
+  else document.documentElement.dataset.fontsize = v;
+}
 function applyFont() {
   if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
   else document.documentElement.dataset.font = db.settings.font;
@@ -409,14 +444,11 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
   card.append(main);
 
-  if (it.kind === 'task' && it.ref.routineId) { // ルーティン色のタグ
-    const r = db.routines.find((x) => x.id === it.ref.routineId);
-    if (r) {
-      const dot = el('span', 'routine-dot');
-      dot.style.background = (ACCENTS[r.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
-      dot.title = r.title;
-      card.append(dot);
-    }
+  const ownColor = itemColor(it);
+  if (ownColor) { // 自分の色 or ルーティン色のタグ
+    const dot = el('span', 'routine-dot');
+    dot.style.background = ownColor;
+    card.append(dot);
   }
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
   if (showTime && it.time) {
@@ -541,6 +573,40 @@ function streakDays() {
   return n;
 }
 
+function goalKey() {
+  const c = ui.cursor;
+  if (ui.view === 'day') return `d:${toKey(c)}`;
+  if (ui.view === 'week') return `w:${toKey(startOfWeekMon(c))}`;
+  if (ui.view === 'month') return `m:${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, '0')}`;
+  return `y:${c.getFullYear()}`;
+}
+const GOAL_PLACEHOLDER = { day: '今日の目標を書く…', week: '今週の目標を書く…', month: '今月の目標を書く…', year: '今年の目標を書く…' };
+
+$('#goal-line').addEventListener('click', () => {
+  const line = $('#goal-line');
+  if (line.dataset.editing) return;
+  const k = goalKey();
+  line.dataset.editing = '1';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 60;
+  input.className = 'goal-input';
+  input.value = db.goals[k] || '';
+  input.placeholder = GOAL_PLACEHOLDER[ui.view];
+  line.textContent = '';
+  line.classList.remove('is-empty');
+  line.append(input);
+  input.focus();
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+  input.addEventListener('blur', () => {
+    const v = input.value.trim();
+    if (v) db.goals[k] = v; else delete db.goals[k];
+    save();
+    delete line.dataset.editing;
+    renderAll();
+  });
+});
+
 function renderCal() {
   document.querySelectorAll('.seg-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === ui.view));
   const c = ui.cursor;
@@ -555,6 +621,7 @@ function renderCal() {
     title.textContent = `${c.getMonth() + 1}月${c.getDate()}日（${WD_JA[c.getDay()]}）`;
   } else if (ui.view === 'week') {
     const s = startOfWeekMon(c);
+    $('#cal-title').classList.add('small'); // 「7月27日〜8月2日」が変な位置で折り返さないように
     const e2 = addDays(s, 6);
     eyebrow.textContent = s.getMonth() === e2.getMonth()
       ? `${MONTH_EN[s.getMonth()]} ${s.getDate()} — ${e2.getDate()}`
@@ -567,6 +634,14 @@ function renderCal() {
     title.textContent = `${c.getFullYear()}年${c.getMonth() + 1}月`;
   }
 
+  if (ui.view !== 'week') $('#cal-title').classList.remove('small');
+
+  const goalLine = $('#goal-line');
+  if (!goalLine.dataset.editing) {
+    const g = db.goals[goalKey()];
+    goalLine.textContent = g || GOAL_PLACEHOLDER[ui.view];
+    goalLine.classList.toggle('is-empty', !g);
+  }
   const body = $('#cal-body');
   body.textContent = '';
   openSwipeEl = null;
@@ -581,6 +656,8 @@ function renderCal() {
 function renderDay(body) {
   const key = toKey(ui.cursor);
   if (db.running) body.append(buildRunCard());
+
+  body.append(buildSleepCard(key));
 
   const items = itemsFor(key);
   const stats = tasksStatsFor(key);
@@ -619,8 +696,8 @@ function renderWeek(body) {
     const dateBlock = el('button', `wk-date${key === todayKey() ? ' is-today' : ''}`);
     dateBlock.type = 'button';
     dateBlock.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日をデイリー表示で開く`);
-    dateBlock.append(el('span', 'dnum', String(day.getDate())));
-    dateBlock.append(el('span', `wd${day.getDay() === 0 ? ' sun' : ''}`, WD_EN[day.getDay()]));
+    dateBlock.append(el('span', `dnum${dayColorClass(day)}`, String(day.getDate())));
+    dateBlock.append(el('span', `wd${day.getDay() === 0 ? ' sun' : day.getDay() === 6 ? ' sat' : ''}`, WD_EN[day.getDay()]));
     dateBlock.addEventListener('click', () => { ui.cursor = day; ui.view = 'day'; renderAll(); });
     row.append(dateBlock);
 
@@ -651,11 +728,25 @@ function renderWeek(body) {
 
 function renderMonth(body) {
   const c = ui.cursor;
+  const schedule = db.settings.monthStyle === 'schedule';
+
+  // ドット（既定）⇄ 予定表（TimeTree風ラベル）の切替 — 既存のドット表示はそのまま
+  const styleRow = el('div', 'mo-style-seg');
+  const styleSeg = el('div', 'seg');
+  [['dots', 'ドット'], ['schedule', '予定表']].forEach(([v, label]) => {
+    const b = el('button', `seg-btn${(db.settings.monthStyle || 'dots') === v ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { db.settings.monthStyle = v; save(); renderAll(); });
+    styleSeg.append(b);
+  });
+  styleRow.append(styleSeg);
+  body.append(styleRow);
+
   const head = el('div', 'mo-head');
   ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].forEach((w) => head.append(el('span', '', w)));
   body.append(head);
 
-  const grid = el('div', 'mo-grid');
+  const grid = el('div', schedule ? 'mo-grid schedule' : 'mo-grid');
   const first = new Date(c.getFullYear(), c.getMonth(), 1);
   const gridStart = startOfWeekMon(first);
   for (let i = 0; i < 42; i += 1) {
@@ -671,13 +762,23 @@ function renderMonth(body) {
     ].filter(Boolean).join(' '));
     cell.type = 'button';
     cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
-    cell.append(el('span', 'dnum', String(day.getDate())));
-    const dots = el('span', 'mo-dots');
-    for (const it of items.slice(0, MAX_MONTH_DOTS)) {
-      dots.append(el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`));
+    cell.append(el('span', `dnum${dayColorClass(day)}`, String(day.getDate())));
+    if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
+      for (const it of items.slice(0, 4)) {
+        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}`, it.title);
+        const cc = itemColor(it);
+        if (cc) chip.style.background = cc;
+        cell.append(chip);
+      }
+      if (items.length > 4) cell.append(el('span', 'mo-chip-more', `+${items.length - 4}`));
+    } else {
+      const dots = el('span', 'mo-dots');
+      for (const it of items.slice(0, MAX_MONTH_DOTS)) {
+        dots.append(el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`));
+      }
+      if (items.length > MAX_MONTH_DOTS) dots.append(el('span', 'mdot-more', '+'));
+      cell.append(dots);
     }
-    if (items.length > MAX_MONTH_DOTS) dots.append(el('span', 'mdot-more', '+'));
-    cell.append(dots);
     cell.addEventListener('click', () => { ui.selectedKey = key; renderAll(); });
     grid.append(cell);
   }
@@ -803,6 +904,36 @@ $('#picker-today').addEventListener('click', () => {
 });
 $('#picker-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePicker(); });
 
+/* ----- 睡眠記録（朝活サポート: この日の起床とその前夜の就寝） ----- */
+
+function toMin(t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3)); }
+function sleepDurMin(rec) { return (toMin(rec.wake) - toMin(rec.bed) + 1440) % 1440; }
+function fmtDur(min) { return `${Math.floor(min / 60)}時間${String(Math.round(min % 60)).padStart(2, '0')}分`; }
+function fmtClock(min) { const m2 = ((Math.round(min) % 1440) + 1440) % 1440; return `${String(Math.floor(m2 / 60)).padStart(2, '0')}:${String(m2 % 60).padStart(2, '0')}`; }
+
+function buildSleepCard(key) {
+  const rec = db.sleep[key] || {};
+  const card = el('div', 'sleep-card');
+  card.innerHTML = `${ICONS.clock}<span>就寝</span>`;
+  const bed = document.createElement('input');
+  bed.type = 'time'; bed.value = rec.bed || '';
+  const wakeLabel = el('span', '', '起床');
+  const wake = document.createElement('input');
+  wake.type = 'time'; wake.value = rec.wake || '';
+  const dur = el('span', 'sleep-dur');
+  const sync = () => {
+    const r = { bed: bed.value || null, wake: wake.value || null };
+    if (r.bed || r.wake) db.sleep[key] = r; else delete db.sleep[key];
+    dur.textContent = r.bed && r.wake ? fmtDur(sleepDurMin(r)) : '';
+    save();
+  };
+  bed.addEventListener('change', sync);
+  wake.addEventListener('change', sync);
+  if (rec.bed && rec.wake) dur.textContent = fmtDur(sleepDurMin(rec));
+  card.append(bed, wakeLabel, wake, dur);
+  return card;
+}
+
 /* ----- insights（振り返り） ----- */
 
 function periodDays(period) {
@@ -913,6 +1044,21 @@ function renderInsights() {
   }
   body.append(doneCard);
 
+  // 睡眠（平均就寝・起床・睡眠時間）
+  const sleepRecs = keys.filter((k) => k <= tKey).map((k) => db.sleep[k]).filter((r) => r && r.bed && r.wake);
+  if (sleepRecs.length) {
+    const bedAvg = sleepRecs.reduce((a, r) => a + (toMin(r.bed) < 720 ? toMin(r.bed) + 1440 : toMin(r.bed)), 0) / sleepRecs.length;
+    const wakeAvg = sleepRecs.reduce((a, r) => a + toMin(r.wake), 0) / sleepRecs.length;
+    const durAvg = sleepRecs.reduce((a, r) => a + sleepDurMin(r), 0) / sleepRecs.length;
+    const sCard = el('div', 'card chart-card');
+    sCard.append(el('p', 'section-label', `睡眠（${sleepRecs.length}日分）`));
+    const row = el('div', 'stats-row');
+    const mk = (num, label) => { const d2 = el('div', 'stat-card'); d2.innerHTML = `<div class="stat-num" style="font-size:18px">${num}</div><div class="stat-label">${label}</div>`; return d2; };
+    row.append(mk(fmtClock(bedAvg), '平均就寝'), mk(fmtClock(wakeAvg), '平均起床'), mk(fmtDur(durAvg), '平均睡眠'));
+    sCard.append(row);
+    body.append(sCard);
+  }
+
   // ルーティン別の達成
   if (db.routines.length > 0) {
     const rCard = el('div', 'card chart-card');
@@ -955,6 +1101,9 @@ function renderInsights() {
 function renderSettings() {
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
+  });
+  document.querySelectorAll('#size-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.sizeOpt === (db.settings.fontSize || 'large'));
   });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
@@ -999,6 +1148,12 @@ document.querySelectorAll('#font-seg button').forEach((b) => {
     save(); applyFont(); renderAll();
   });
 });
+document.querySelectorAll('#size-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.fontSize = b.dataset.sizeOpt;
+    save(); applySize(); renderAll();
+  });
+});
 
 /* ========== add / edit sheet ========== */
 
@@ -1041,14 +1196,38 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
     sheetEls.fMemo.value = '';
     sheetEls.repeatHint.hidden = true;
   }
+  buildSheetColors(item ? (item.ref.color || '') : '');
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
+}
+function buildSheetColors(current) {
+  const wrap = $('#f-colors');
+  wrap.textContent = '';
+  const options = [['', 'なし'], ...Object.entries(ACCENTS).map(([id, a]) => [id, a.name])];
+  for (const [id, name] of options) {
+    const sw = el('button', `accent-swatch${id === '' ? ' f-colors-none' : ''}${current === id ? ' is-active' : ''}`);
+    sw.type = 'button';
+    sw.dataset.color = id;
+    if (id === '') sw.textContent = 'なし';
+    else sw.style.background = effectiveDark() ? ACCENTS[id].dark : ACCENTS[id].light;
+    sw.setAttribute('aria-label', name);
+    if (current === id && id !== '') sw.innerHTML = ICONS.check;
+    sw.addEventListener('click', () => {
+      wrap.querySelectorAll('.accent-swatch').forEach((b) => { b.classList.remove('is-active'); if (b.dataset.color !== '') b.innerHTML = ''; });
+      sw.classList.add('is-active');
+      if (id !== '') sw.innerHTML = ICONS.check;
+    });
+    wrap.append(sw);
+  }
 }
 function closeSheet() {
   sheetEls.scrim.hidden = true;
   ui.editing = null;
 }
 sheetEls.scrim.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSheet(); });
+$('#sheet-close').addEventListener('click', closeSheet);
+$('#r-close').addEventListener('click', () => { $('#routine-scrim').hidden = true; routineEditing = null; });
+$('#share-close').addEventListener('click', () => { $('#share-scrim').hidden = true; });
 
 sheetEls.typeSeg.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-type]');
@@ -1079,19 +1258,20 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const minutes = Number.isInteger(rawMin) && rawMin >= 1 && rawMin <= 600 ? rawMin : null;
   const repeat = sheetEls.fRepeat.value || null;
   const memo = sheetEls.fMemo.value.trim() || null;
+  const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, memo, createdAt: Date.now() };
+    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, createdAt: Date.now() };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1105,10 +1285,11 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
+  r.color = color;
   if (item.kind === 'event') {
     r.date = dateKey;
     r.memo = memo;
@@ -1750,6 +1931,7 @@ if ('serviceWorker' in navigator) {
 
 applyTheme();
 applyFont();
+applySize();
 // 実行中タイマーの復元（リロード・再起動後）
 if (db.running) {
   const r = db.running;
