@@ -45,6 +45,17 @@
   --tc-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+/* フォント設定（設定画面の4択。端末内蔵フォントのみ — Webフォントは読まない） */
+:root[data-font="rounded"] {
+  --tc-font: "Hiragino Maru Gothic ProN", "HGMaruGothicMPRO", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+}
+:root[data-font="mincho"] {
+  --tc-font: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "MS PMincho", serif;
+}
+:root[data-font="mono"] {
+  --tc-font: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
 /* ダーク（Turn 4）— OS追従 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {

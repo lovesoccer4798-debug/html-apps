@@ -726,3 +726,27 @@ input, select, textarea { font: inherit; color: inherit; }
 .done-row .dr-main .dr-title { flex: none; }
 .dr-memo { font-size: 12px; color: var(--tc-ink3); text-decoration: none; overflow-wrap: anywhere; }
 .dr-date { font-family: var(--tc-mono); font-size: 11px; color: var(--tc-ink4); margin-right: 6px; }
+
+/* ---------- v3: タスクメモ ---------- */
+
+.item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.item-main .item-title { flex: none; }
+.item-memo {
+  font-size: 12px;
+  color: var(--tc-ink3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.item.is-done .item-memo { text-decoration: none; }
+
+.sheet textarea {
+  width: 100%;
+  background: var(--tc-bg);
+  border: 1.5px solid var(--tc-line);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 14px;
+  color: var(--tc-ink);
+  resize: vertical;
+}
+.sheet textarea::placeholder { color: var(--tc-ink4); }
+.sheet textarea:focus { outline: none; border-color: var(--tc-accent); box-shadow: 0 0 0 3px var(--tc-accent-soft); }

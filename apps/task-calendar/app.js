@@ -43,7 +43,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, settings: { theme: 'auto', accent: 'green' }, running: null };
+  return { tasks: [], events: [], notes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic' }, running: null };
 }
 
 function loadDb() {
@@ -121,6 +121,11 @@ function occursOn(t, key) {
 }
 function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
 function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+function memoFor(it) {
+  const r = it.ref;
+  if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
+  return r.memo || null;
+}
 
 function itemsFor(key) {
   const items = [];
@@ -173,6 +178,10 @@ function applyAccent() {
   rs.setProperty('--tc-accent', effectiveDark() ? a.dark : a.light);
   rs.setProperty('--tc-accent-bright', a.bright);
   rs.setProperty('--tc-accent-ink', a.ink);
+}
+function applyFont() {
+  if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
+  else document.documentElement.dataset.font = db.settings.font;
 }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); });
 
@@ -373,7 +382,11 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     card.append(mark);
   }
 
-  card.append(el('span', 'item-title', it.title));
+  const main = el('div', 'item-main');
+  main.append(el('span', 'item-title', it.title));
+  const memo = memoFor(it);
+  if (memo && !compact) main.append(el('span', 'item-memo', memo));
+  card.append(main);
 
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
   if (showTime && it.time) {
@@ -853,6 +866,8 @@ function renderInsights() {
       row.innerHTML = ICONS.check;
       const main = el('div', 'dr-main');
       main.append(el('span', 'dr-title', it.title));
+      const m = memoFor(it);
+      if (m) main.append(el('span', 'dr-memo', m));
       row.append(main);
       const at = taskDoneAt(it.ref, it.key);
       const d = fromKey(it.key);
@@ -886,6 +901,9 @@ function renderSettings() {
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
+  document.querySelectorAll('#font-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
+  });
   const grid = $('#accent-grid');
   grid.textContent = '';
   for (const [id, a] of Object.entries(ACCENTS)) {
@@ -912,6 +930,12 @@ document.querySelectorAll('#theme-seg button').forEach((b) => {
     save(); applyTheme(); renderAll();
   });
 });
+document.querySelectorAll('#font-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.font = b.dataset.fontOpt;
+    save(); applyFont(); renderAll();
+  });
+});
 
 /* ========== add / edit sheet ========== */
 
@@ -924,6 +948,7 @@ const sheetEls = {
   fTime: $('#f-time'),
   fMinutes: $('#f-minutes'),
   fRepeat: $('#f-repeat'),
+  fMemo: $('#f-memo'),
   taskOnly: $('#task-only-fields'),
   repeatHint: $('#repeat-hint'),
 };
@@ -942,6 +967,7 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
     sheetEls.fTime.value = r.time || '';
     sheetEls.fMinutes.value = r.minutes || '';
     sheetEls.fRepeat.value = r.repeat || '';
+    sheetEls.fMemo.value = memoFor(item) || '';
     sheetEls.repeatHint.hidden = !r.repeat;
   } else {
     sheetEls.fTitle.value = '';
@@ -949,6 +975,7 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
     sheetEls.fTime.value = '';
     sheetEls.fMinutes.value = '';
     sheetEls.fRepeat.value = '';
+    sheetEls.fMemo.value = '';
     sheetEls.repeatHint.hidden = true;
   }
   sheetEls.scrim.hidden = false;
@@ -988,19 +1015,20 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const rawMin = parseInt(sheetEls.fMinutes.value, 10);
   const minutes = Number.isInteger(rawMin) && rawMin >= 1 && rawMin <= 600 ? rawMin : null;
   const repeat = sheetEls.fRepeat.value || null;
+  const memo = sheetEls.fMemo.value.trim() || null;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, createdAt: Date.now() };
+    const ev = { id: newId('e'), title, date: dateKey, time, memo, createdAt: Date.now() };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1014,13 +1042,21 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
   if (item.kind === 'event') {
     r.date = dateKey;
+    r.memo = memo;
     return;
+  }
+  if (r.repeat && repeat) { // 繰り返しのメモは「この日の分」として保存（日記になる）
+    r.memoDates = r.memoDates || {};
+    if (memo) r.memoDates[item.key] = memo;
+    else delete r.memoDates[item.key];
+  } else {
+    r.memo = memo;
   }
   r.minutes = minutes;
   const wasRepeat = Boolean(r.repeat);
@@ -1273,6 +1309,7 @@ if ('serviceWorker' in navigator) {
 /* ========== init ========== */
 
 applyTheme();
+applyFont();
 // 実行中タイマーの復元（リロード・再起動後）
 if (db.running) {
   const r = db.running;

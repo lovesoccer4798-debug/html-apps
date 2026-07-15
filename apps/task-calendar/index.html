@@ -91,6 +91,17 @@
         <p class="hint">カレンダーの選択枠・チェック・ボタンの色に反映されます。</p>
       </div>
 
+      <p class="section-label">フォント</p>
+      <div class="card">
+        <div class="theme-seg" id="font-seg">
+          <button data-font-opt="gothic">ゴシック</button>
+          <button data-font-opt="rounded">丸ゴシック</button>
+          <button data-font-opt="mincho">明朝</button>
+          <button data-font-opt="mono">等幅</button>
+        </div>
+        <p class="hint">端末に入っている書体を使うため、機種によって見え方が変わることがあります。</p>
+      </div>
+
       <p class="section-label">データ</p>
       <div class="card">
         <p class="data-line" id="data-summary"></p>
@@ -149,7 +160,9 @@
           </select>
         </div>
       </div>
-      <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます。</p>
+      <label class="f-label" for="f-memo">メモ（任意）</label>
+      <textarea id="f-memo" rows="2" maxlength="500" placeholder="ふりかえり用のひとこと・気づきなど"></textarea>
+      <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます（メモだけはこの日の分として保存）。</p>
       <button type="submit" class="cta" id="sheet-save">保存</button>
     </form>
   </div>
