@@ -73,12 +73,17 @@ if (!Array.isArray(db.calendars) || db.calendars.length === 0) {
   db.calendars = [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }];
 }
 
-function save() {
+function persistLocal() {
   try {
     localStorage.setItem(STORAGE_V2, JSON.stringify(db));
   } catch (err) {
     console.warn('Task Calendar: failed to save', err); // keep working in-memory
   }
+}
+function save() {
+  db.updatedAt = Date.now();
+  persistLocal();
+  scheduleCloudPush(); // ログイン中ならクラウドへも（デバウンス）
 }
 
 /* ========== ui state (not persisted) ========== */
@@ -1232,6 +1237,7 @@ $('#cal-add').addEventListener('click', () => {
 
 function renderSettings() {
   renderCalManage();
+  renderSyncCard();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
@@ -2433,6 +2439,146 @@ $('#vb-save').addEventListener('click', () => {
 });
 $('#vb-close').addEventListener('click', () => { $('#vb-scrim').hidden = true; });
 $('#vb-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+
+
+/* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
+
+const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems'];
+const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep'];
+let fbReady = false;
+let fbUser = null;
+let fbPushTimer = null;
+let syncStatus = 'off'; // off | loading | synced | error | offline
+
+function setSyncStatus(st) {
+  syncStatus = st;
+  if (ui.screen === 'settings') renderSyncCard();
+}
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const sc = document.createElement('script');
+    sc.src = src;
+    sc.onload = resolve;
+    sc.onerror = () => reject(new Error(`load failed: ${src}`));
+    document.head.append(sc);
+  });
+}
+async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
+  if (fbReady) return true;
+  if (!window.TC_FIREBASE_CONFIG) return false;
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=12');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=12');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=12');
+  window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
+  fbReady = true;
+  window.firebase.auth().onAuthStateChanged((user) => {
+    fbUser = user;
+    if (user) {
+      db.settings.syncUser = { email: user.email || '' };
+      persistLocal();
+      cloudPullOrPush();
+    }
+    if (ui.screen === 'settings') renderSyncCard();
+  });
+  return true;
+}
+function userDocRef() { return window.firebase.firestore().collection('users').doc(fbUser.uid); }
+
+async function cloudLogin() {
+  try {
+    setSyncStatus('loading');
+    if (!navigator.onLine) { setSyncStatus('offline'); flashToast('オフラインです。電波のある場所でお試しを'); return; }
+    if (!(await ensureFirebase())) { setSyncStatus('error'); return; }
+    const provider = new window.firebase.auth.GoogleAuthProvider();
+    await window.firebase.auth().signInWithPopup(provider);
+  } catch (err) {
+    console.warn('login failed', err);
+    setSyncStatus('error');
+    flashToast('ログインできませんでした（許可ドメインの設定を確認してね）');
+  }
+}
+async function cloudLogout() {
+  try { if (fbReady) await window.firebase.auth().signOut(); } catch (err) { /* ローカルは無事 */ }
+  fbUser = null;
+  delete db.settings.syncUser;
+  db.settings.lastSyncAt = null;
+  persistLocal();
+  setSyncStatus('off');
+  renderAll();
+}
+
+/* ドキュメント単位の後勝ち（Phase A）: リモートが新しければ取り込み、そうでなければ押し上げる */
+async function cloudPullOrPush() {
+  try {
+    setSyncStatus('loading');
+    const snap = await userDocRef().get();
+    const remote = snap.exists ? snap.data() : null;
+    if (remote && (remote.updatedAt || 0) > (db.updatedAt || 0)) {
+      SYNC_KEYS_ARR.forEach((k) => { if (Array.isArray(remote[k])) db[k] = remote[k]; });
+      SYNC_KEYS_OBJ.forEach((k) => { if (remote[k] && typeof remote[k] === 'object') db[k] = remote[k]; });
+      db.updatedAt = remote.updatedAt;
+      db.settings.lastSyncAt = Date.now();
+      persistLocal();
+      renderAll();
+      flashToast('クラウドのデータを読み込みました');
+      setSyncStatus('synced');
+    } else {
+      await cloudPush();
+    }
+  } catch (err) {
+    console.warn('sync failed', err);
+    setSyncStatus('error');
+  }
+}
+async function cloudPush() {
+  if (!fbReady || !fbUser) return;
+  const payload = { updatedAt: db.updatedAt || Date.now() };
+  SYNC_KEYS_ARR.forEach((k) => { payload[k] = db[k]; });
+  SYNC_KEYS_OBJ.forEach((k) => { payload[k] = db[k]; });
+  await userDocRef().set(payload);
+  db.settings.lastSyncAt = Date.now();
+  persistLocal();
+  setSyncStatus('synced');
+}
+function scheduleCloudPush() {
+  if (!fbUser) return;
+  clearTimeout(fbPushTimer);
+  fbPushTimer = setTimeout(() => { cloudPush().catch(() => setSyncStatus('error')); }, 2500);
+}
+
+function renderSyncCard() {
+  const wrap = $('#sync-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  if (db.settings.syncUser) {
+    const row = el('div', 'sync-row');
+    row.append(el('span', 'sync-email', db.settings.syncUser.email || 'ログイン中'));
+    const st = el('span', `sync-state${syncStatus === 'synced' ? ' ok' : syncStatus === 'error' ? ' err' : ''}`);
+    st.textContent = syncStatus === 'synced'
+      ? `同期済み ${db.settings.lastSyncAt ? new Date(db.settings.lastSyncAt).toTimeString().slice(0, 5) : ''}`
+      : syncStatus === 'loading' ? '同期中…'
+      : syncStatus === 'error' ? '同期エラー（ローカルには保存されています）'
+      : syncStatus === 'offline' ? 'オフライン（復帰後に同期します）' : '接続待ち…';
+    row.append(st);
+    wrap.append(row);
+    const out = el('button', 'cta ghost', 'ログアウト');
+    out.type = 'button';
+    out.addEventListener('click', cloudLogout);
+    wrap.append(out);
+  } else {
+    const btn = el('button', 'cta', 'Googleでログインして同期');
+    btn.type = 'button';
+    btn.addEventListener('click', cloudLogin);
+    wrap.append(btn);
+  }
+}
+
+// 以前ログインしていたら起動時に静かに再接続（オフラインならスキップ）
+if (db.settings.syncUser && navigator.onLine) {
+  ensureFirebase().catch(() => setSyncStatus('error'));
+}
+window.addEventListener('online', () => { if (db.settings.syncUser) ensureFirebase().then(() => { if (fbUser) cloudPush().catch(() => setSyncStatus('error')); }).catch(() => {}); });
 
 /* ========== PWA ========== */
 

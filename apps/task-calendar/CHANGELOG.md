@@ -2,6 +2,14 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [0.9.0] - 2026-07-16
+
+### Added
+
+- Googleログインとクラウド同期（Firebase Phase A）: 設定の「アカウントと同期」からログインすると、タスク・予定・ルーティン・目標・睡眠・メモ等が自分専用のクラウド領域へ自動バックアップされ、別端末でも復元できる（ビジョンボードの写真は端末内のみ）
+- オフライン時はローカル動作を継続し、復帰時に同期。ログアウトしても端末内データは残る
+- Firebase SDK（v10.14.1 compat）を同梱・遅延読み込み（CDN不使用・ADR: 20260716-firebase-sdk-vendoring）
+
 ## [0.8.0] - 2026-07-15
 
 ### Added

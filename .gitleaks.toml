@@ -1,0 +1,12 @@
+# gitleaks設定 — 既定ルールを継承しつつ、公開前提の値だけを許可する
+# FirebaseのWebクライアント設定（apiKey等）は秘密鍵ではなく公開識別子。
+# アクセス制御はFirestoreセキュリティルール側で行う（apps/task-calendar/specs/task-calendar-firebase-sync.md）
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Firebase Web config（公開前提）とベンダー同梱SDK"
+paths = [
+  '''apps/task-calendar/firebase-config\.js''',
+  '''apps/task-calendar/vendor/.*\.js''',
+]
