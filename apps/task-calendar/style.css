@@ -971,3 +971,111 @@ input, select, textarea { font: inherit; color: inherit; }
   font-size: 14px; color: var(--tc-ink); padding: 2px 0;
 }
 .calm-row input:focus { outline: none; border-bottom-color: var(--tc-accent); }
+
+/* ---------- v8: ビジョンボード ---------- */
+
+.rv-seg { margin: 0 0 14px; }
+
+.vb-card {
+  background: var(--tc-surface);
+  border-radius: var(--tc-r-card);
+  box-shadow: var(--tc-shadow);
+  padding: 14px 16px 16px;
+  margin-bottom: 14px;
+}
+.vb-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.vb-head input {
+  flex: 1; min-width: 0;
+  background: transparent; border: none;
+  font-size: 16px; font-weight: 700; color: var(--tc-ink);
+  border-bottom: 1.5px dashed transparent; padding: 2px 0;
+}
+.vb-head input:focus { outline: none; border-bottom-color: var(--tc-accent); }
+
+.vb-grid { display: grid; gap: 8px; }
+.vb-grid.t1 { grid-template-columns: 1fr; }
+.vb-grid.t2 { grid-template-columns: 1fr 1fr; }
+.vb-grid.t3, .vb-grid.t4 { grid-template-columns: 1fr 1fr; }
+.vb-grid.t3 .vb-slot-wrap:first-child { grid-column: 1 / -1; }
+.vb-slot-wrap { min-width: 0; }
+.vb-slot {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  background: var(--tc-bg);
+  border: 1.5px dashed var(--tc-line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tc-ink4);
+  overflow: hidden;
+  padding: 0;
+}
+.vb-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vb-slot.filled { border-style: solid; }
+.vb-caption {
+  width: 100%;
+  background: transparent; border: none;
+  font-size: 11.5px; color: var(--tc-ink2);
+  padding: 4px 2px 0;
+}
+.vb-caption:focus { outline: none; }
+.vb-caption::placeholder { color: var(--tc-ink4); }
+
+.vb-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  background: var(--tc-bg);
+  border: 1.5px dashed var(--tc-line);
+  overflow: hidden;
+  touch-action: none;
+}
+.vb-item { position: absolute; cursor: grab; user-select: none; -webkit-user-select: none; }
+.vb-item img { width: 100%; height: auto; display: block; border-radius: 8px; box-shadow: var(--tc-shadow); pointer-events: none; }
+.vb-item.word {
+  font-weight: 700; color: var(--tc-ink);
+  background: var(--tc-surface);
+  border-radius: 8px; box-shadow: var(--tc-shadow);
+  padding: 6px 10px; font-size: 14px;
+  min-width: 40px;
+}
+.vb-item.word:focus { outline: 2px solid var(--tc-accent); }
+.vb-item.is-picked { outline: 2px solid var(--tc-accent); outline-offset: 2px; }
+
+.vb-tools { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.vb-tools .pill-btn { font-size: 12px; }
+
+.vb-memo {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--tc-bg);
+  border: 1.5px solid var(--tc-line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px; color: var(--tc-ink);
+  resize: vertical; min-height: 52px;
+}
+.vb-memo:focus { outline: none; border-color: var(--tc-accent); }
+.vb-memo::placeholder { color: var(--tc-ink4); }
+
+.vb-count { font-size: 11.5px; color: var(--tc-ink3); margin: 4px 2px 12px; }
+
+.vb-tpl-pick { display: flex; gap: 10px; padding: 6px 0; }
+.vb-tpl-pick button {
+  width: 56px; height: 56px;
+  border: 1.5px solid var(--tc-line);
+  border-radius: 10px;
+  background: var(--tc-bg);
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  gap: 3px; padding: 5px;
+}
+.vb-tpl-pick button.is-active { border-color: var(--tc-accent); background: var(--tc-accent-soft); }
+.vb-tpl-pick .tp { background: var(--tc-ink4); border-radius: 3px; opacity: .6; }
+.vb-tpl-pick button[data-tpl="t1"] .tp { grid-area: 1 / 1 / 3 / 3; }
+.vb-tpl-pick button[data-tpl="t2"] .tp.a { grid-area: 1 / 1 / 3 / 2; }
+.vb-tpl-pick button[data-tpl="t2"] .tp.b { grid-area: 1 / 2 / 3 / 3; }
+.vb-tpl-pick .tp.wide { grid-area: 1 / 1 / 2 / 3; }
+
+.memory-card { border-left: 3px solid var(--tc-accent); }
+.memory-card .mem-date { font-family: var(--tc-mono); font-size: 11px; color: var(--tc-ink4); }
+.memory-card .mem-text { font-size: 13.5px; margin-top: 2px; overflow-wrap: anywhere; }
