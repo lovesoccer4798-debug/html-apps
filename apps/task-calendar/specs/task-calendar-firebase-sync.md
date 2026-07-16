@@ -2,7 +2,7 @@
 
 - **作成日**: 2026-07-15
 - **最終更新**: 2026-07-15
-- **ステータス**: Phase A 実装済み（2026-07-16）。Phase B（カレンダー共有）は未着手。注: Phase Aの衝突解決はドキュメント単位の後勝ち（項目単位マージはPhase Bで）
+- **ステータス**: Phase A・Phase B 実装済み（2026-07-16）。衝突解決はいずれもドキュメント単位の後勝ち＋差分がないときは書き込まない（無料枠節約）
 - **関連**: v6仕様 §4 / ADR予定（SDK同梱）
 
 ## 1. 目的
@@ -23,16 +23,40 @@ Googleログインで複数端末からデータを使え、**カレンダー単
 - 端末2台目でログイン → データ復元。オフライン時はローカル動作→復帰時同期（項目ごとの updatedAt で後勝ち）
 - ログアウトしてもローカルデータは残る（ローカルファースト）
 
-### Phase B — カレンダー共有
+### Phase B — カレンダー共有（実装メモ: 2026-07-16）
 
-- マイカレンダーの管理画面に「共有」→ 招待コード発行。相手はコード入力で参加
-- 共有カレンダーの項目は `sharedCalendars/{calId}/items` に置く
+- 設定の「共有カレンダー」で作成 → 招待コード（8桁英数・I/O/0/1除外）発行。相手はコード入力で参加（既定=編集可）
+- 実装は `shared/{招待コード}` の1ドキュメント = 1カレンダー（`{title, color, ownerUid, members:{uid:{role,email}}, updatedAt, tasks[], events[]}`）。コード自体が秘密（知っている人だけ参加できる）
+- ローカルでは共有項目も db.tasks / db.events に `calendarId='s:コード'` で持つ → チェック・スワイプ・チップ・色・予定表モードが既存コードのまま動く。参加コード一覧（sharedJoined）は自分の users ドキュメントにも同期、タイトル・権限の控え（sharedCache）は端末のみ
+- 受信は onSnapshot のリアルタイム購読、送信は3秒デバウンス＋差分がないときは書かない。自分の users ドキュメントには共有項目を含めない（共有ドキュメントが正）
+- **メンバーごとの権限をオーナーが設定**（オーナー回答）: 「編集可（既定）／閲覧専用／解除（非表示）」の3段階。オーナーはいつでも変更可
 - **メンバーごとの権限をオーナーが設定**（オーナー回答）: 「編集可（既定）／閲覧専用／非表示（見せない）」の3段階。オーナーはいつでも変更可
   - 編集可: 読み書き両方
   - 閲覧専用: 読みのみ（追加・編集・削除ボタンを出さない＋ルールでも書き込み拒否）
-  - 非表示: そのメンバーには共有を停止（招待取り消しと同義。再付与も可）
+  - 解除（非表示）: members から削除 → そのメンバーの端末からカレンダーごと消える。**制約: 同じ招待コードで再参加はできる**ため、完全に見せたくない場合はカレンダーを削除して作り直す（UIのヒントに明記）
 - チップに参加カレンダーが並ぶ（自分のと同じ操作感）。退出・オーナーによるメンバー解除あり
-- Firestoreセキュリティルール: 本人のuid配下のみ／共有は members[uid].role で判定（editor=読み書き・viewer=読みのみ・なし=拒否）。UIだけでなくルールでも権限を強制
+- Firestoreセキュリティルール: 本人のuid配下のみ／共有は members[uid].role で判定（editor=読み書き・viewer=読みのみ）。UIだけでなくルールでも権限を強制。オーナーに貼ってもらう最終版:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /shared/{calId} {
+      allow get: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid
+        || (resource.data.members[request.auth.uid] != null && resource.data.members[request.auth.uid].role == 'editor')
+        || !(request.auth.uid in resource.data.members) // 招待コードを知っている人の参加（自分をmembersへ追加）
+      );
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+  }
+}
+```
 
 ### やらないこと（当面）
 

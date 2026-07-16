@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=12">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="tokens.css?v=13">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -124,6 +124,12 @@
       <div class="card">
         <div id="sync-body"></div>
         <p class="hint">ログインするとデータがあなた専用のクラウド領域に自動保存され、別の端末でも同じデータを使えます（ビジョンボードの写真はこの端末にのみ保存）。ログアウトしてもこの端末のデータは残ります。</p>
+      </div>
+
+      <p class="section-label">共有カレンダー</p>
+      <div class="card">
+        <div id="shared-body"></div>
+        <p class="hint">招待コードを知っている人だけが参加できます。権限は「編集可」「閲覧専用」から選べ、「解除」で相手から見えなくなります（同じコードで再参加はできるので、完全に見せたくない場合はカレンダーごと削除して作り直してね）。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -374,7 +380,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="firebase-config.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>
