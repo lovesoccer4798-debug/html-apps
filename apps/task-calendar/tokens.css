@@ -32,6 +32,8 @@
   --tc-deep-ink: #eaf6f0;      /* 深緑上の主テキスト */
 
   --tc-danger: #d95b5b;        /* 削除 */
+  --tc-sun: #e05d5d;           /* 日曜・祝日（ライト/ダーク共通で読める赤） */
+  --tc-sat: #5b93e0;           /* 土曜（同・青） */
 
   /* 形（handoff） */
   --tc-r-card: 16px;

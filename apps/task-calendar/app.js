@@ -40,6 +40,7 @@ const ICONS = {
   sprout: `<svg ${ICON_ATTRS}><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg>`,
   maximize: `<svg ${ICON_ATTRS}><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
   copy: `<svg ${ICON_ATTRS}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
+  search: `<svg ${ICON_ATTRS}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
 };
 
 /* ========== persistent data ========== */
@@ -92,7 +93,8 @@ function save() {
 const ui = {
   screen: 'cal',            // 'cal' | 'insights' | 'settings'
   prevScreen: 'cal',
-  view: 'day',              // 'day' | 'week' | 'month'
+  view: 'day',              // 'day' | 'week' | 'grid' | 'month' | 'year'
+  gridDays: 3,              // 時間割ビューの日数（1 | 3 | 7）
   cursor: new Date(),
   selectedKey: null,        // month view: selected date key
   selectedItemId: null,     // accent-framed item
@@ -582,6 +584,7 @@ $('#nav-today').addEventListener('click', () => {
 function navigate(dir) {
   const c = ui.cursor;
   if (ui.view === 'day') ui.cursor = addDays(c, dir);
+  else if (ui.view === 'grid') ui.cursor = addDays(c, dir * ui.gridDays);
   else if (ui.view === 'week') ui.cursor = addDays(c, dir * 7);
   else if (ui.view === 'year') ui.cursor = new Date(c.getFullYear() + dir, 0, 1);
   else {
@@ -635,11 +638,12 @@ function streakDays() {
 function goalKey() {
   const c = ui.cursor;
   if (ui.view === 'day') return `d:${toKey(c)}`;
+  if (ui.view === 'grid') return ui.gridDays === 1 ? `d:${toKey(c)}` : `w:${toKey(startOfWeekMon(c))}`;
   if (ui.view === 'week') return `w:${toKey(startOfWeekMon(c))}`;
   if (ui.view === 'month') return `m:${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, '0')}`;
   return `y:${c.getFullYear()}`;
 }
-const GOAL_PLACEHOLDER = { day: '今日の目標を書く…', week: '今週の目標を書く…', month: '今月の目標を書く…', year: '今年の目標を書く…' };
+const GOAL_PLACEHOLDER = { day: '今日の目標を書く…', week: '今週の目標を書く…', grid: '目標を書く…', month: '今月の目標を書く…', year: '今年の目標を書く…' };
 
 $('#goal-line').addEventListener('click', () => {
   const line = $('#goal-line');
@@ -678,6 +682,19 @@ function renderCal() {
     const isToday = toKey(c) === todayKey();
     eyebrow.textContent = `${WD_EN[c.getDay()]} · ${MONTH_EN[c.getMonth()]} ${c.getDate()}${isToday ? ' · TODAY' : ''}`;
     title.textContent = `${c.getMonth() + 1}月${c.getDate()}日（${WD_JA[c.getDay()]}）`;
+  } else if (ui.view === 'grid') {
+    const s = gridStart();
+    const e2 = addDays(s, ui.gridDays - 1);
+    if (ui.gridDays === 1) {
+      eyebrow.textContent = `${WD_EN[s.getDay()]} · ${MONTH_EN[s.getMonth()]} ${s.getDate()}`;
+      title.textContent = `${s.getMonth() + 1}月${s.getDate()}日（${WD_JA[s.getDay()]}）`;
+    } else {
+      $('#cal-title').classList.add('small');
+      eyebrow.textContent = `${MONTH_EN[s.getMonth()].slice(0, 3)} ${s.getDate()} — ${MONTH_EN[e2.getMonth()].slice(0, 3)} ${e2.getDate()}`;
+      title.textContent = s.getMonth() === e2.getMonth()
+        ? `${s.getMonth() + 1}月${s.getDate()}日〜${e2.getDate()}日`
+        : `${s.getMonth() + 1}月${s.getDate()}日〜${e2.getMonth() + 1}月${e2.getDate()}日`;
+    }
   } else if (ui.view === 'week') {
     const s = startOfWeekMon(c);
     $('#cal-title').classList.add('small'); // 「7月27日〜8月2日」が変な位置で折り返さないように
@@ -693,7 +710,7 @@ function renderCal() {
     title.textContent = `${c.getFullYear()}年${c.getMonth() + 1}月`;
   }
 
-  if (ui.view !== 'week') $('#cal-title').classList.remove('small');
+  if (ui.view !== 'week' && !(ui.view === 'grid' && ui.gridDays > 1)) $('#cal-title').classList.remove('small');
 
   const goalLine = $('#goal-line');
   if (!goalLine.dataset.editing) {
@@ -731,9 +748,124 @@ function renderCal() {
     body.append(chips);
   }
   if (ui.view === 'day') renderDay(body);
+  if (ui.view === 'grid') renderGrid(body);
   if (ui.view === 'week') renderWeek(body);
   if (ui.view === 'month') renderMonth(body);
   if (ui.view === 'year') renderYear(body);
+}
+
+/* ----- 時間割（Googleカレンダー風・日×時間のグリッド。既存の日・週ビューとは別口の追加ビュー） ----- */
+
+const TG_HOUR_H = 48; // 1時間の高さ(px)
+
+function gridStart() {
+  if (ui.gridDays === 7) return startOfWeekMon(ui.cursor);
+  return new Date(ui.cursor.getFullYear(), ui.cursor.getMonth(), ui.cursor.getDate());
+}
+
+function renderGrid(body) {
+  // 日数の切替（1日／3日／週）
+  const seg = el('div', 'tg-seg');
+  for (const [n, label] of [[1, '1日'], [3, '3日'], [7, '週']]) {
+    const b = el('button', `tg-seg-btn${ui.gridDays === n ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { ui.gridDays = n; renderAll(); });
+    seg.append(b);
+  }
+  body.append(seg);
+
+  const start = gridStart();
+  const days = Array.from({ length: ui.gridDays }, (_, i) => addDays(start, i));
+  const wrap = el('div', 'tg-wrap');
+
+  // 見出し（曜日・日付。タップでその日のデイリーへ）
+  const head = el('div', 'tg-head');
+  head.append(el('span', 'tg-gutter'));
+  for (const d of days) {
+    const h = el('button', `tg-day${toKey(d) === todayKey() ? ' is-today' : ''}`);
+    h.type = 'button';
+    h.append(el('span', `tg-wd${dayColorClass(d)}`, WD_JA[d.getDay()]));
+    h.append(el('span', `tg-num mono${dayColorClass(d)}`, String(d.getDate())));
+    h.addEventListener('click', () => { ui.view = 'day'; ui.cursor = d; renderAll(); });
+    head.append(h);
+  }
+  wrap.append(head);
+
+  // 時間なしの項目（終日の段）
+  const allday = el('div', 'tg-allday');
+  allday.append(el('span', 'tg-gutter tg-adlabel', '終日'));
+  let anyAllday = false;
+  for (const d of days) {
+    const cell = el('div', 'tg-adcell');
+    for (const it of itemsFor(toKey(d)).filter(passFilter).filter((x) => !x.time)) {
+      anyAllday = true;
+      const chip = el('button', `tg-chip${it.done ? ' is-done' : ''}`, it.title);
+      chip.type = 'button';
+      const col = itemColor(it);
+      if (col) chip.style.background = col;
+      chip.addEventListener('click', () => openSheet('edit', { item: it }));
+      cell.append(chip);
+    }
+    allday.append(cell);
+  }
+  if (anyAllday) wrap.append(allday);
+
+  // 本体（縦=時間・横=日）
+  const grid = el('div', 'tg-grid');
+  const gutter = el('div', 'tg-gutter tg-hours');
+  for (let h = 1; h < 24; h += 1) {
+    const s = el('span', 'tg-hour mono', `${h}:00`);
+    s.style.top = `${h * TG_HOUR_H}px`;
+    gutter.append(s);
+  }
+  grid.append(gutter);
+  for (const d of days) {
+    const key = toKey(d);
+    const col = el('div', `tg-col${key === todayKey() ? ' is-today' : ''}`);
+    for (let h = 1; h < 24; h += 1) {
+      const ln = el('div', 'tg-line');
+      ln.style.top = `${h * TG_HOUR_H}px`;
+      col.append(ln);
+    }
+    // 空きスロットのタップ → その日時で追加シート
+    col.addEventListener('click', (e) => {
+      if (e.target.closest('.tg-item')) return;
+      const rect = col.getBoundingClientRect();
+      const hour = Math.max(0, Math.min(23, Math.floor((e.clientY - rect.top) / TG_HOUR_H)));
+      openSheet('add', { dateKey: key, time: `${String(hour).padStart(2, '0')}:00` });
+    });
+    for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
+      const [hh, mm] = it.time.split(':').map(Number);
+      const durMin = it.minutes || 60; // 所要時間があればその長さ・なければ1時間ぶん
+      const block = el('button', `tg-item${it.done ? ' is-done' : ''}`);
+      block.type = 'button';
+      block.style.top = `${(hh + mm / 60) * TG_HOUR_H + 1}px`;
+      block.style.height = `${Math.max(20, (durMin / 60) * TG_HOUR_H - 2)}px`;
+      const c2 = itemColor(it);
+      if (c2) block.style.background = c2;
+      block.append(el('span', 'tg-ittl', it.title));
+      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.time));
+      block.addEventListener('click', (e) => { e.stopPropagation(); openSheet('edit', { item: it }); });
+      col.append(block);
+    }
+    if (key === todayKey()) { // 現在時刻の線
+      const now = new Date();
+      const line = el('div', 'tg-now');
+      line.style.top = `${(now.getHours() + now.getMinutes() / 60) * TG_HOUR_H}px`;
+      col.append(line);
+    }
+    grid.append(col);
+  }
+  wrap.append(grid);
+  body.append(wrap);
+
+  // 初期スクロール: 今日を含むなら現在時刻の少し上、それ以外は7時へ
+  const hasToday = days.some((d) => toKey(d) === todayKey());
+  const targetHour = hasToday ? Math.max(0, new Date().getHours() - 1) : 7;
+  requestAnimationFrame(() => {
+    const y = grid.getBoundingClientRect().top + window.scrollY + targetHour * TG_HOUR_H - 140;
+    window.scrollTo(0, Math.max(0, y));
+  });
 }
 
 /* ----- day（タイムライン） ----- */
@@ -1323,7 +1455,7 @@ const sheetEls = {
   repeatHint: $('#repeat-hint'),
 };
 
-function openSheet(mode, { item = null, dateKey = null } = {}) {
+function openSheet(mode, { item = null, dateKey = null, time = null } = {}) {
   ui.editing = mode === 'edit' ? item : null;
   ui.sheetType = item ? item.kind : 'task';
   sheetEls.title.textContent = mode === 'edit' ? '編集' : '追加';
@@ -1342,7 +1474,7 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
   } else {
     sheetEls.fTitle.value = '';
     sheetEls.fDate.value = dateKey || (ui.view === 'month' ? (ui.selectedKey || todayKey()) : toKey(ui.cursor));
-    sheetEls.fTime.value = '';
+    sheetEls.fTime.value = time || '';
     sheetEls.fMinutes.value = '';
     sheetEls.fRepeat.value = '';
     sheetEls.fMemo.value = '';
@@ -2464,6 +2596,74 @@ $('#vb-close').addEventListener('click', () => { $('#vb-scrim').hidden = true; }
 $('#vb-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
 
 
+/* ========== v11: 検索（タスク・予定・メモをキーワードで探して、その日へジャンプ） ========== */
+
+function searchAll(qRaw) {
+  const q = qRaw.trim().toLowerCase();
+  if (!q) return [];
+  const hit = (s) => typeof s === 'string' && s.toLowerCase().includes(q);
+  const out = [];
+  for (const t of db.tasks) {
+    const memoDayHit = Object.entries(t.memoDates || {}).find(([, v]) => hit(v));
+    if (!hit(t.title) && !hit(t.memo) && !memoDayHit) continue;
+    let key = t.date || t.startDate;
+    if (t.repeat) {
+      if (memoDayHit && !hit(t.title)) key = memoDayHit[0]; // 日記（日ごとメモ）がヒット → その日へ
+      else { // 直近の出現日へ（今日から1年以内・なければ開始日）
+        for (let i = 0; i < 366; i += 1) { const k = toKey(addDays(new Date(), i)); if (occursOn(t, k)) { key = k; break; } }
+      }
+    }
+    out.push({ kind: 'task', ref: t, key, title: t.title, repeat: t.repeat || null });
+  }
+  for (const e of db.events) {
+    if (!hit(e.title) && !hit(e.memo)) continue;
+    out.push({ kind: 'event', ref: e, key: e.date, title: e.title, repeat: null });
+  }
+  return out.sort((a, b) => (b.key || '').localeCompare(a.key || '')).slice(0, 50);
+}
+
+function renderSearchResults() {
+  const q = $('#search-input').value;
+  const list = $('#search-results');
+  list.textContent = '';
+  const results = searchAll(q);
+  if (q.trim() && !results.length) {
+    list.append(el('p', 'hint', '見つかりませんでした'));
+    return;
+  }
+  for (const r of results) {
+    const row = el('button', 'sr-row');
+    row.type = 'button';
+    const left = el('span', 'sr-title');
+    const dot = el('span', 'ccdot');
+    const col = itemColor({ ref: r.ref, kind: r.kind });
+    if (col) dot.style.background = col;
+    left.append(dot, r.title);
+    if (r.repeat) left.append(el('span', 'sr-repeat', REPEAT_LABEL[r.repeat]));
+    const d = fromKey(r.key);
+    const date = el('span', `sr-date mono${dayColorClass(d)}`, `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`);
+    row.append(left, date);
+    row.addEventListener('click', () => {
+      $('#search-scrim').hidden = true;
+      ui.view = 'day';
+      ui.cursor = d;
+      ui.selectedItemId = `${r.ref.id}@${r.key}`;
+      setScreen('cal');
+    });
+    list.append(row);
+  }
+}
+
+$('#search-open').addEventListener('click', () => {
+  $('#search-scrim').hidden = false;
+  $('#search-input').value = '';
+  $('#search-results').textContent = '';
+  $('#search-input').focus();
+});
+$('#search-close').addEventListener('click', () => { $('#search-scrim').hidden = true; });
+$('#search-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#search-input').addEventListener('input', renderSearchResults);
+
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
 const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined'];
@@ -2492,11 +2692,17 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=13');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=13');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=13');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=14');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=14');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=14');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
+  // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
+  window.firebase.auth().getRedirectResult().catch((err) => {
+    console.warn('redirect login failed', err);
+    setSyncStatus('error');
+    flashToast(`ログインできませんでした（${(err && err.code) || 'unknown'}）`);
+  });
   window.firebase.auth().onAuthStateChanged((user) => {
     fbUser = user;
     if (user) {
@@ -2516,11 +2722,18 @@ async function cloudLogin() {
     if (!navigator.onLine) { setSyncStatus('offline'); flashToast('オフラインです。電波のある場所でお試しを'); return; }
     if (!(await ensureFirebase())) { setSyncStatus('error'); return; }
     const provider = new window.firebase.auth.GoogleAuthProvider();
+    // ホーム画面から開いたPWA（standalone）はポップアップが開けないことが多い → 最初からリダイレクト方式
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (standalone) { await window.firebase.auth().signInWithRedirect(provider); return; }
     await window.firebase.auth().signInWithPopup(provider);
   } catch (err) {
+    const code = (err && err.code) || '';
+    if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment' || code === 'auth/cancelled-popup-request') {
+      try { await window.firebase.auth().signInWithRedirect(new window.firebase.auth.GoogleAuthProvider()); return; } catch (e2) { err = e2; }
+    }
     console.warn('login failed', err);
     setSyncStatus('error');
-    flashToast('ログインできませんでした（許可ドメインの設定を確認してね）');
+    flashToast(`ログインできませんでした（${(err && err.code) || '設定を確認してね'}）`);
   }
 }
 async function cloudLogout() {
