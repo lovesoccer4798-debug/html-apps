@@ -41,12 +41,14 @@ const ICONS = {
   maximize: `<svg ${ICON_ATTRS}><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
   copy: `<svg ${ICON_ATTRS}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
   search: `<svg ${ICON_ATTRS}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+  mapPin: `<svg ${ICON_ATTRS}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`,
+  users: `<svg ${ICON_ATTRS}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
 };
 
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all' }, running: null };
 }
 
 function loadDb() {
@@ -503,6 +505,28 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   main.append(el('span', 'item-title', it.title));
   const memo = memoFor(it);
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
+  if (it.kind === 'event' && !compact && (it.ref.place || (it.ref.who || []).length || (it.time && it.ref.timeEnd))) {
+    const meta = el('span', 'item-meta'); // 時間・誰と・どこで（日記的な記録）
+    if (it.time && it.ref.timeEnd) {
+      const tm = el('span', 'meta-bit mono');
+      tm.innerHTML = ICONS.clock;
+      tm.append(` ${it.time}〜${it.ref.timeEnd}`);
+      meta.append(tm);
+    }
+    if ((it.ref.who || []).length) {
+      const w = el('span', 'meta-bit');
+      w.innerHTML = ICONS.users;
+      w.append(` ${it.ref.who.join('、')}`);
+      meta.append(w);
+    }
+    if (it.ref.place) {
+      const pl = el('span', 'meta-bit');
+      pl.innerHTML = ICONS.mapPin;
+      pl.append(` ${it.ref.place}`);
+      meta.append(pl);
+    }
+    main.append(meta);
+  }
   card.append(main);
 
   const ownColor = itemColor(it);
@@ -515,7 +539,7 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   if (showTime && it.time) {
     const c = el('span', 'chip mono');
     c.innerHTML = ICONS.clock;
-    c.append(` ${it.time}`);
+    c.append(` ${it.time}${it.kind === 'event' && it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}`);
     card.append(c);
   }
   if (it.repeat) {
@@ -827,16 +851,18 @@ function renderGrid(body) {
       ln.style.top = `${h * TG_HOUR_H}px`;
       col.append(ln);
     }
-    // 空きスロットのタップ → その日時で追加シート
+    // 空きスロットのタップ → 時間枠（下書き）を出してつまみで調整 → 予定として追加
     col.addEventListener('click', (e) => {
-      if (e.target.closest('.tg-item')) return;
+      if (e.target.closest('.tg-item') || e.target.closest('.tg-draft')) return;
       const rect = col.getBoundingClientRect();
-      const hour = Math.max(0, Math.min(23, Math.floor((e.clientY - rect.top) / TG_HOUR_H)));
-      openSheet('add', { dateKey: key, time: `${String(hour).padStart(2, '0')}:00` });
+      tgAddDraft(col, key, e.clientY - rect.top);
     });
     for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
       const [hh, mm] = it.time.split(':').map(Number);
-      const durMin = it.minutes || 60; // 所要時間があればその長さ・なければ1時間ぶん
+      // 長さ: 予定は終了時刻まで、タスクは所要時間、どちらもなければ1時間ぶん
+      const durMin = (it.kind === 'event' && it.ref.timeEnd)
+        ? Math.max(15, tgStrToMin(it.ref.timeEnd) - tgStrToMin(it.time))
+        : (it.minutes || 60);
       const block = el('button', `tg-item${it.done ? ' is-done' : ''}`);
       block.type = 'button';
       block.style.top = `${(hh + mm / 60) * TG_HOUR_H + 1}px`;
@@ -844,7 +870,7 @@ function renderGrid(body) {
       const c2 = itemColor(it);
       if (c2) block.style.background = c2;
       block.append(el('span', 'tg-ittl', it.title));
-      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.time));
+      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.kind === 'event' && it.ref.timeEnd ? `${it.time}〜${it.ref.timeEnd}` : it.time));
       block.addEventListener('click', (e) => { e.stopPropagation(); openSheet('edit', { item: it }); });
       col.append(block);
     }
@@ -866,6 +892,63 @@ function renderGrid(body) {
     const y = grid.getBoundingClientRect().top + window.scrollY + targetHour * TG_HOUR_H - 140;
     window.scrollTo(0, Math.max(0, y));
   });
+}
+
+/* ----- 時間割: タップで時間枠（下書き）→ つまみで開始・終了を調整 → 「予定」として追加 ----- */
+
+function tgStrToMin(s) { const [h, m] = s.split(':').map(Number); return h * 60 + m; }
+function tgMinToStr(min) { return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`; }
+
+function tgAddDraft(col, key, y) {
+  document.querySelectorAll('.tg-draft').forEach((n) => n.remove()); // 下書きは1つだけ
+  let start = Math.max(0, Math.min(23 * 60, Math.floor(y / (TG_HOUR_H / 2)) * 30)); // 30分刻みで開始
+  let end = Math.min(24 * 60, start + 60);
+  const d = el('div', 'tg-draft');
+  const lbl = el('span', 'tg-dlbl mono');
+  const h1 = el('span', 'tg-handle tg-h1');
+  const h2 = el('span', 'tg-handle tg-h2');
+  const bar = el('div', 'tg-dbar');
+  const okB = el('button', 'tg-dok', '予定を追加');
+  okB.type = 'button';
+  const noB = el('button', 'tg-dcancel');
+  noB.type = 'button';
+  noB.setAttribute('aria-label', 'キャンセル');
+  noB.textContent = '×';
+  bar.append(okB, noB);
+  d.append(lbl, h1, h2, bar);
+  const sync = () => {
+    d.style.top = `${(start / 60) * TG_HOUR_H}px`;
+    d.style.height = `${((end - start) / 60) * TG_HOUR_H}px`;
+    lbl.textContent = `${tgMinToStr(start)}〜${tgMinToStr(end)}`;
+  };
+  sync();
+  const drag = (handle, apply) => { // つまみを上下にドラッグ（15分刻み）
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handle.setPointerCapture(e.pointerId);
+      const rect = col.getBoundingClientRect();
+      const move = (ev) => {
+        apply(Math.round((ev.clientY - rect.top) / (TG_HOUR_H / 4)) * 15);
+        sync();
+      };
+      const up = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', up);
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', up);
+    });
+  };
+  drag(h1, (m) => { start = Math.max(0, Math.min(end - 15, m)); });
+  drag(h2, (m) => { end = Math.min(24 * 60, Math.max(start + 15, m)); });
+  okB.addEventListener('click', (e) => {
+    e.stopPropagation();
+    d.remove();
+    openSheet('add', { dateKey: key, time: tgMinToStr(start), timeEnd: tgMinToStr(end), type: 'event' });
+  });
+  noB.addEventListener('click', (e) => { e.stopPropagation(); d.remove(); });
+  col.append(d);
 }
 
 /* ----- day（タイムライン） ----- */
@@ -1379,8 +1462,52 @@ $('#cal-add').addEventListener('click', () => {
   save(); renderAll();
 });
 
+const MAX_PEOPLE = 30;
+
+function renderPeopleCard() {
+  const wrap = $('#people-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  for (const name of db.people) {
+    const row = el('div', 'pp-row');
+    row.append(el('span', 'pp-name', name));
+    const del = el('button', 'iconbtn');
+    del.type = 'button';
+    del.setAttribute('aria-label', '削除');
+    del.innerHTML = ICONS.trash;
+    del.addEventListener('click', () => {
+      const idx = db.people.indexOf(name);
+      db.people.splice(idx, 1);
+      save(); renderPeopleCard();
+      showUndoToast(`「${name}」をリストから外しました（過去の予定の記録は残ります）`, () => {
+        db.people.splice(Math.min(idx, db.people.length), 0, name);
+        save(); renderPeopleCard();
+      });
+    });
+    row.append(del);
+    wrap.append(row);
+  }
+  const form = el('div', 'sh-form');
+  const input = document.createElement('input');
+  input.type = 'text'; input.maxLength = 20; input.placeholder = '名前・ニックネーム';
+  const add = el('button', 'cta ghost', '追加');
+  add.type = 'button';
+  add.addEventListener('click', () => {
+    const v = input.value.trim();
+    if (!v) return;
+    if (db.people.includes(v)) { flashToast('登録済みです'); return; }
+    if (db.people.length >= MAX_PEOPLE) { flashToast(`上限（${MAX_PEOPLE}人）に達しました`); return; }
+    db.people.push(v);
+    input.value = '';
+    save(); renderPeopleCard();
+  });
+  form.append(input, add);
+  wrap.append(form);
+}
+
 function renderSettings() {
   renderCalManage();
+  renderPeopleCard();
   renderSyncCard();
   renderSharedCard();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
@@ -1455,9 +1582,9 @@ const sheetEls = {
   repeatHint: $('#repeat-hint'),
 };
 
-function openSheet(mode, { item = null, dateKey = null, time = null } = {}) {
+function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = null, type = null } = {}) {
   ui.editing = mode === 'edit' ? item : null;
-  ui.sheetType = item ? item.kind : 'task';
+  ui.sheetType = item ? item.kind : (type || 'task');
   sheetEls.title.textContent = mode === 'edit' ? '編集' : '追加';
   sheetEls.typeSeg.hidden = mode === 'edit'; // 種類はあとから変えない
   syncSheetType();
@@ -1471,6 +1598,9 @@ function openSheet(mode, { item = null, dateKey = null, time = null } = {}) {
     sheetEls.fRepeat.value = r.repeat || '';
     sheetEls.fMemo.value = memoFor(item) || '';
     sheetEls.repeatHint.hidden = !r.repeat;
+    $('#f-time-end').value = r.timeEnd || '';
+    $('#f-place').value = r.place || '';
+    buildWhoChips(Array.isArray(r.who) ? r.who : []);
   } else {
     sheetEls.fTitle.value = '';
     sheetEls.fDate.value = dateKey || (ui.view === 'month' ? (ui.selectedKey || todayKey()) : toKey(ui.cursor));
@@ -1479,6 +1609,9 @@ function openSheet(mode, { item = null, dateKey = null, time = null } = {}) {
     sheetEls.fRepeat.value = '';
     sheetEls.fMemo.value = '';
     sheetEls.repeatHint.hidden = true;
+    $('#f-time-end').value = timeEnd || '';
+    $('#f-place').value = '';
+    buildWhoChips([]);
   }
   buildSheetColors(item ? (item.ref.color || '') : '');
   const calSel = $('#f-cal');
@@ -1504,6 +1637,22 @@ function openSheet(mode, { item = null, dateKey = null, time = null } = {}) {
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
 }
+/* 「誰と」チップ（設定の「よく会う人」から。選択中の名前を is-on で保持） */
+function buildWhoChips(selected) {
+  const wrap = $('#f-who-chips');
+  wrap.textContent = '';
+  for (const name of db.people) {
+    const b = el('button', `who-chip${selected.includes(name) ? ' is-on' : ''}`, name);
+    b.type = 'button';
+    b.dataset.name = name;
+    b.addEventListener('click', () => b.classList.toggle('is-on'));
+    wrap.append(b);
+  }
+  wrap.hidden = !db.people.length;
+  // リストにない名前は自由入力欄へ
+  $('#f-who').value = selected.filter((n) => !db.people.includes(n)).join('、');
+}
+
 function buildSheetColors(current) {
   const wrap = $('#f-colors');
   wrap.textContent = '';
@@ -1542,6 +1691,7 @@ sheetEls.typeSeg.addEventListener('click', (e) => {
 function syncSheetType() {
   sheetEls.typeSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b.dataset.type === ui.sheetType));
   sheetEls.taskOnly.hidden = ui.sheetType !== 'task';
+  $('#event-only-fields').hidden = ui.sheetType !== 'event';
 }
 
 $('#fab').addEventListener('click', () => openSheet('add', {}));
@@ -1557,7 +1707,13 @@ $('#sheet-form').addEventListener('submit', (e) => {
     return;
   }
   const dateKey = sheetEls.fDate.value || todayKey();
-  const time = sheetEls.fTime.value || null;
+  let time = sheetEls.fTime.value || null;
+  let timeEnd = $('#f-time-end').value || null;
+  if (time && timeEnd && timeEnd < time) [time, timeEnd] = [timeEnd, time]; // 逆なら入れ替え
+  const place = $('#f-place').value.trim() || null;
+  const whoSel = [...document.querySelectorAll('#f-who-chips .who-chip.is-on')].map((b) => b.dataset.name);
+  const whoFree = $('#f-who').value.split(/[、,]/).map((s) => s.trim()).filter(Boolean);
+  const who = [...whoSel, ...whoFree.filter((n) => !whoSel.includes(n))];
   const rawMin = parseInt(sheetEls.fMinutes.value, 10);
   const minutes = Number.isInteger(rawMin) && rawMin >= 1 && rawMin <= 600 ? rawMin : null;
   const repeat = sheetEls.fRepeat.value || null;
@@ -1569,9 +1725,9 @@ $('#sheet-form').addEventListener('submit', (e) => {
   if (ui.editing && sharedBlocked(ui.editing.ref.calendarId)) return;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color, calendarId });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color, calendarId, timeEnd, place, who });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, calendarId, createdAt: Date.now() };
+    const ev = { id: newId('e'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, memo, color, calendarId, createdAt: Date.now() };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
@@ -1593,7 +1749,7 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color, calendarId }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color, calendarId, timeEnd, place, who }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
@@ -1602,6 +1758,9 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color, c
   if (item.kind === 'event') {
     r.date = dateKey;
     r.memo = memo;
+    r.timeEnd = time ? timeEnd : null;
+    r.place = place;
+    r.who = who && who.length ? who : null;
     return;
   }
   if (r.repeat && repeat) { // 繰り返しのメモは「この日の分」として保存（日記になる）
@@ -2616,7 +2775,7 @@ function searchAll(qRaw) {
     out.push({ kind: 'task', ref: t, key, title: t.title, repeat: t.repeat || null });
   }
   for (const e of db.events) {
-    if (!hit(e.title) && !hit(e.memo)) continue;
+    if (!hit(e.title) && !hit(e.memo) && !hit(e.place) && !(e.who || []).some(hit)) continue;
     out.push({ kind: 'event', ref: e, key: e.date, title: e.title, repeat: null });
   }
   return out.sort((a, b) => (b.key || '').localeCompare(a.key || '')).slice(0, 50);
@@ -2645,8 +2804,10 @@ function renderSearchResults() {
     row.append(left, date);
     row.addEventListener('click', () => {
       $('#search-scrim').hidden = true;
-      ui.view = 'day';
+      // いま見ているビュー（日・週・時間・月）のまま、その日付へジャンプ
+      if (ui.view === 'year') ui.view = 'month';
       ui.cursor = d;
+      if (ui.view === 'month') ui.selectedKey = r.key;
       ui.selectedItemId = `${r.ref.id}@${r.key}`;
       setScreen('cal');
     });
@@ -2666,7 +2827,7 @@ $('#search-input').addEventListener('input', renderSearchResults);
 
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
-const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined'];
+const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people'];
 const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep'];
 const SH_PREFIX = 's:'; // 共有カレンダー所属の calendarId は 's:招待コード'
 function isSharedCal(id) { return typeof id === 'string' && id.startsWith(SH_PREFIX); }
@@ -2692,9 +2853,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=14');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=14');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=14');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=15');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=15');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=15');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
@@ -2736,6 +2897,48 @@ async function cloudLogin() {
     flashToast(`ログインできませんでした（${(err && err.code) || '設定を確認してね'}）`);
   }
 }
+/* メールアドレス＋パスワードの新規登録／ログイン（Googleが使えない環境でもOK・承認済みドメイン設定が不要） */
+function emailAuthMsg(err) {
+  const c = (err && err.code) || '';
+  if (c === 'auth/email-already-in-use') return 'このメールアドレスは登録済みです。「ログイン」を押してね';
+  if (c === 'auth/invalid-email') return 'メールアドレスの形式が正しくないみたい';
+  if (c === 'auth/weak-password' || c === 'auth/missing-password') return 'パスワードは6文字以上で入力してね';
+  if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found') return 'メールアドレスかパスワードが違います';
+  if (c === 'auth/too-many-requests') return '試行回数が多すぎます。少し待ってからどうぞ';
+  if (c === 'auth/operation-not-allowed') return 'メール/パスワードのログインがFirebase側で無効です（コンソールで有効化）';
+  if (c === 'auth/network-request-failed') return '通信に失敗しました。電波を確認してね';
+  return `うまくいきませんでした（${c || 'unknown'}）`;
+}
+async function cloudEmailAuth(mode) {
+  const email = $('#sy-email').value.trim();
+  const pass = $('#sy-pass').value;
+  if (!email || !pass) { flashToast('メールアドレスとパスワードを入力してね'); return; }
+  try {
+    setSyncStatus('loading');
+    if (!navigator.onLine) { setSyncStatus('offline'); flashToast('オフラインです。電波のある場所でお試しを'); return; }
+    if (!(await ensureFirebase())) { setSyncStatus('error'); return; }
+    if (mode === 'signup') {
+      await window.firebase.auth().createUserWithEmailAndPassword(email, pass);
+      flashToast('アカウントを作成してログインしました');
+    } else {
+      await window.firebase.auth().signInWithEmailAndPassword(email, pass);
+    }
+  } catch (err) {
+    console.warn('email auth failed', err);
+    setSyncStatus('error');
+    flashToast(emailAuthMsg(err));
+  }
+}
+async function cloudResetPass() {
+  const email = $('#sy-email').value.trim();
+  if (!email) { flashToast('先にメールアドレスを入力してね'); return; }
+  try {
+    if (!(await ensureFirebase())) return;
+    await window.firebase.auth().sendPasswordResetEmail(email);
+    flashToast('再設定メールを送りました。受信箱を確認してね');
+  } catch (err) { flashToast(emailAuthMsg(err)); }
+}
+
 async function cloudLogout() {
   try { if (fbReady) await window.firebase.auth().signOut(); } catch (err) { /* ローカルは無事 */ }
   shUnlistenAll();
@@ -2749,6 +2952,7 @@ async function cloudLogout() {
 
 /* ドキュメント単位の後勝ち（Phase A）: リモートが新しければ取り込み、そうでなければ押し上げる */
 async function cloudPullOrPush() {
+  if (db.settings.syncEnabled === false) { setSyncStatus('off'); return; } // 同期オフ（ログインだけの状態）
   try {
     setSyncStatus('loading');
     const snap = await userDocRef().get();
@@ -2787,7 +2991,7 @@ async function cloudPush() {
   setSyncStatus('synced');
 }
 function scheduleCloudPush() {
-  if (!fbUser) return;
+  if (!fbUser || db.settings.syncEnabled === false) return;
   clearTimeout(fbPushTimer);
   fbPushTimer = setTimeout(() => { cloudPush().catch(() => setSyncStatus('error')); }, 2500);
 }
@@ -2799,14 +3003,29 @@ function renderSyncCard() {
   if (db.settings.syncUser) {
     const row = el('div', 'sync-row');
     row.append(el('span', 'sync-email', db.settings.syncUser.email || 'ログイン中'));
+    const syncOn = db.settings.syncEnabled !== false;
     const st = el('span', `sync-state${syncStatus === 'synced' ? ' ok' : syncStatus === 'error' ? ' err' : ''}`);
-    st.textContent = syncStatus === 'synced'
+    st.textContent = !syncOn ? '同期オフ（この端末にのみ保存）'
+      : syncStatus === 'synced'
       ? `同期済み ${db.settings.lastSyncAt ? new Date(db.settings.lastSyncAt).toTimeString().slice(0, 5) : ''}`
       : syncStatus === 'loading' ? '同期中…'
       : syncStatus === 'error' ? '同期エラー（ローカルには保存されています）'
       : syncStatus === 'offline' ? 'オフライン（復帰後に同期します）' : '接続待ち…';
     row.append(st);
     wrap.append(row);
+    // 同期する・しないの切替（ログインしたままでもオフにできる）
+    const tg = el('label', 'sync-toggle');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = syncOn;
+    cb.addEventListener('change', () => {
+      db.settings.syncEnabled = cb.checked;
+      persistLocal();
+      if (cb.checked) cloudPullOrPush(); else setSyncStatus('off');
+      renderSyncCard();
+    });
+    tg.append(cb, ' カレンダーをクラウドと同期する');
+    wrap.append(tg);
     const out = el('button', 'cta ghost', 'ログアウト');
     out.type = 'button';
     out.addEventListener('click', cloudLogout);
@@ -2816,6 +3035,25 @@ function renderSyncCard() {
     btn.type = 'button';
     btn.addEventListener('click', cloudLogin);
     wrap.append(btn);
+    wrap.append(el('p', 'sync-or', 'または、メールアドレスで'));
+    const email = document.createElement('input');
+    email.type = 'email'; email.id = 'sy-email'; email.placeholder = 'メールアドレス'; email.autocomplete = 'email';
+    const pass = document.createElement('input');
+    pass.type = 'password'; pass.id = 'sy-pass'; pass.placeholder = 'パスワード（6文字以上）'; pass.autocomplete = 'current-password';
+    wrap.append(email, pass);
+    const row = el('div', 'sync-btnrow');
+    const loginB = el('button', 'cta ghost', 'ログイン');
+    loginB.type = 'button';
+    loginB.addEventListener('click', () => cloudEmailAuth('login'));
+    const signupB = el('button', 'cta ghost', '新規登録');
+    signupB.type = 'button';
+    signupB.addEventListener('click', () => cloudEmailAuth('signup'));
+    row.append(loginB, signupB);
+    wrap.append(row);
+    const reset = el('button', 'sync-reset', 'パスワードを忘れたとき');
+    reset.type = 'button';
+    reset.addEventListener('click', cloudResetPass);
+    wrap.append(reset);
   }
 }
 

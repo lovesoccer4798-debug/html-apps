@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=14">
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="tokens.css?v=15">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -113,6 +113,12 @@
         <p class="hint">タスク・予定の分類に使えます（最大8個）。名前はタップで編集、色は丸をタップで切替。</p>
       </div>
 
+      <p class="section-label">よく会う人</p>
+      <div class="card">
+        <div id="people-body"></div>
+        <p class="hint">登録しておくと、予定の「誰と」でワンタップで選べます（最大30人）。いない人は予定の追加時にその場で自由入力もできます。</p>
+      </div>
+
       <p class="section-label">文字サイズ</p>
       <div class="card">
         <div class="theme-seg" id="size-seg">
@@ -207,6 +213,21 @@
             <option value="yearly">毎年</option>
           </select>
         </div>
+      </div>
+      <div id="event-only-fields" hidden>
+        <div class="f-row">
+          <div class="f-col">
+            <label class="f-label" for="f-time-end">終了時刻（任意）</label>
+            <input type="time" id="f-time-end" class="mono">
+          </div>
+          <div class="f-col">
+            <label class="f-label" for="f-place">場所（任意）</label>
+            <input type="text" id="f-place" maxlength="60" placeholder="例：渋谷・自宅">
+          </div>
+        </div>
+        <label class="f-label">誰と（任意 — タップで選択。設定の「よく会う人」から追加できます）</label>
+        <div class="who-chips" id="f-who-chips"></div>
+        <input type="text" id="f-who" maxlength="120" placeholder="その他の人（「、」区切りで複数OK）">
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
       <div class="r-colors" id="f-colors"></div>
@@ -394,7 +415,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="firebase-config.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

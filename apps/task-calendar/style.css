@@ -1181,3 +1181,63 @@ input, select, textarea { font: inherit; color: inherit; }
 .sr-date { font-size: 11px; color: var(--tc-ink2); flex-shrink: 0; }
 .sr-date.sun { color: var(--tc-sun); }
 .sr-date.sat { color: var(--tc-sat); }
+
+/* ---------- v12: 予定の「誰と・どこで」／メール認証／時間枠ドラッグ ---------- */
+
+.who-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.who-chips[hidden] { display: none; }
+.who-chip {
+  border: 1px solid var(--tc-line); background: var(--tc-surface2);
+  border-radius: var(--tc-r-pill); padding: 5px 13px; font-size: 12.5px; color: var(--tc-ink2);
+}
+.who-chip.is-on { background: var(--tc-accent); border-color: var(--tc-accent); color: var(--tc-accent-ink); font-weight: 700; }
+
+.item-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11.5px; color: var(--tc-ink2); margin-top: 2px; }
+.item-meta .meta-bit { display: inline-flex; align-items: center; gap: 3px; overflow-wrap: anywhere; }
+.item-meta .icon { width: 12px; height: 12px; }
+
+.pp-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
+.pp-name { flex: 1; font-size: 14px; overflow-wrap: anywhere; }
+
+.sync-or { font-size: 12px; color: var(--tc-ink3); text-align: center; margin: 12px 0 8px; }
+#sync-body input[type="email"], #sync-body input[type="password"] {
+  width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px;
+  padding: 10px 13px; margin-bottom: 8px;
+}
+#sync-body input:focus { outline: none; border-color: var(--tc-accent); }
+.sync-btnrow { display: flex; gap: 8px; }
+.sync-btnrow .cta { flex: 1; margin: 0; }
+.sync-reset { display: block; margin: 10px auto 0; font-size: 12px; color: var(--tc-ink3); text-decoration: underline; }
+.sync-toggle { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin: 12px 0 4px; }
+.sync-toggle input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
+
+.tg-draft {
+  position: absolute; left: 2px; right: 2px; z-index: 5;
+  border: 2px solid var(--tc-accent); border-radius: 8px;
+  background: color-mix(in srgb, var(--tc-accent) 18%, transparent);
+  touch-action: none;
+}
+.tg-dlbl { position: absolute; top: 2px; left: 6px; font-size: 10px; font-weight: 700; color: var(--tc-ink); white-space: nowrap; }
+.tg-handle {
+  position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--tc-accent); border: 2px solid var(--tc-surface);
+  touch-action: none; z-index: 6;
+}
+.tg-handle::after { /* 指で掴みやすいように当たり判定を広げる */
+  content: ""; position: absolute; inset: -12px;
+}
+.tg-h1 { top: -9px; left: 10px; }
+.tg-h2 { bottom: -9px; right: 10px; }
+.tg-dbar {
+  position: absolute; right: 0; bottom: -38px; display: flex; gap: 6px; z-index: 6;
+}
+.tg-dok {
+  background: var(--tc-accent); color: var(--tc-accent-ink);
+  border-radius: var(--tc-r-pill); padding: 6px 14px; font-size: 12.5px; font-weight: 700;
+  box-shadow: var(--tc-shadow);
+}
+.tg-dcancel {
+  background: var(--tc-surface); color: var(--tc-ink2); border: 1px solid var(--tc-line);
+  border-radius: 50%; width: 30px; height: 30px; font-size: 15px; box-shadow: var(--tc-shadow);
+}
