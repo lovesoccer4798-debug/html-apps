@@ -29,6 +29,7 @@ const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/200
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
+  plus: `<svg ${ICON_ATTRS}><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
   play: `<svg ${ICON_ATTRS}><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>`,
   pause: `<svg ${ICON_ATTRS}><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>`,
   clock: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
@@ -44,7 +45,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all' }, running: null };
 }
 
 function loadDb() {
@@ -68,6 +69,9 @@ function loadDb() {
 }
 
 const db = loadDb();
+if (!Array.isArray(db.calendars) || db.calendars.length === 0) {
+  db.calendars = [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }];
+}
 
 function save() {
   try {
@@ -92,6 +96,9 @@ const ui = {
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
+  routineTab: 'routines',   // ルーティンタブ内: 'routines' | 'vision'
+  vbFileTarget: null,       // 写真ピッカーの投入先
+  vbSlotTarget: null,       // 差し替え/削除の対象アイテム
 };
 
 /* ========== date helpers (local timezone) ========== */
@@ -146,6 +153,32 @@ function occursOn(t, key) {
 }
 function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
 function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+const MAX_CALENDARS = 8; // 仕様§7: 色の見分けとチップ視認性の上限
+
+function allFilterIds() {
+  const ids = db.calendars.map((c) => c.id);
+  if (db.routines.length) ids.push('routine');
+  return ids;
+}
+function passFilter(it) {
+  const f = db.settings.calendarFilter;
+  if (!f || f === 'all') return true;
+  if (it.kind === 'task' && it.ref.routineId) return f.includes('routine');
+  return f.includes(it.ref.calendarId || 'c-default');
+}
+function toggleFilter(id) {
+  const all = allFilterIds();
+  let f = db.settings.calendarFilter;
+  if (id === 'all') f = 'all';
+  else if (f === 'all') f = all.filter((x) => x !== id);
+  else if (f.includes(id)) f = f.filter((x) => x !== id);
+  else f = [...f, id];
+  if (Array.isArray(f) && (f.length === 0 || all.every((x) => f.includes(x)))) f = 'all'; // 全解除は「すべて」へ復帰（真っ白防止）
+  db.settings.calendarFilter = f;
+  save();
+  renderAll();
+}
+
 /* 予定表モード等で使う色: 自分の色 > ルーティンの色 > なし */
 function itemColor(it) {
   const pick = (id) => (ACCENTS[id] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
@@ -153,6 +186,11 @@ function itemColor(it) {
   if (it.kind === 'task' && it.ref.routineId) {
     const r = db.routines.find((x) => x.id === it.ref.routineId);
     if (r) return pick(r.color);
+  }
+  const calId = it.ref.calendarId;
+  if (calId && calId !== 'c-default') {
+    const cal = db.calendars.find((x) => x.id === calId);
+    if (cal) return pick(cal.color);
   }
   return null;
 }
@@ -245,7 +283,15 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 
 let toastTimer = null;
 let undoAction = null;
+function flashToast(text) { // 取り消し不要のお知らせ
+  $('#toast-text').textContent = text;
+  $('#toast-undo').hidden = true;
+  $('#toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 4000);
+}
 function showUndoToast(text, onUndo) {
+  $('#toast-undo').hidden = false;
   $('#toast-text').textContent = text;
   undoAction = onUndo;
   $('#toast').hidden = false;
@@ -645,6 +691,28 @@ function renderCal() {
   const body = $('#cal-body');
   body.textContent = '';
   openSwipeEl = null;
+
+  // マイカレンダーのフィルタチップ（TimeTree風）
+  if (db.calendars.length > 1 || db.routines.length) {
+    const chips = el('div', 'cal-chips');
+    const f = db.settings.calendarFilter;
+    const mkChip = (id, name, on, color) => {
+      const b = el('button', `cal-chip${on ? ' is-on' : ''}`);
+      b.type = 'button';
+      const d = el('span', 'ccdot');
+      if (on && color) d.style.background = color;
+      b.append(d, name);
+      b.addEventListener('click', () => toggleFilter(id));
+      return b;
+    };
+    chips.append(mkChip('all', 'すべて', f === 'all'));
+    const dark = effectiveDark();
+    for (const cal of db.calendars) {
+      chips.append(mkChip(cal.id, cal.name, f === 'all' || f.includes(cal.id), (ACCENTS[cal.color] || ACCENTS.green)[dark ? 'dark' : 'light']));
+    }
+    if (db.routines.length) chips.append(mkChip('routine', 'ルーティン', f === 'all' || f.includes('routine')));
+    body.append(chips);
+  }
   if (ui.view === 'day') renderDay(body);
   if (ui.view === 'week') renderWeek(body);
   if (ui.view === 'month') renderMonth(body);
@@ -659,7 +727,7 @@ function renderDay(body) {
 
   body.append(buildSleepCard(key));
 
-  const items = itemsFor(key);
+  const items = itemsFor(key).filter(passFilter);
   const stats = tasksStatsFor(key);
   if (stats.total > 0 && stats.done === stats.total) {
     const cel = el('div', 'celebrate');
@@ -702,7 +770,7 @@ function renderWeek(body) {
     row.append(dateBlock);
 
     const main = el('div', 'wk-main');
-    const items = itemsFor(key);
+    const items = itemsFor(key).filter(passFilter);
     if (items.length === 0) {
       const empty = el('button', 'wk-empty', '予定なし — タップして追加');
       empty.type = 'button';
@@ -752,7 +820,7 @@ function renderMonth(body) {
   for (let i = 0; i < 42; i += 1) {
     const day = addDays(gridStart, i);
     const key = toKey(day);
-    const items = itemsFor(key);
+    const items = itemsFor(key).filter(passFilter);
     const isOther = day.getMonth() !== c.getMonth();
     const cell = el('button', [
       'mo-cell',
@@ -787,7 +855,7 @@ function renderMonth(body) {
   // 選択日のプレビュー
   const key = ui.selectedKey || todayKey();
   const day = fromKey(key);
-  const items = itemsFor(key);
+  const items = itemsFor(key).filter(passFilter);
   const stats = tasksStatsFor(key);
   const headRow = el('div', 'preview-head');
   headRow.append(el('span', 'preview-title', `${day.getMonth() + 1}月${day.getDate()}日（${WD_JA[day.getDay()]}）`));
@@ -1044,6 +1112,18 @@ function renderInsights() {
   }
   body.append(doneCard);
 
+  // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様）
+  const mem = [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
+    .map(([days, label]) => ({ key: toKey(addDays(new Date(), -days)), label }))
+    .find((m2) => db.notes[m2.key]);
+  if (mem) {
+    const mc = el('div', 'card chart-card memory-card');
+    mc.append(el('p', 'section-label', `${mem.label}の今日のひとこと`));
+    mc.append(el('p', 'mem-date', mem.key));
+    mc.append(el('p', 'mem-text', db.notes[mem.key]));
+    body.append(mc);
+  }
+
   // 睡眠（平均就寝・起床・睡眠時間）
   const sleepRecs = keys.filter((k) => k <= tKey).map((k) => db.sleep[k]).filter((r) => r && r.bed && r.wake);
   if (sleepRecs.length) {
@@ -1098,7 +1178,60 @@ function renderInsights() {
 
 /* ----- settings ----- */
 
+const ACCENT_KEYS = Object.keys(ACCENTS);
+function renderCalManage() {
+  const wrap = $('#cal-manage');
+  wrap.textContent = '';
+  const dark = effectiveDark();
+  for (const cal of db.calendars) {
+    const row = el('div', 'calm-row');
+    const sw = el('button', 'calm-swatch');
+    sw.type = 'button';
+    sw.style.background = (ACCENTS[cal.color] || ACCENTS.green)[dark ? 'dark' : 'light'];
+    sw.setAttribute('aria-label', '色を切り替え');
+    sw.addEventListener('click', () => {
+      cal.color = ACCENT_KEYS[(ACCENT_KEYS.indexOf(cal.color) + 1) % ACCENT_KEYS.length];
+      save(); renderAll();
+    });
+    const name = document.createElement('input');
+    name.type = 'text'; name.maxLength = 20; name.value = cal.name;
+    name.addEventListener('blur', () => {
+      cal.name = name.value.trim() || cal.name;
+      save(); renderAll();
+    });
+    row.append(sw, name);
+    if (cal.id !== 'c-default') {
+      const del = el('button', 'iconbtn');
+      del.type = 'button'; del.setAttribute('aria-label', '削除'); del.innerHTML = ICONS.trash;
+      del.addEventListener('click', () => {
+        const idx = db.calendars.indexOf(cal);
+        const moved = [...db.tasks, ...db.events].filter((x) => x.calendarId === cal.id);
+        db.calendars.splice(idx, 1);
+        moved.forEach((x) => { delete x.calendarId; }); // 項目はマイカレンダーへ
+        if (Array.isArray(db.settings.calendarFilter)) db.settings.calendarFilter = 'all';
+        save(); renderAll();
+        showUndoToast(`「${cal.name}」を削除しました（項目はマイカレンダーへ）`, () => {
+          db.calendars.splice(Math.min(idx, db.calendars.length), 0, cal);
+          moved.forEach((x) => { x.calendarId = cal.id; });
+          save(); renderAll();
+        });
+      });
+      row.append(del);
+    }
+    wrap.append(row);
+  }
+  const addBtn = $('#cal-add');
+  addBtn.disabled = db.calendars.length >= MAX_CALENDARS;
+  addBtn.textContent = addBtn.disabled ? '上限（8個）に達しました' : '＋ カレンダーを追加';
+}
+$('#cal-add').addEventListener('click', () => {
+  if (db.calendars.length >= MAX_CALENDARS) return;
+  db.calendars.push({ id: newId('c'), name: `カレンダー${db.calendars.length + 1}`, color: ACCENT_KEYS[db.calendars.length % ACCENT_KEYS.length], order: db.calendars.length });
+  save(); renderAll();
+});
+
 function renderSettings() {
+  renderCalManage();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
@@ -1197,6 +1330,18 @@ function openSheet(mode, { item = null, dateKey = null } = {}) {
     sheetEls.repeatHint.hidden = true;
   }
   buildSheetColors(item ? (item.ref.color || '') : '');
+  const calSel = $('#f-cal');
+  calSel.textContent = '';
+  for (const cal of db.calendars) {
+    const o = document.createElement('option');
+    o.value = cal.id;
+    o.textContent = cal.name;
+    calSel.append(o);
+  }
+  calSel.value = item ? (item.ref.calendarId || 'c-default') : 'c-default';
+  const single = db.calendars.length < 2;
+  calSel.hidden = single;
+  $('#f-cal-label').hidden = single;
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
 }
@@ -1259,19 +1404,21 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const repeat = sheetEls.fRepeat.value || null;
   const memo = sheetEls.fMemo.value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
+  const calSelV = $('#f-cal').value;
+  const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color, calendarId });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, createdAt: Date.now() };
+    const ev = { id: newId('e'), title, date: dateKey, time, memo, color, calendarId, createdAt: Date.now() };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1285,11 +1432,12 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color, calendarId }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
   r.color = color;
+  r.calendarId = calendarId;
   if (item.kind === 'event') {
     r.date = dateKey;
     r.memo = memo;
@@ -1539,7 +1687,9 @@ document.addEventListener('keydown', (e) => {
   if (!$('#picker-scrim').hidden) { closePicker(); return; }
   if (!$('#routine-scrim').hidden) { $('#routine-scrim').hidden = true; return; }
   if (!$('#share-scrim').hidden) { $('#share-scrim').hidden = true; return; }
-  if (!$('#rdel-scrim').hidden) $('#rdel-scrim').hidden = true;
+  if (!$('#rdel-scrim').hidden) { $('#rdel-scrim').hidden = true; return; }
+  if (!$('#vb-scrim').hidden) { $('#vb-scrim').hidden = true; return; }
+  if (!$('#vb-slot-scrim').hidden) $('#vb-slot-scrim').hidden = true;
 });
 
 
@@ -1572,6 +1722,17 @@ function routineStreakWeeks(r) {
 function renderRoutines() {
   const body = $('#routines-body');
   body.textContent = '';
+
+  // ルーティン｜ビジョン 切替（仕様: ビジョンボードはこのタブ内）
+  const rvSeg = el('div', 'seg rv-seg');
+  [['routines', 'ルーティン'], ['vision', 'ビジョン']].forEach(([v, label]) => {
+    const b = el('button', `seg-btn${(ui.routineTab || 'routines') === v ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { ui.routineTab = v; renderAll(); });
+    rvSeg.append(b);
+  });
+  body.append(rvSeg);
+  if ((ui.routineTab || 'routines') === 'vision') { vbPicked = null; renderVisions(body); return; }
 
   const ctaRow = el('div', 'r-cta-row');
   const addBtn = el('button', 'cta', '＋ 新しいルーティン');
@@ -1915,6 +2076,363 @@ $('#share-import').addEventListener('click', () => {
   });
 });
 $('#share-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+
+
+/* ========== v8: ビジョンボード（思い出すためのページ） ========== */
+
+const VB_SLOTS = { t1: 1, t2: 2, t3: 3, t4: 4 };
+const VB_MAX_PHOTOS = 30; // 仕様: iOS PWAの保存領域の安全圏
+const VB_ROTS = [0, -6, 6, -12, 12];
+let vbPicked = null; // 自由配置で選択中の {it, node}
+
+/* --- 画像はIndexedDBへ（localStorageを圧迫しない） --- */
+let vbDbPromise = null;
+function vbOpenDb() {
+  if (!vbDbPromise) {
+    vbDbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open('tc-images', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('images');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  return vbDbPromise;
+}
+function vbPut(key, blob) {
+  return vbOpenDb().then((d) => new Promise((resolve, reject) => {
+    const tx = d.transaction('images', 'readwrite');
+    tx.objectStore('images').put(blob, key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+function vbGet(key) {
+  return vbOpenDb().then((d) => new Promise((resolve, reject) => {
+    const req = d.transaction('images').objectStore('images').get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  }));
+}
+const vbUrlCache = new Map();
+async function vbImageUrl(key) {
+  if (vbUrlCache.has(key)) return vbUrlCache.get(key);
+  try {
+    const blob = await vbGet(key);
+    if (!blob) return null;
+    const url = URL.createObjectURL(blob);
+    vbUrlCache.set(key, url);
+    return url;
+  } catch (err) { return null; }
+}
+function vbShrink(file) { // 長辺1280pxへ縮小してJPEG化
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(img.width * scale));
+      cv.height = Math.max(1, Math.round(img.height * scale));
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(img.src);
+      cv.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/jpeg', 0.82);
+    };
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+function vbPhotoCount() { return db.boardItems.filter((i) => i.kind === 'photo').length; }
+
+/* --- 一覧 --- */
+
+function renderVisions(body) {
+  const row = el('div', 'r-cta-row');
+  const add = el('button', 'cta', '＋ 新しいボード');
+  add.type = 'button';
+  add.addEventListener('click', openVbSheet);
+  row.append(add);
+  body.append(row);
+  body.append(el('p', 'vb-count', `写真 ${vbPhotoCount()}/${VB_MAX_PHOTOS}枚`));
+  if (db.boards.length === 0) {
+    body.append(el('p', 'empty', '写真やことばを貼って「なぜ続けるのか」を思い出すページ。テンプレートに写真をはめるか、自由に貼り付けるかを選べます。'));
+    return;
+  }
+  for (const board of db.boards) body.append(buildBoardCard(board));
+}
+
+function buildBoardCard(board) {
+  const card = el('div', 'vb-card');
+  const head = el('div', 'vb-head');
+  const title = document.createElement('input');
+  title.type = 'text'; title.maxLength = 40; title.value = board.title;
+  title.addEventListener('blur', () => { board.title = title.value.trim() || board.title; save(); });
+  const del = el('button', 'iconbtn');
+  del.type = 'button'; del.setAttribute('aria-label', 'ボードを削除'); del.innerHTML = ICONS.trash;
+  del.addEventListener('click', () => {
+    const bIndex = db.boards.indexOf(board);
+    const items = db.boardItems.filter((i) => i.boardId === board.id);
+    db.boards.splice(bIndex, 1);
+    db.boardItems = db.boardItems.filter((i) => i.boardId !== board.id);
+    save(); renderAll();
+    // 画像Blobは消さない（元に戻せるように。孤児Blobは軽微）
+    showUndoToast(`「${board.title}」を削除しました`, () => {
+      db.boards.splice(Math.min(bIndex, db.boards.length), 0, board);
+      db.boardItems.push(...items);
+      save(); renderAll();
+    });
+  });
+  head.append(title, del);
+  card.append(head);
+
+  if (board.mode === 'free') card.append(buildFreeBoard(board));
+  else card.append(buildTplGrid(board));
+
+  const memo = document.createElement('textarea');
+  memo.className = 'vb-memo';
+  memo.placeholder = 'このボードのテーマ・意図・意味をメモ…';
+  memo.value = board.memo || '';
+  let mt = null;
+  memo.addEventListener('input', () => { board.memo = memo.value; clearTimeout(mt); mt = setTimeout(save, 300); });
+  card.append(memo);
+  return card;
+}
+
+/* --- テンプレート型（コラージュ） --- */
+
+function buildTplGrid(board) {
+  const tpl = board.template || 't4';
+  const grid = el('div', `vb-grid ${tpl}`);
+  const items = db.boardItems.filter((i) => i.boardId === board.id);
+  for (let slot = 0; slot < VB_SLOTS[tpl]; slot += 1) {
+    const wrap = el('div', 'vb-slot-wrap');
+    const it = items.find((x) => x.slot === slot);
+    const btn = el('button', it ? 'vb-slot filled' : 'vb-slot');
+    btn.type = 'button';
+    if (it) {
+      const img = document.createElement('img');
+      img.alt = it.text || '';
+      vbImageUrl(it.imageKey).then((u) => { if (u) img.src = u; });
+      btn.append(img);
+      btn.addEventListener('click', () => { ui.vbSlotTarget = it; $('#vb-slot-scrim').hidden = false; });
+      const cap = document.createElement('input');
+      cap.type = 'text'; cap.className = 'vb-caption'; cap.maxLength = 80;
+      cap.placeholder = 'この写真の意図・テーマ…';
+      cap.value = it.text || '';
+      let ct = null;
+      cap.addEventListener('input', () => { it.text = cap.value; clearTimeout(ct); ct = setTimeout(save, 300); });
+      wrap.append(btn, cap);
+    } else {
+      btn.innerHTML = ICONS.plus;
+      btn.setAttribute('aria-label', '写真を追加');
+      btn.addEventListener('click', () => vbPickPhoto({ boardId: board.id, slot }));
+      wrap.append(btn);
+    }
+    grid.append(wrap);
+  }
+  return grid;
+}
+
+/* --- 自由配置型 --- */
+
+function buildFreeBoard(board) {
+  const wrapper = el('div');
+  const canvas = el('div', 'vb-canvas');
+  for (const it of db.boardItems.filter((i) => i.boardId === board.id)) {
+    canvas.append(buildFreeItem(it, canvas));
+  }
+  const tools = el('div', 'vb-tools');
+  const mk = (label, fn) => { const b = el('button', 'pill-btn', label); b.type = 'button'; b.addEventListener('click', fn); tools.append(b); };
+  mk('＋写真', () => vbPickPhoto({ boardId: board.id, free: true }));
+  mk('＋ことば', () => {
+    db.boardItems.push({ id: newId('vi'), boardId: board.id, kind: 'word', text: 'ことば', x: 32, y: 42, w: 16, rot: 0, createdAt: Date.now() });
+    save(); renderAll();
+  });
+  mk('小さく', () => vbScale(-1));
+  mk('大きく', () => vbScale(1));
+  mk('回転', vbRotate);
+  mk('削除', vbDeletePicked);
+  wrapper.append(canvas, tools);
+  return wrapper;
+}
+
+function buildFreeItem(it, canvas) {
+  let node;
+  if (it.kind === 'photo') {
+    node = el('div', 'vb-item');
+    const img = document.createElement('img');
+    vbImageUrl(it.imageKey).then((u) => { if (u) img.src = u; });
+    node.append(img);
+    node.style.width = `${it.w || 38}%`;
+  } else {
+    node = el('div', 'vb-item word');
+    node.contentEditable = 'true';
+    node.textContent = it.text || '';
+    node.style.fontSize = `${it.w || 16}px`;
+    node.addEventListener('blur', () => {
+      it.text = node.textContent.trim();
+      save();
+      if (!it.text) { db.boardItems = db.boardItems.filter((x) => x.id !== it.id); save(); renderAll(); }
+    });
+  }
+  node.style.left = `${it.x}%`;
+  node.style.top = `${it.y}%`;
+  node.style.transform = `rotate(${it.rot || 0}deg)`;
+
+  let sx = 0; let sy = 0; let ox = 0; let oy = 0; let dragging = false; let moved = false;
+  node.addEventListener('pointerdown', (e) => {
+    if (it.kind === 'word' && document.activeElement === node) return; // 文字編集中はドラッグしない
+    dragging = true; moved = false;
+    sx = e.clientX; sy = e.clientY; ox = it.x; oy = it.y;
+    try { node.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+  });
+  node.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const r = canvas.getBoundingClientRect();
+    const dx = ((e.clientX - sx) / r.width) * 100;
+    const dy = ((e.clientY - sy) / r.height) * 100;
+    if (Math.abs(dx) + Math.abs(dy) > 1.5) moved = true;
+    it.x = Math.min(92, Math.max(0, ox + dx));
+    it.y = Math.min(94, Math.max(0, oy + dy));
+    node.style.left = `${it.x}%`;
+    node.style.top = `${it.y}%`;
+  });
+  const up = () => { if (dragging) { dragging = false; if (moved) save(); } };
+  node.addEventListener('pointerup', up);
+  node.addEventListener('pointercancel', up);
+  node.addEventListener('click', () => {
+    canvas.querySelectorAll('.vb-item').forEach((n) => n.classList.remove('is-picked'));
+    node.classList.add('is-picked');
+    vbPicked = { it, node };
+  });
+  return node;
+}
+
+function vbApplyPicked() {
+  const { it, node } = vbPicked;
+  if (it.kind === 'photo') node.style.width = `${it.w}%`;
+  else node.style.fontSize = `${it.w || 16}px`;
+  node.style.transform = `rotate(${it.rot || 0}deg)`;
+}
+function vbScale(dir) {
+  if (!vbPicked) { flashToast('写真かことばをタップして選んでね'); return; }
+  const it = vbPicked.it;
+  if (it.kind === 'photo') it.w = Math.min(90, Math.max(14, (it.w || 38) + dir * 6));
+  else it.w = Math.min(34, Math.max(10, (it.w || 16) + dir * 2));
+  vbApplyPicked(); save();
+}
+function vbRotate() {
+  if (!vbPicked) { flashToast('写真かことばをタップして選んでね'); return; }
+  const it = vbPicked.it;
+  it.rot = VB_ROTS[(VB_ROTS.indexOf(it.rot || 0) + 1) % VB_ROTS.length];
+  vbApplyPicked(); save();
+}
+function vbDeletePicked() {
+  if (!vbPicked) { flashToast('写真かことばをタップして選んでね'); return; }
+  const it = vbPicked.it;
+  const index = db.boardItems.indexOf(it);
+  db.boardItems.splice(index, 1);
+  vbPicked = null;
+  save(); renderAll();
+  showUndoToast('削除しました', () => {
+    db.boardItems.splice(Math.min(index, db.boardItems.length), 0, it);
+    save(); renderAll();
+  });
+}
+
+/* --- 写真ピッカー --- */
+
+function vbPickPhoto(target) {
+  if (!target.replaceItem && vbPhotoCount() >= VB_MAX_PHOTOS) {
+    flashToast(`写真は${VB_MAX_PHOTOS}枚まで。どれか削除してから追加してね`);
+    return;
+  }
+  ui.vbFileTarget = target;
+  const input = $('#vb-file');
+  input.value = '';
+  input.click();
+}
+$('#vb-file').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  const target = ui.vbFileTarget;
+  ui.vbFileTarget = null;
+  e.target.value = '';
+  if (!file || !target) return;
+  try {
+    const blob = await vbShrink(file);
+    const key = newId('img');
+    await vbPut(key, blob);
+    if (target.replaceItem) {
+      target.replaceItem.imageKey = key; // 旧Blobは残す（元に戻す安全側）
+    } else if (target.free) {
+      db.boardItems.push({ id: newId('vi'), boardId: target.boardId, kind: 'photo', imageKey: key, x: 28, y: 26, w: 40, rot: 0, text: null, createdAt: Date.now() });
+    } else {
+      db.boardItems.push({ id: newId('vi'), boardId: target.boardId, kind: 'photo', imageKey: key, slot: target.slot, text: null, createdAt: Date.now() });
+    }
+    save(); renderAll();
+  } catch (err) {
+    console.warn('vision photo failed', err);
+    flashToast('写真を保存できませんでした（容量や形式を確認してね）');
+  }
+});
+
+/* --- 差し替え／削除シート --- */
+
+$('#vb-slot-replace').addEventListener('click', () => {
+  const it = ui.vbSlotTarget;
+  $('#vb-slot-scrim').hidden = true;
+  ui.vbSlotTarget = null;
+  if (it) vbPickPhoto({ replaceItem: it });
+});
+$('#vb-slot-delete').addEventListener('click', () => {
+  const it = ui.vbSlotTarget;
+  $('#vb-slot-scrim').hidden = true;
+  ui.vbSlotTarget = null;
+  if (!it) return;
+  const index = db.boardItems.indexOf(it);
+  db.boardItems.splice(index, 1);
+  save(); renderAll();
+  showUndoToast('写真を削除しました', () => {
+    db.boardItems.splice(Math.min(index, db.boardItems.length), 0, it);
+    save(); renderAll();
+  });
+});
+$('#vb-slot-cancel').addEventListener('click', () => { $('#vb-slot-scrim').hidden = true; ui.vbSlotTarget = null; });
+$('#vb-slot-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.hidden = true; ui.vbSlotTarget = null; } });
+
+/* --- 新規ボードシート --- */
+
+let vbNewMode = 'template';
+let vbNewTpl = 't1';
+function openVbSheet() {
+  vbNewMode = 'template'; vbNewTpl = 't1';
+  $('#vb-title').value = '';
+  document.querySelectorAll('#vb-mode-seg button').forEach((b) => b.classList.toggle('is-active', b.dataset.vbMode === 'template'));
+  document.querySelectorAll('#vb-tpl-pick button').forEach((b) => b.classList.toggle('is-active', b.dataset.tpl === 't1'));
+  $('#vb-template-row').hidden = false;
+  $('#vb-scrim').hidden = false;
+  $('#vb-title').focus();
+}
+$('#vb-mode-seg').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-vb-mode]');
+  if (!btn) return;
+  vbNewMode = btn.dataset.vbMode;
+  document.querySelectorAll('#vb-mode-seg button').forEach((b) => b.classList.toggle('is-active', b === btn));
+  $('#vb-template-row').hidden = vbNewMode !== 'template';
+});
+$('#vb-tpl-pick').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-tpl]');
+  if (!btn) return;
+  vbNewTpl = btn.dataset.tpl;
+  document.querySelectorAll('#vb-tpl-pick button').forEach((b) => b.classList.toggle('is-active', b === btn));
+});
+$('#vb-save').addEventListener('click', () => {
+  const title = $('#vb-title').value.trim() || 'ビジョンボード';
+  db.boards.push({ id: newId('b'), title, mode: vbNewMode, template: vbNewTpl, memo: '', order: db.boards.length, createdAt: Date.now() });
+  $('#vb-scrim').hidden = true;
+  ui.routineTab = 'vision';
+  save(); renderAll();
+});
+$('#vb-close').addEventListener('click', () => { $('#vb-scrim').hidden = true; });
+$('#vb-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
 
 /* ========== PWA ========== */
 

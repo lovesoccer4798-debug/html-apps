@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=8">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="tokens.css?v=11">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -104,6 +104,13 @@
         <p class="hint" id="font-hint">端末に入っている書体を使います。「＊」が付く書体はこの端末に日本語書体がなく、数字・英字だけ変わります。</p>
       </div>
 
+      <p class="section-label">マイカレンダー</p>
+      <div class="card">
+        <div id="cal-manage"></div>
+        <button type="button" class="cta ghost" id="cal-add">＋ カレンダーを追加</button>
+        <p class="hint">タスク・予定の分類に使えます（最大8個）。名前はタップで編集、色は丸をタップで切替。</p>
+      </div>
+
       <p class="section-label">文字サイズ</p>
       <div class="card">
         <div class="theme-seg" id="size-seg">
@@ -189,6 +196,8 @@
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
       <div class="r-colors" id="f-colors"></div>
+      <label class="f-label" for="f-cal" id="f-cal-label">カレンダー</label>
+      <select id="f-cal"></select>
       <label class="f-label" for="f-memo">メモ（任意）</label>
       <textarea id="f-memo" rows="2" maxlength="500" placeholder="ふりかえり用のひとこと・気づきなど"></textarea>
       <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます（メモだけはこの日の分として保存）。</p>
@@ -243,6 +252,44 @@
     </form>
   </div>
 </div>
+
+<!-- ビジョンボード: 新規作成 -->
+<div class="sheet-scrim" id="vb-scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="vb-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 class="sheet-title">新しいビジョンボード</h2>
+    <label class="f-label" for="vb-title">タイトル</label>
+    <input type="text" id="vb-title" maxlength="40" placeholder="例：2026年のわたし">
+    <label class="f-label">形式</label>
+    <div class="type-seg" id="vb-mode-seg">
+      <button type="button" data-vb-mode="template" class="is-active">テンプレート</button>
+      <button type="button" data-vb-mode="free">自由配置</button>
+    </div>
+    <div id="vb-template-row">
+      <label class="f-label">レイアウト</label>
+      <div class="vb-tpl-pick" id="vb-tpl-pick">
+        <button type="button" data-tpl="t1" class="is-active"><span class="tp a"></span></button>
+        <button type="button" data-tpl="t2"><span class="tp a"></span><span class="tp b"></span></button>
+        <button type="button" data-tpl="t3"><span class="tp wide"></span><span class="tp c"></span><span class="tp d"></span></button>
+        <button type="button" data-tpl="t4"><span class="tp a"></span><span class="tp b"></span><span class="tp c"></span><span class="tp d"></span></button>
+      </div>
+    </div>
+    <button type="button" class="cta" id="vb-save">つくる</button>
+  </div>
+</div>
+
+<!-- ビジョンボード: 写真の差し替え／削除 -->
+<div class="sheet-scrim" id="vb-slot-scrim" hidden>
+  <div class="sheet sheet-confirm" role="dialog" aria-modal="true">
+    <div class="sheet-grip"></div>
+    <h2 class="sheet-title">この写真をどうする？</h2>
+    <button type="button" class="cta ghost" id="vb-slot-replace">差し替える</button>
+    <button type="button" class="cta danger" id="vb-slot-delete">削除する</button>
+    <button type="button" class="cta plain" id="vb-slot-cancel">キャンセル</button>
+  </div>
+</div>
+<input type="file" id="vb-file" accept="image/*" hidden>
 
 <!-- ルーティン共有／読み込み -->
 <div class="sheet-scrim" id="share-scrim" hidden>
@@ -321,6 +368,6 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
