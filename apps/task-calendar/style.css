@@ -74,7 +74,7 @@ input, select, textarea { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: space-between;
   margin-top: 6px;
 }
-.date-title { font-size: 26px; font-weight: 900; letter-spacing: .01em; }
+.date-title { font-size: 20px; font-weight: 800; letter-spacing: .01em; }
 .date-nav { display: flex; align-items: center; gap: 2px; }
 
 .pill-btn {
@@ -677,7 +677,7 @@ input, select, textarea { font: inherit; color: inherit; }
 
 .date-title {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 26px; font-weight: 900; letter-spacing: .01em;
+  font-size: 20px; font-weight: 800; letter-spacing: .01em;
   padding: 0; text-align: left;
 }
 .date-title .icon { width: 18px; height: 18px; color: var(--tc-ink3); flex-shrink: 0; }
@@ -844,7 +844,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .sheet-close:hover { background: var(--tc-surface2); color: var(--tc-ink); }
 
 .date-title { white-space: nowrap; }
-.date-title.small { font-size: 19px; }
+.date-title.small { font-size: 18px; }
 
 .mo-style-seg { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .mo-style-seg .seg { margin: 0; padding: 3px; }
