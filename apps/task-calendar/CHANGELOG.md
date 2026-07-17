@@ -2,6 +2,12 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.9.0] - 2026-07-17
+
+### Added
+
+- フィルタチップに「Googleカレンダー」を追加: 「すべて／マイカレンダー／ルーティン」と同じように、チェックするとGoogleの予定を表示、外すと非表示にできる（連携中のみ表示）
+
 ## [1.8.0] - 2026-07-17
 
 ### Added
