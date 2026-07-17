@@ -172,12 +172,13 @@ function allFilterIds() {
   const ids = db.calendars.map((c) => c.id);
   for (const code of db.sharedJoined) ids.push(SH_PREFIX + code);
   if (db.routines.length) ids.push('routine');
+  if (gcalConnected()) ids.push('gcal');
   return ids;
 }
 function passFilter(it) {
-  if (it.kind === 'gcal') return true; // Google連携分は表示ON/OFFを連携設定側で持つ
   const f = db.settings.calendarFilter;
   if (!f || f === 'all') return true;
+  if (it.kind === 'gcal') return f.includes('gcal');
   if (it.kind === 'task' && it.ref.routineId) return f.includes('routine');
   return f.includes(it.ref.calendarId || 'c-default');
 }
@@ -806,7 +807,7 @@ function renderCal() {
   openSwipeEl = null;
 
   // マイカレンダーのフィルタチップ（TimeTree風）
-  if (db.calendars.length > 1 || db.routines.length || db.sharedJoined.length) {
+  if (db.calendars.length > 1 || db.routines.length || db.sharedJoined.length || gcalConnected()) {
     const chips = el('div', 'cal-chips');
     const f = db.settings.calendarFilter;
     const mkChip = (id, name, on, color) => {
@@ -828,6 +829,7 @@ function renderCal() {
       chips.append(mkChip(SH_PREFIX + code, `${(c && c.title) || code}（共有）`, f === 'all' || f.includes(SH_PREFIX + code), (ACCENTS[(c && c.color) || 'blue'] || ACCENTS.blue)[dark ? 'dark' : 'light']));
     }
     if (db.routines.length) chips.append(mkChip('routine', 'ルーティン', f === 'all' || f.includes('routine')));
+    if (gcalConnected()) chips.append(mkChip('gcal', 'Googleカレンダー', f === 'all' || f.includes('gcal'), (ACCENTS.blue || ACCENTS.green)[dark ? 'dark' : 'light']));
     body.append(chips);
   }
   if (ui.view === 'day') renderDay(body);
@@ -3084,6 +3086,8 @@ function gcalToken() {
   const g = db.settings.gcal;
   return g && g.token && g.exp > Date.now() ? g.token : null;
 }
+// 連携済み（フィルタチップに「Googleカレンダー」を出す条件）
+function gcalConnected() { return Boolean(db.settings.gcal); }
 function gcalConnect() {
   if (!window.TC_GCAL_CLIENT_ID) { flashToast('先にクライアントIDの設定が必要です（下の手順を見てね）'); return; }
   const params = new URLSearchParams({
@@ -3260,9 +3264,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=21');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=21');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=21');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=22');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=22');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=22');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）

@@ -24,6 +24,10 @@
 
 ## 作業ログ
 
+### 2026-07-17（v1.9.0 = Googleカレンダーのフィルタチップ）
+
+- オーナー: Google連携成功。要望でチップフィルタに「Googleカレンダー」を追加（passFilterでgcalをfへ・allFilterIds/チップ条件にgcalConnected()）。チェックで表示/非表示。新規5＋回帰44 PASS
+
 ### 2026-07-17（v1.8.0 = 終了時刻・睡眠一覧・ルーティン期間・gcal URI表示）
 
 - タスク・予定とも終了時刻（timeEnd）: シート時刻欄を開始/終了の2つに・event-only解除・grid durMin/カード/詳細を全kind対応
