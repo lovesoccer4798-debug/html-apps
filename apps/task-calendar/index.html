@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=20">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="tokens.css?v=21">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -235,9 +235,15 @@
           <label class="f-label" for="f-date">日付</label>
           <input type="date" id="f-date" class="mono">
         </div>
+      </div>
+      <div class="f-row">
         <div class="f-col">
-          <label class="f-label" for="f-time">時刻（任意）</label>
+          <label class="f-label" for="f-time">開始時刻（任意）</label>
           <input type="time" id="f-time" class="mono">
+        </div>
+        <div class="f-col">
+          <label class="f-label" for="f-time-end">終了時刻（任意）</label>
+          <input type="time" id="f-time-end" class="mono">
         </div>
       </div>
       <div class="f-row">
@@ -258,10 +264,6 @@
       </div>
       <div id="event-only-fields" hidden>
         <div class="f-row">
-          <div class="f-col">
-            <label class="f-label" for="f-time-end">終了時刻（任意）</label>
-            <input type="time" id="f-time-end" class="mono">
-          </div>
           <div class="f-col">
             <label class="f-label" for="f-place">場所（任意）</label>
             <input type="text" id="f-place" maxlength="60" placeholder="例：渋谷・自宅">
@@ -324,6 +326,17 @@
           </select>
         </div>
       </div>
+      <div class="f-row">
+        <div class="f-col">
+          <label class="f-label" for="r-start">期間はじめ（任意）</label>
+          <input type="date" id="r-start" class="mono">
+        </div>
+        <div class="f-col">
+          <label class="f-label" for="r-end">期間おわり（任意）</label>
+          <input type="date" id="r-end" class="mono">
+        </div>
+      </div>
+      <p class="hint">プロジェクト的に期間を区切りたいとき（例：8/1〜8/31）に設定。空欄なら期限なしでずっと続きます。</p>
       <label class="f-label">習慣タスク（チェックさえ入れば合格 — 時間は目安）</label>
       <div id="r-items"></div>
       <button type="button" class="cta ghost" id="r-add-item">＋ 習慣タスクを追加</button>
@@ -500,7 +513,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="firebase-config.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

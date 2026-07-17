@@ -151,6 +151,8 @@ function occursOn(t, key) {
   if (t.routineId) { // 一時停止中のルーティンのタスクは pausedFrom 以降出さない
     const r = db.routines.find((x) => x.id === t.routineId);
     if (r && r.pausedFrom && key >= r.pausedFrom) return false;
+    if (r && r.periodStart && key < r.periodStart) return false; // プロジェクト期間の外は出さない
+    if (r && r.periodEnd && key > r.periodEnd) return false;
   }
   if (!t.repeat) return t.date === key;
   if (key < t.startDate || (t.exDates || []).includes(key)) return false;
@@ -541,7 +543,7 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   if (showTime && it.time) {
     const c = el('span', 'chip mono');
     c.innerHTML = ICONS.clock;
-    c.append(` ${it.time}${it.kind === 'event' && it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}`);
+    c.append(` ${it.time}${it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}`);
     card.append(c);
   }
   if (it.repeat) {
@@ -919,7 +921,7 @@ function renderGrid(body) {
     for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
       const [hh, mm] = it.time.split(':').map(Number);
       // 長さ: 予定は終了時刻まで、タスクは所要時間、どちらもなければ1時間ぶん
-      const durMin = ((it.kind === 'event' || it.kind === 'gcal') && it.ref.timeEnd)
+      const durMin = it.ref.timeEnd
         ? Math.max(15, tgStrToMin(it.ref.timeEnd) - tgStrToMin(it.time))
         : (it.minutes || 60);
       const block = el('button', `tg-item${it.done ? ' is-done' : ''}`);
@@ -1470,6 +1472,19 @@ function renderInsights() {
     const mk = (num, label) => { const d2 = el('div', 'stat-card'); d2.innerHTML = `<div class="stat-num" style="font-size:18px">${num}</div><div class="stat-label">${label}</div>`; return d2; };
     row.append(mk(fmtClock(bedAvg), '平均就寝'), mk(fmtClock(wakeAvg), '平均起床'), mk(fmtDur(durAvg), '平均睡眠'));
     sCard.append(row);
+    // すべての記録の一覧（自分が実際に寝た・起きた時刻をそのまま振り返る）
+    const list = el('div', 'sleep-list');
+    list.append(el('p', 'section-label', '記録の一覧'));
+    for (const k of keys.filter((k2) => k2 <= tKey && db.sleep[k2] && db.sleep[k2].bed && db.sleep[k2].wake).reverse()) {
+      const rec = db.sleep[k];
+      const d = fromKey(k);
+      const li = el('div', 'sleep-row');
+      li.append(el('span', `sl-date mono${dayColorClass(d)}`, `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）`));
+      li.append(el('span', 'sl-times mono', `就寝 ${rec.bed} ・ 起床 ${rec.wake}`));
+      li.append(el('span', 'sl-dur mono', fmtDur(sleepDurMin(rec))));
+      list.append(li);
+    }
+    sCard.append(list);
     body.append(sCard);
   }
 
@@ -1715,7 +1730,7 @@ function openDetail(it) {
   };
   const d = fromKey(it.key);
   row('日付', `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`);
-  const timeStr = it.time ? `${it.time}${(it.kind === 'event' || isGcal) && it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}` : '';
+  const timeStr = it.time ? `${it.time}${it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}` : '';
   row('時刻', timeStr);
   if (it.repeat) row('くりかえし', REPEAT_LABEL[it.repeat]);
   if (it.kind === 'task' && it.ref.minutes) row('所要時間', `${it.ref.minutes}分`);
@@ -1936,11 +1951,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, diary, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1971,8 +1986,8 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   r.time = time;
   r.color = color;
   r.calendarId = calendarId;
+  r.timeEnd = time ? timeEnd : null; // 開始があるときだけ終了を持つ（タスク・予定とも）
   if (item.kind === 'event') {
-    r.timeEnd = time ? timeEnd : null;
     r.place = place;
     r.who = who && who.length ? who : null;
   } else {
@@ -2301,6 +2316,14 @@ function renderRoutines() {
     if (r.pausedFrom) titleRow.append(el('span', 'r-paused-chip', '一時停止中'));
     head.append(titleRow);
     if (r.goal) head.append(el('p', 'r-goal', `ゴール: ${r.goal}`));
+    if (r.periodStart || r.periodEnd) { // プロジェクト期間
+      const fmt = (k) => { if (!k) return ''; const d = fromKey(k); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
+      const over = r.periodEnd && todayKey() > r.periodEnd;
+      const p = el('p', `r-period${over ? ' is-over' : ''}`);
+      p.innerHTML = ICONS.calendar;
+      p.append(` ${fmt(r.periodStart) || '開始'}〜${fmt(r.periodEnd) || '無期限'}${over ? '（終了）' : ''}`);
+      head.append(p);
+    }
 
     const w = routineWeek(r, weekStart);
     const weekRow = el('div', 'r-week');
@@ -2427,6 +2450,8 @@ function openRoutineSheet(r) {
   $('#r-sheet-title').textContent = r ? 'ルーティンを編集' : '新しいルーティン';
   $('#r-title').value = r ? r.title : '';
   $('#r-goal').value = r ? (r.goal || '') : '';
+  $('#r-start').value = r ? (r.periodStart || '') : '';
+  $('#r-end').value = r ? (r.periodEnd || '') : '';
   $('#r-target').value = String(r ? (r.targetPerWeek || R_DEFAULT_TARGET) : R_DEFAULT_TARGET);
   const colors = $('#r-colors');
   colors.textContent = '';
@@ -2472,13 +2497,16 @@ $('#r-form').addEventListener('submit', (e) => {
   const goal = $('#r-goal').value.trim() || null;
   const color = $('#r-colors .accent-swatch.is-active')?.dataset.color || 'green';
   const target = parseInt($('#r-target').value, 10) || R_DEFAULT_TARGET;
+  let periodStart = $('#r-start').value || null;
+  let periodEnd = $('#r-end').value || null;
+  if (periodStart && periodEnd && periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
 
   let r = routineEditing;
   if (!r) {
-    r = { id: newId('r'), title, goal, color, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), createdAt: Date.now() };
+    r = { id: newId('r'), title, goal, color, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, createdAt: Date.now() };
     db.routines.push(r);
   } else {
-    r.title = title; r.goal = goal; r.color = color; r.targetPerWeek = target;
+    r.title = title; r.goal = goal; r.color = color; r.targetPerWeek = target; r.periodStart = periodStart; r.periodEnd = periodEnd;
   }
 
   // アイテム行と実タスクを同期（行が消えた=タスク削除、taskIdなし=新規）
@@ -3156,6 +3184,20 @@ function renderGcalCard() {
     wrap.append(el('p', 'hint', '準備がまだです。Google Cloud ConsoleでOAuthクライアント（ウェブアプリ）を作成し、firebase-config.js の TC_GCAL_CLIENT_ID に貼り付けると使えるようになります（無料・PRの手順参照）。'));
     return;
   }
+  // redirect_uri_mismatch対策: 実際に送るリダイレクトURIをそのまま表示（コンソールにこれを登録）
+  const redirectUri = location.origin + location.pathname;
+  const uriRow = el('div', 'gcal-uri');
+  uriRow.append(el('span', 'gcal-uri-label', 'このアプリの承認済みリダイレクトURI'));
+  const codeRow = el('div', 'sh-coderow');
+  codeRow.append(el('span', 'sh-code mono', redirectUri));
+  const cp = el('button', 'iconbtn');
+  cp.type = 'button'; cp.setAttribute('aria-label', 'コピー'); cp.innerHTML = ICONS.copy;
+  cp.addEventListener('click', () => navigator.clipboard?.writeText(redirectUri).then(() => flashToast('コピーしました')).catch(() => flashToast(redirectUri)));
+  codeRow.append(cp);
+  uriRow.append(codeRow);
+  uriRow.append(el('p', 'hint', 'エラー「redirect_uri_mismatch」が出るときは、Google Cloud Console のOAuthクライアントの「承認済みのリダイレクトURI」に、上のURIを完全一致で追加してください（承認済みのJavaScript生成元にはドメインだけを追加）。'));
+  wrap.append(uriRow);
+
   const g = db.settings.gcal;
   if (!g) {
     const btn = el('button', 'cta', 'Googleカレンダーと連携する');
@@ -3218,9 +3260,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=20');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=20');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=20');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=21');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=21');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=21');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
