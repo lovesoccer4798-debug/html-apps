@@ -33,11 +33,21 @@ TimeTreeは公式APIが終了（2023年）しているため接続不可。**統
    - 承認済みリダイレクトURI: `https://lovesoccer4798-debug.github.io/html-apps/apps/task-calendar/index.html`
 5. 発行された**クライアントID**を `apps/task-calendar/firebase-config.js` の `TC_GCAL_CLIENT_ID` に貼る（公開してよい識別子）
 
-## 5. 第2弾（未実装・構想）
+## 5. 第2弾（双方向書き込み・実装済み 2026-07-18）
 
-- 書き込み（このアプリの予定→Google。方向ごとのON/OFF）
-- externalId（gcalId）でのひも付けによる双方向の重複防止・更新追従
-- primary以外のカレンダー選択
+- スコープを `calendar.events`（読み書き）へ。既存の読み込みユーザーは**再連携で書き込み許可**が必要
+- 予定の追加/編集シート（連携中のみ表示）に「Googleカレンダーにも登録」「Google Meetのリンクを自動発行」
+- 作成=POST（Meet希望時 `conferenceDataVersion=1` ＋ `conferenceData.createRequest`）→ 返る `id` を `ev.gcalId`、`hangoutLink` を保存し「会議に参加」ボタンに反映
+- 編集=PATCH（`ev.gcalId`）／削除=DELETE。取り消し（Undo）で再作成
+- 対象は**単発の予定のみ**（繰り返しは対象外）。同日時同名の重複は表示側で統合済み
+- 権限不足/期限切れ（401/403）は「再連携」を促す
+
+### オーナー準備（第2弾）
+- OAuth同意画面のスコープに `.../auth/calendar.events` を追加（テストユーザーは審査不要）。連携済みなら設定から「再連携」で書き込みを許可
+
+## 6. 第3弾（未実装・構想）
+
+- primary以外のカレンダー選択・繰り返し（RRULE）対応・Google→アプリの編集取り込み
 
 ## 6. やらないこと
 

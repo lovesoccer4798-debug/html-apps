@@ -24,6 +24,11 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.12.0 = Googleカレンダー双方向＋Meet自動発行）
+
+- スコープをcalendar.eventsへ。予定シートに「Googleにも登録」「Meet自動発行」（連携中のみ）。作成POST(conferenceDataVersion=1)→gcalId/hangoutLink保存、編集PATCH、削除DELETE、Undoで再作成。単発のみ・重複は表示側で統合。401/403で再連携促し
+- **オーナー操作: OAuth同意画面にcalendar.eventsスコープ追加＋設定から「再連携」で書き込み許可**（spec§5）。モックでPOST/PATCH/DELETE/Meet検証・新規9＋回帰44 PASS。次: ②Notion
+
 ### 2026-07-18（v1.11.0 = ズーム固定・タイマー終了通知）
 
 - ズーム固定: viewportにid付与＋applyZoomLockで maximum-scale=1,user-scalable=no を出し入れ。設定「画面」で固定/自由（既定=固定）。iOSの入力フォーカス時オートズームも抑制

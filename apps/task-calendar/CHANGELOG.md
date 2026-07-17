@@ -2,6 +2,14 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.12.0] - 2026-07-18
+
+### Added
+
+- Googleカレンダー双方向連携: 予定の追加/編集で「Googleカレンダーにも登録」を選ぶと、このアプリ→Googleへ書き込み。編集・削除もGoogle側に反映（単発の予定のみ）
+- Google Meet のリンク自動発行: 「Google Meetのリンクを自動発行」を選ぶと、Googleに登録と同時に会議リンクを作成し、詳細の「会議に参加」から開ける
+- ※すでに連携済みの場合、書き込みを有効にするには設定から一度「再連携」が必要（読み書き権限へ）
+
 ## [1.11.0] - 2026-07-18
 
 ### Added

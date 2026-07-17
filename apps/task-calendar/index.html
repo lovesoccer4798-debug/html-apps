@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=24">
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="tokens.css?v=25">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -179,7 +179,7 @@
       <p class="section-label">Googleカレンダー連携</p>
       <div class="card">
         <div id="gcal-body"></div>
-        <p class="hint">Googleカレンダー（メインカレンダー）の予定を読み込んで、日・週・時間・月に一緒に表示します（青色・「Google」ラベルつき・このアプリからの編集は不可）。同じ日時・同じ名前の予定は重複表示しません。書き込み（双方向）連携は次の段階で対応予定。</p>
+        <p class="hint">Googleカレンダー（メインカレンダー）の予定を読み込んで表示します（青色・「Google」ラベル）。さらに、予定を追加/編集するときに「Googleカレンダーにも登録」を選ぶと、こちら→Googleへ書き込み・Google Meetのリンク自動発行もできます（双方向）。すでに連携済みの場合は、書き込みを有効にするため一度「再連携」してください。同じ日時・同じ名前の予定は重複表示しません。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -293,6 +293,11 @@
         <div class="who-chips" id="f-meeting-btns">
           <button type="button" class="who-chip" data-meet="https://meet.google.com/new">＋ Google Meet を作成</button>
           <button type="button" class="who-chip" data-meet="https://zoom.us/start/videomeeting">＋ Zoom を開く</button>
+        </div>
+        <div id="f-gcal-sync" hidden>
+          <label class="vis-row"><input type="checkbox" id="f-push-google"> この予定をGoogleカレンダーにも登録</label>
+          <label class="vis-row"><input type="checkbox" id="f-auto-meet"> Google Meet のリンクを自動発行（Googleに登録時）</label>
+          <p class="hint">Googleに登録すると、他の端末やGoogleカレンダーアプリでも見られます。編集・削除もGoogle側に反映されます（単発の予定のみ）。</p>
         </div>
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
@@ -534,7 +539,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=24"></script>
-<script src="app.js?v=24"></script>
+<script src="firebase-config.js?v=25"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>
