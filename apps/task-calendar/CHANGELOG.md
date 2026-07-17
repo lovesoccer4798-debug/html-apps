@@ -2,6 +2,13 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.10.0] - 2026-07-17
+
+### Added
+
+- 予定に会議リンク（Google Meet / Zoom などのURL）を登録でき、詳細画面に「会議に参加」ボタンが出る。追加シートに「＋ Google Meet を作成」「＋ Zoom を開く」ショートカットも（新規会議ページを開いて、発行URLを貼り付け）。Googleカレンダー側のMeetリンクも「会議に参加」で開ける
+- 日ビューのタイムラインに、開始時刻の下に終了時刻を表示（終了時刻がある予定・タスク）
+
 ## [1.9.0] - 2026-07-17
 
 ### Added

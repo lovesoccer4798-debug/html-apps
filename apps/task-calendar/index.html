@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=22">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="tokens.css?v=23">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -273,6 +273,12 @@
         <div class="who-chips" id="f-who-chips"></div>
         <input type="text" id="f-who" maxlength="120" placeholder="その他の人（「、」区切りで複数OK）">
         <div class="who-chips who-suggest-box" id="f-who-suggest"></div>
+        <label class="f-label" for="f-meeting">会議リンク（任意）</label>
+        <input type="url" id="f-meeting" maxlength="500" placeholder="Google Meet / Zoom などのURL" inputmode="url">
+        <div class="who-chips" id="f-meeting-btns">
+          <button type="button" class="who-chip" data-meet="https://meet.google.com/new">＋ Google Meet を作成</button>
+          <button type="button" class="who-chip" data-meet="https://zoom.us/start/videomeeting">＋ Zoom を開く</button>
+        </div>
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
       <div class="r-colors" id="f-colors"></div>
@@ -513,7 +519,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="firebase-config.js?v=23"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>
