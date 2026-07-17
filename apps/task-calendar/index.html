@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" id="tc-viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="Task Calendar — 日・週・月の3つの視点でタスクをこなし、積み上がった「できた」をながめるアプリ。">
 <title>Task Calendar</title>
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=23">
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="stylesheet" href="tokens.css?v=24">
+<link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -129,6 +129,21 @@
       <div class="card">
         <div id="colorrule-body"></div>
         <p class="hint">「遊び＝緑」「仕事＝オレンジ」のように、色の意味を自分で決めておけます。予定・タスクの色を選ぶときの目安に（表示用のメモです）。</p>
+      </div>
+
+      <p class="section-label">画面</p>
+      <div class="card">
+        <div class="theme-seg" id="zoom-seg">
+          <button data-zoom="lock">固定（ズームしない）</button>
+          <button data-zoom="free">自由（ピンチで拡大）</button>
+        </div>
+        <p class="hint">「固定」にすると、iPhoneでうっかり画面が拡大されて表示がブレるのを防げます（入力欄を開いたときの勝手なズームも止まります）。文字を大きくしたいときは上の「文字サイズ」をどうぞ。</p>
+      </div>
+
+      <p class="section-label">タイマー終了の通知</p>
+      <div class="card">
+        <label class="vis-row"><input type="checkbox" id="timer-notify"> 終了時に通知（音＋バイブ＋通知バナー）</label>
+        <p class="hint">タイマーが終わったときに、チャイム音・端末のバイブ・通知バナーでお知らせします（オンにすると通知の許可を求めます）。iPhoneでは、音は本体のサイレントスイッチに従い、バイブは非対応のため、確実に気づきたいときは通知バナーをオンにしてホーム画面に追加したアプリでご利用ください。</p>
       </div>
 
       <p class="section-label">睡眠の記録</p>
@@ -519,7 +534,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=23"></script>
-<script src="app.js?v=23"></script>
+<script src="firebase-config.js?v=24"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>
