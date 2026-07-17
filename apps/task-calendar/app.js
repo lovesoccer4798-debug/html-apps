@@ -50,7 +50,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false }, running: null };
 }
 
 function loadDb() {
@@ -304,6 +304,14 @@ function applySize() {
 function applyFont() {
   if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
   else document.documentElement.dataset.font = db.settings.font;
+}
+function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手なズームを止める
+  const vp = document.getElementById('tc-viewport');
+  if (!vp) return;
+  const locked = db.settings.zoomLock !== false;
+  vp.setAttribute('content', locked
+    ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
+    : 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); });
 
@@ -1644,6 +1652,11 @@ function renderSettings() {
   document.querySelectorAll('#size-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sizeOpt === (db.settings.fontSize || 'large'));
   });
+  document.querySelectorAll('#zoom-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.zoom === (db.settings.zoomLock === false ? 'free' : 'lock'));
+  });
+  const tn = $('#timer-notify');
+  if (tn) tn.checked = !!db.settings.timerNotify;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
   });
@@ -1701,6 +1714,22 @@ document.querySelectorAll('#sleep-seg button').forEach((b) => {
     db.settings.sleepMode = b.dataset.sleep;
     save(); renderAll();
   });
+});
+document.querySelectorAll('#zoom-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.zoomLock = b.dataset.zoom === 'lock';
+    save(); applyZoomLock(); renderAll();
+  });
+});
+$('#timer-notify').addEventListener('change', async (e) => {
+  if (e.target.checked && 'Notification' in window && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch (err) { /* 拒否でもトグルは有効（音・バイブは動く） */ }
+  }
+  db.settings.timerNotify = e.target.checked;
+  if (e.target.checked && 'Notification' in window && Notification.permission === 'denied') {
+    flashToast('通知はブロックされています。端末の設定から許可すると通知バナーが出ます');
+  }
+  save();
 });
 
 /* ========== add / edit sheet ========== */
@@ -2150,13 +2179,29 @@ function resumeTimer() {
 function finishTimer() {
   const r = db.running;
   if (!r) return;
+  const title = r.title || 'タイマー';
   r.finished = true;
   r.paused = false;
   r.remainingMs = 0;
   r.endAt = null;
   save();
   chime();
+  notifyTimerDone(title);
   updateTimerUI();
+}
+// 終了通知: バイブ（Android）＋通知バナー（許可時）。音はchime()で別途
+function notifyTimerDone(title) {
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (err) { /* 非対応端末は無視 */ }
+  if (!db.settings.timerNotify) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const body = `「${title}」が終わりました`;
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then((reg) => reg.showNotification('タイマー終了', { body, tag: 'tc-timer', vibrate: [200, 100, 200] })).catch(() => { new Notification('タイマー終了', { body }); });
+    } else {
+      new Notification('タイマー終了', { body });
+    }
+  } catch (err) { /* 通知が使えなくてもタイマー自体は完了している */ }
 }
 function stopTimer() { // 実行を中断してリセット（タスクは未完了のまま）
   db.running = null;
@@ -3295,9 +3340,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=23');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=23');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=23');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=24');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=24');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=24');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
@@ -4029,6 +4074,7 @@ if ('serviceWorker' in navigator) {
 applyTheme();
 applyFont();
 applySize();
+applyZoomLock();
 // 実行中タイマーの復元（リロード・再起動後）
 if (db.running) {
   const r = db.running;

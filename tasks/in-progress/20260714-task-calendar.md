@@ -24,6 +24,12 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.11.0 = ズーム固定・タイマー終了通知）
+
+- ズーム固定: viewportにid付与＋applyZoomLockで maximum-scale=1,user-scalable=no を出し入れ。設定「画面」で固定/自由（既定=固定）。iOSの入力フォーカス時オートズームも抑制
+- タイマー終了通知: finishTimer→notifyTimerDone（navigator.vibrate＋許可時 SW showNotification/Notification）。設定でON時に許可要求。**iOS制約: Vibration API非対応・音はサイレントSW依存 → 通知バナー＋PWA追加を案内**（正直に明記）
+- 次: ① Google双方向＋Meet自動発行（別ターン・write scope追加要）→ ② Notion。新規9＋回帰44 PASS
+
 ### 2026-07-17（v1.10.0 = 会議リンク・日ビュー終了時刻／Notion構想）
 
 - Q回答: gcal同期は読み込みのみ・片方向（アプリ→Googleは書かない）
