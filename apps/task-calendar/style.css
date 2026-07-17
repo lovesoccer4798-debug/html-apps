@@ -15,6 +15,7 @@ body {
   display: flex;
   justify-content: center;
   min-height: 100dvh;
+  overflow-x: hidden; /* スワイプ中の横ずれ・はみ出しを完全に防ぐ */
 }
 
 .mono { font-family: var(--tc-mono); }
@@ -1248,11 +1249,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .who-chip.who-suggest { border-style: dashed; color: var(--tc-ink); }
 .tl-row.is-gcal .tl-rail::after { background: transparent; border-color: var(--tc-sat); }
 
-/* ---------- v14: つながる横スワイプ（前後ページのゴースト） ---------- */
-#cal-body { position: relative; }
-.cal-ghost { position: absolute; top: 0; width: 100%; pointer-events: none; }
-.cal-ghost.prev { left: -100%; }
-.cal-ghost.next { left: 100%; }
+/* ---------- v14: 横スワイプ（本体だけ動かす・はみ出し防止） ---------- */
+#cal-body { will-change: transform; }
 
 /* ---------- v14: 記念日・色ルール・期間メモ ---------- */
 
@@ -1320,8 +1318,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .dt-block .dt-key { display: block; width: auto; margin-bottom: 4px; }
 .dt-text { font-size: 14px; color: var(--tc-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
 #detail-body .cta { margin-top: 14px; }
-.mo-star { font-size: 9px; margin-left: 1px; vertical-align: top; }
-.mo-grid.schedule .mo-star { font-size: 8px; }
+.mo-star { display: inline-flex; vertical-align: top; margin-left: 1px; }
+.mo-star .icon { width: 11px; height: 11px; color: #f5b301; }
+.anniv-banner .icon { color: #f5b301; }
 .vis-row { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
 .vis-row:last-child { border-bottom: none; }
 .vis-row input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
