@@ -1227,16 +1227,18 @@ input, select, textarea { font: inherit; color: inherit; }
 .tg-handle::after { /* 指で掴みやすいように当たり判定を広げる */
   content: ""; position: absolute; inset: -12px;
 }
-.tg-h1 { top: -9px; left: 10px; }
-.tg-h2 { bottom: -9px; right: 10px; }
+.tg-h1 { top: -9px; left: 12px; }
+.tg-h2 { bottom: -9px; right: 16px; }
 .tg-draft { cursor: grab; }
-.tg-dbar { /* つまみ（右下）と重ならないよう左下に・少し離す */
-  position: absolute; left: 0; bottom: -46px; display: flex; align-items: center; gap: 10px; z-index: 6;
+.tg-dbar { /* 枠の下に余白をとって表示（つまみと重ならない・折り返さない） */
+  position: absolute; top: 100%; margin-top: 18px; left: 0;
+  display: flex; align-items: center; gap: 10px; z-index: 7;
 }
 .tg-dok {
   background: var(--tc-accent); color: var(--tc-accent-ink);
-  border-radius: var(--tc-r-pill); padding: 6px 14px; font-size: 12.5px; font-weight: 700;
+  border-radius: var(--tc-r-pill); padding: 8px 18px; font-size: 12.5px; font-weight: 700;
   box-shadow: var(--tc-shadow);
+  white-space: nowrap; /* 狭い列でも「予定を追加」が縦に折れて巨大化しない */
 }
 .tg-dcancel {
   background: var(--tc-surface); color: var(--tc-ink2); border: 1px solid var(--tc-line);
@@ -1244,3 +1246,4 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .who-suggest-box { margin-top: 6px; margin-bottom: 0; }
 .who-chip.who-suggest { border-style: dashed; color: var(--tc-ink); }
+.tl-row.is-gcal .tl-rail::after { background: transparent; border-color: var(--tc-sat); }

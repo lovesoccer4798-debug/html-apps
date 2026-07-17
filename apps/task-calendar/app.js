@@ -172,6 +172,7 @@ function allFilterIds() {
   return ids;
 }
 function passFilter(it) {
+  if (it.kind === 'gcal') return true; // Google連携分は表示ON/OFFを連携設定側で持つ
   const f = db.settings.calendarFilter;
   if (!f || f === 'all') return true;
   if (it.kind === 'task' && it.ref.routineId) return f.includes('routine');
@@ -193,6 +194,7 @@ function toggleFilter(id) {
 /* 予定表モード等で使う色: 自分の色 > ルーティンの色 > なし */
 function itemColor(it) {
   const pick = (id) => (ACCENTS[id] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+  if (it.kind === 'gcal') return pick('blue');
   if (it.ref.color) return pick(it.ref.color);
   if (it.kind === 'task' && it.ref.routineId) {
     const r = db.routines.find((x) => x.id === it.ref.routineId);
@@ -225,6 +227,7 @@ function itemsFor(key) {
     if (e.date !== key) continue;
     items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: e.time || '', minutes: null, repeat: null, done: false });
   }
+  items.push(...gcalItemsFor(key)); // Googleカレンダーの予定（連携ON時のみ・読み取り専用）
   return items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99') || (a.ref.createdAt || 0) - (b.ref.createdAt || 0));
 }
 function tasksStatsFor(key) {
@@ -536,6 +539,7 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     card.append(dot);
   }
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
+  if (it.kind === 'gcal') card.append(el('span', 'chip', 'Google'));
   if (showTime && it.time) {
     const c = el('span', 'chip mono');
     c.innerHTML = ICONS.clock;
@@ -568,6 +572,8 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     ui.selectedItemId = ui.selectedItemId === it.id ? null : it.id;
     renderAll();
   });
+
+  if (it.kind === 'gcal') return card; // Googleの予定は読み取り専用（スワイプ編集なし）
 
   return makeSwipe(card, {
     onEdit: () => openSheet('edit', { item: it }),
@@ -605,25 +611,58 @@ $('#nav-today').addEventListener('click', () => {
   ui.selectedKey = todayKey();
   renderAll();
 });
-// カレンダー本体の横スワイプで前後の日・週・月へ（カードのスワイプ操作・時間枠の上では発動しない）
+// カレンダー本体の横スワイプで前後へ — 指に追従して隣の日・週へつながるように滑る（Googleカレンダー風）
 (() => {
   const body = $('#cal-body');
   let sx = 0;
   let sy = 0;
-  let tracking = false;
+  let active = false;
+  let horiz = null; // 横ジェスチャーと確定したか（縦スクロールとの取り合い防止）
+  const reset = (animate) => {
+    body.style.transition = animate ? 'transform .18s ease' : 'none';
+    body.style.transform = '';
+    body.style.opacity = '';
+  };
   body.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.swipe, .tg-draft, .tg-handle')) { tracking = false; return; }
-    tracking = true;
+    if (e.target.closest('.swipe, .tg-draft, .tg-handle')) { active = false; return; }
+    active = true;
+    horiz = null;
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
   }, { passive: true });
-  body.addEventListener('touchend', (e) => {
-    if (!tracking) return;
-    tracking = false;
-    const dx = e.changedTouches[0].clientX - sx;
-    const dy = e.changedTouches[0].clientY - sy;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) navigate(dx < 0 ? 1 : -1);
+  body.addEventListener('touchmove', (e) => {
+    if (!active) return;
+    const dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+    if (horiz === null && (Math.abs(dx) > 14 || Math.abs(dy) > 14)) horiz = Math.abs(dx) > Math.abs(dy) * 1.4;
+    if (horiz) {
+      body.style.transition = 'none';
+      body.style.transform = `translateX(${dx}px)`;
+    }
   }, { passive: true });
+  body.addEventListener('touchend', (e) => {
+    if (!active) return;
+    active = false;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (!horiz || Math.abs(dx) < 60) { reset(true); return; }
+    const dir = dx < 0 ? 1 : -1;
+    const w = body.clientWidth || 390;
+    body.style.transition = 'transform .16s ease-out, opacity .16s ease-out';
+    body.style.transform = `translateX(${-dir * w}px)`;
+    body.style.opacity = '.35';
+    setTimeout(() => { // 新しい日付を反対側からスライドイン
+      navigate(dir);
+      body.style.transition = 'none';
+      body.style.transform = `translateX(${dir * w * 0.6}px)`;
+      body.style.opacity = '.35';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        body.style.transition = 'transform .18s ease-out, opacity .18s ease-out';
+        body.style.transform = '';
+        body.style.opacity = '';
+      }));
+    }, 160);
+  }, { passive: true });
+  body.addEventListener('touchcancel', () => { if (active) { active = false; } reset(true); });
 })();
 
 function navigate(dir) {
@@ -884,7 +923,7 @@ function renderGrid(body) {
     for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
       const [hh, mm] = it.time.split(':').map(Number);
       // 長さ: 予定は終了時刻まで、タスクは所要時間、どちらもなければ1時間ぶん
-      const durMin = (it.kind === 'event' && it.ref.timeEnd)
+      const durMin = ((it.kind === 'event' || it.kind === 'gcal') && it.ref.timeEnd)
         ? Math.max(15, tgStrToMin(it.ref.timeEnd) - tgStrToMin(it.time))
         : (it.minutes || 60);
       const block = el('button', `tg-item${it.done ? ' is-done' : ''}`);
@@ -894,8 +933,12 @@ function renderGrid(body) {
       const c2 = itemColor(it);
       if (c2) block.style.background = c2;
       block.append(el('span', 'tg-ittl', it.title));
-      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.kind === 'event' && it.ref.timeEnd ? `${it.time}〜${it.ref.timeEnd}` : it.time));
-      block.addEventListener('click', (e) => { e.stopPropagation(); openSheet('edit', { item: it }); });
+      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.ref.timeEnd ? `${it.time}〜${it.ref.timeEnd}` : it.time));
+      block.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (it.kind === 'gcal') { flashToast('Googleカレンダーの予定（このアプリからは編集できません）'); return; }
+        openSheet('edit', { item: it });
+      });
       col.append(block);
     }
     if (key === todayKey()) { // 現在時刻の線
@@ -1562,6 +1605,7 @@ function renderSettings() {
   renderPeopleCard();
   renderSyncCard();
   renderSharedCard();
+  renderGcalCard();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
@@ -2911,6 +2955,150 @@ $('#search-close').addEventListener('click', () => { $('#search-scrim').hidden =
 $('#search-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
 $('#search-input').addEventListener('input', renderSearchResults);
 
+/* ========== v13: Googleカレンダー連携（第1弾: メインカレンダーの読み込み・表示）==========
+   OAuthはライブラリ不要のリダイレクト方式（インプリシットフロー）— CDN禁止方針と両立。
+   トークンはこの端末のみに保存（クラウドへは送らない）。表示のみで書き込み権限は求めない。 */
+
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+let gcalEvents = {};  // dateKey -> [{id,title,time,timeEnd,place}]
+let gcalFetched = {}; // 'YYYY-MM' -> true | 'loading' | false
+
+function gcalToken() {
+  const g = db.settings.gcal;
+  return g && g.token && g.exp > Date.now() ? g.token : null;
+}
+function gcalConnect() {
+  if (!window.TC_GCAL_CLIENT_ID) { flashToast('先にクライアントIDの設定が必要です（下の手順を見てね）'); return; }
+  const params = new URLSearchParams({
+    client_id: window.TC_GCAL_CLIENT_ID,
+    redirect_uri: location.origin + location.pathname,
+    response_type: 'token',
+    scope: GCAL_SCOPE,
+    include_granted_scopes: 'true',
+    state: 'tc-gcal',
+  });
+  location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+// 認可画面から戻ってきた時: URLフラグメントのアクセストークンを回収してURLを掃除
+(() => {
+  if (!location.hash.includes('access_token')) return;
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get('state') !== 'tc-gcal' || !h.get('access_token')) return;
+  db.settings.gcal = {
+    token: h.get('access_token'),
+    exp: Date.now() + ((parseInt(h.get('expires_in'), 10) || 3600) - 60) * 1000,
+    on: true,
+  };
+  persistLocal();
+  history.replaceState(null, '', location.pathname + location.search);
+  flashToast('Googleカレンダーと連携しました');
+})();
+function gcalDisconnect() {
+  delete db.settings.gcal;
+  gcalEvents = {};
+  gcalFetched = {};
+  persistLocal();
+  renderAll();
+}
+
+async function gcalEnsureMonth(key) {
+  const m = key.slice(0, 7); // 月単位でまとめて取得（通信回数を抑える）
+  if (gcalFetched[m]) return;
+  const token = gcalToken();
+  if (!token) return;
+  gcalFetched[m] = 'loading';
+  try {
+    const [y, mo] = m.split('-').map(Number);
+    const q = new URLSearchParams({
+      timeMin: new Date(y, mo - 1, 1).toISOString(),
+      timeMax: new Date(y, mo, 1).toISOString(),
+      singleEvents: 'true',
+      orderBy: 'startTime',
+      maxResults: '250',
+      fields: 'items(id,summary,start,end,location)',
+    });
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401 || res.status === 403) { // トークン切れ → 再連携待ち
+      db.settings.gcal.exp = 0;
+      persistLocal();
+      gcalFetched[m] = false;
+      if (ui.screen === 'settings') renderGcalCard();
+      return;
+    }
+    const data = await res.json();
+    for (const it of data.items || []) {
+      const sd = it.start || {};
+      const ed = it.end || {};
+      const dateKey = (sd.dateTime || sd.date || '').slice(0, 10);
+      if (!dateKey) continue;
+      (gcalEvents[dateKey] = gcalEvents[dateKey] || []).push({
+        id: it.id,
+        title: it.summary || '（タイトルなし）',
+        time: sd.dateTime ? sd.dateTime.slice(11, 16) : '',
+        timeEnd: ed.dateTime ? ed.dateTime.slice(11, 16) : null,
+        place: it.location || null,
+      });
+    }
+    gcalFetched[m] = true;
+    renderAll();
+  } catch (err) {
+    console.warn('gcal fetch failed', err);
+    gcalFetched[m] = false;
+  }
+}
+
+function gcalItemsFor(key) {
+  const g = db.settings.gcal;
+  if (!g || g.on === false) return [];
+  gcalEnsureMonth(key); // 未取得の月なら裏で取得→届いたら再描画
+  return (gcalEvents[key] || [])
+    // このアプリ側に同じ予定（同日・同時刻・同タイトル）があれば重複表示しない
+    .filter((e) => !db.events.some((l) => l.date === key && (l.time || '') === (e.time || '') && l.title === e.title))
+    .map((e) => ({ kind: 'gcal', id: `g${e.id}@${key}`, ref: e, key, title: e.title, time: e.time, minutes: null, repeat: null, done: false }));
+}
+
+function renderGcalCard() {
+  const wrap = $('#gcal-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  if (!window.TC_GCAL_CLIENT_ID) {
+    wrap.append(el('p', 'hint', '準備がまだです。Google Cloud ConsoleでOAuthクライアント（ウェブアプリ）を作成し、firebase-config.js の TC_GCAL_CLIENT_ID に貼り付けると使えるようになります（無料・PRの手順参照）。'));
+    return;
+  }
+  const g = db.settings.gcal;
+  if (!g) {
+    const btn = el('button', 'cta', 'Googleカレンダーと連携する');
+    btn.type = 'button';
+    btn.addEventListener('click', gcalConnect);
+    wrap.append(btn);
+    return;
+  }
+  const row = el('div', 'sync-row');
+  const expired = !gcalToken();
+  row.append(el('span', 'sync-email', 'Googleカレンダー'));
+  row.append(el('span', `sync-state${expired ? '' : ' ok'}`, expired ? '接続の期限切れ（再連携してね）' : '連携中（読み込みのみ）'));
+  wrap.append(row);
+  if (expired) {
+    const re = el('button', 'cta', '再連携する');
+    re.type = 'button';
+    re.addEventListener('click', gcalConnect);
+    wrap.append(re);
+  }
+  const tg = el('label', 'sync-toggle');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = g.on !== false;
+  cb.addEventListener('change', () => { g.on = cb.checked; persistLocal(); renderAll(); });
+  tg.append(cb, ' Googleの予定をカレンダーに表示する');
+  wrap.append(tg);
+  const out = el('button', 'cta ghost', '連携を解除');
+  out.type = 'button';
+  out.addEventListener('click', gcalDisconnect);
+  wrap.append(out);
+}
+
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
 const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people'];
@@ -2921,6 +3109,8 @@ let fbReady = false;
 let fbUser = null;
 let fbPushTimer = null;
 let syncStatus = 'off'; // off | loading | synced | error | offline
+let syncErrCode = ''; // 直近の同期エラーコード（原因の切り分け用に画面に出す）
+function fbErrCode(err) { return (err && (err.code || err.message)) || 'unknown'; }
 
 function setSyncStatus(st) {
   syncStatus = st;
@@ -2939,9 +3129,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=16');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=16');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=16');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=17');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=17');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=17');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
@@ -3063,6 +3253,7 @@ async function cloudPullOrPush() {
     }
   } catch (err) {
     console.warn('sync failed', err);
+    syncErrCode = fbErrCode(err);
     setSyncStatus('error');
   }
 }
@@ -3079,7 +3270,7 @@ async function cloudPush() {
 function scheduleCloudPush() {
   if (!fbUser || db.settings.syncEnabled === false) return;
   clearTimeout(fbPushTimer);
-  fbPushTimer = setTimeout(() => { cloudPush().catch(() => setSyncStatus('error')); }, 2500);
+  fbPushTimer = setTimeout(() => { cloudPush().catch((err) => { syncErrCode = fbErrCode(err); setSyncStatus('error'); }); }, 2500);
 }
 
 function renderSyncCard() {
@@ -3095,7 +3286,7 @@ function renderSyncCard() {
       : syncStatus === 'synced'
       ? `同期済み ${db.settings.lastSyncAt ? new Date(db.settings.lastSyncAt).toTimeString().slice(0, 5) : ''}`
       : syncStatus === 'loading' ? '同期中…'
-      : syncStatus === 'error' ? '同期エラー（ローカルには保存されています）'
+      : syncStatus === 'error' ? `同期エラー: ${syncErrCode || '不明'}${/permission/i.test(syncErrCode) ? '（Firestoreのルール未設定が原因の可能性大）' : ''}（ローカルには保存されています）`
       : syncStatus === 'offline' ? 'オフライン（復帰後に同期します）' : '接続待ち…';
     row.append(st);
     wrap.append(row);

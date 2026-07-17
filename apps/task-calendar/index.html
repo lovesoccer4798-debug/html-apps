@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=16">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="tokens.css?v=17">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -138,6 +138,12 @@
       <div class="card">
         <div id="shared-body"></div>
         <p class="hint">招待コードを知っている人だけが参加できます。権限は「編集可」「閲覧専用」から選べ、「解除」で相手から見えなくなります（同じコードで再参加はできるので、完全に見せたくない場合はカレンダーごと削除して作り直してね）。</p>
+      </div>
+
+      <p class="section-label">Googleカレンダー連携</p>
+      <div class="card">
+        <div id="gcal-body"></div>
+        <p class="hint">Googleカレンダー（メインカレンダー）の予定を読み込んで、日・週・時間・月に一緒に表示します（青色・「Google」ラベルつき・このアプリからの編集は不可）。同じ日時・同じ名前の予定は重複表示しません。書き込み（双方向）連携は次の段階で対応予定。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -416,7 +422,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="firebase-config.js?v=17"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>
