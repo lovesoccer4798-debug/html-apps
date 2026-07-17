@@ -44,6 +44,7 @@ const ICONS = {
   mapPin: `<svg ${ICON_ATTRS}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`,
   users: `<svg ${ICON_ATTRS}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   sparkles: `<svg ${ICON_ATTRS}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>`,
+  video: `<svg ${ICON_ATTRS}><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>`,
 };
 
 /* ========== persistent data ========== */
@@ -1071,8 +1072,13 @@ function renderDay(body) {
   }
   const tl = el('div', 'tl');
   for (const it of items) {
-    const row = el('div', `tl-row${it.done ? ' is-done' : ''}${it.kind === 'event' ? ' is-event' : ''}`);
-    row.append(el('span', 'tl-time mono', it.time || ''));
+    const row = el('div', `tl-row${it.done ? ' is-done' : ''}${it.kind === 'event' ? ' is-event' : ''}${it.kind === 'gcal' ? ' is-gcal' : ''}`);
+    const timeCell = el('span', 'tl-time mono');
+    if (it.time) {
+      timeCell.append(el('span', 'tl-start', it.time));
+      if (it.ref.timeEnd) timeCell.append(el('span', 'tl-end', it.ref.timeEnd)); // 終了時刻を下に添える
+    }
+    row.append(timeCell);
     row.append(el('span', 'tl-rail'));
     const slot = el('div', 'tl-item');
     slot.append(buildItemCard(it));
@@ -1749,6 +1755,17 @@ function openDetail(it) {
   } else if (it.ref.place) {
     row('場所', it.ref.place);
   }
+  // 会議リンク（アプリの予定 or GoogleのconferenceData）→「会議に参加」ボタン
+  const meetUrl = it.ref.meetUrl || it.ref.hangoutLink || null;
+  if (meetUrl) {
+    const join = el('a', 'cta join-btn');
+    join.href = meetUrl;
+    join.target = '_blank';
+    join.rel = 'noopener';
+    join.innerHTML = ICONS.video || '';
+    join.append(el('span', '', '会議に参加'));
+    body.append(join);
+  }
   if (it.kind === 'task') { // 完了トグルも詳細から
     const btn = el('button', `cta ${it.done ? 'ghost' : ''}`, it.done ? '完了を取り消す' : '完了にする');
     btn.type = 'button';
@@ -1783,6 +1800,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.repeatHint.hidden = !r.repeat;
     $('#f-time-end').value = r.timeEnd || '';
     $('#f-place').value = r.place || '';
+    $('#f-meeting').value = r.meetUrl || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
   } else {
     sheetEls.fTitle.value = '';
@@ -1795,6 +1813,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.repeatHint.hidden = true;
     $('#f-time-end').value = timeEnd || '';
     $('#f-place').value = '';
+    $('#f-meeting').value = '';
     buildWhoChips([]);
   }
   buildSheetColors(item ? (item.ref.color || '') : '');
@@ -1912,6 +1931,15 @@ function syncSheetType() {
   $('#event-only-fields').hidden = ui.sheetType !== 'event';
 }
 
+// 「＋ Google Meet を作成」「＋ Zoom を開く」→ 新規会議ページを開いて、発行されたURLを会議リンク欄に貼ってもらう
+$('#f-meeting-btns').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-meet]');
+  if (!btn) return;
+  window.open(btn.dataset.meet, '_blank', 'noopener');
+  flashToast('新しい会議を作成→発行されたURLを会議リンク欄に貼ってね');
+  $('#f-meeting').focus();
+});
+
 $('#fab').addEventListener('click', () => openSheet('add', {}));
 
 $('#sheet-form').addEventListener('submit', (e) => {
@@ -1937,6 +1965,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const repeat = sheetEls.fRepeat.value || null;
   const memo = sheetEls.fMemo.value.trim() || null;
   const diary = sheetEls.fDiary.value.trim() || null;
+  const meetUrl = $('#f-meeting').value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
@@ -1944,9 +1973,9 @@ $('#sheet-form').addEventListener('submit', (e) => {
   if (ui.editing && sharedBlocked(ui.editing.ref.calendarId)) return;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl });
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, memo, diary, color, calendarId, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, color, calendarId, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey };
@@ -1982,7 +2011,7 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
   }
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
@@ -1992,6 +2021,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   if (item.kind === 'event') {
     r.place = place;
     r.who = who && who.length ? who : null;
+    r.meetUrl = meetUrl;
   } else {
     r.minutes = minutes;
   }
@@ -3136,7 +3166,7 @@ async function gcalEnsureMonth(key) {
       singleEvents: 'true',
       orderBy: 'startTime',
       maxResults: '250',
-      fields: 'items(id,summary,start,end,location)',
+      fields: 'items(id,summary,start,end,location,hangoutLink)',
     });
     const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -3160,6 +3190,7 @@ async function gcalEnsureMonth(key) {
         time: sd.dateTime ? sd.dateTime.slice(11, 16) : '',
         timeEnd: ed.dateTime ? ed.dateTime.slice(11, 16) : null,
         place: it.location || null,
+        hangoutLink: it.hangoutLink || null,
       });
     }
     gcalFetched[m] = true;
@@ -3264,9 +3295,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=22');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=22');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=22');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=23');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=23');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=23');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）

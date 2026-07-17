@@ -24,6 +24,13 @@
 
 ## 作業ログ
 
+### 2026-07-17（v1.10.0 = 会議リンク・日ビュー終了時刻／Notion構想）
+
+- Q回答: gcal同期は読み込みのみ・片方向（アプリ→Googleは書かない）
+- 予定に会議リンク（meetUrl）＋詳細に「会議に参加」ボタン。Meet/Zoom新規作成ショートカット（URL自動発行はwrite scope/サーバー必須のため貼り付け方式）。gcalのhangoutLinkも参加ボタン対応
+- 日ビュータイムラインに終了時刻を表示（tl-start/tl-end）
+- Notion連携は spec/task-calendar-notion.md に構想記載（Cloudflare Worker中継が必要＝次段階）。新規7＋回帰44 PASS
+
 ### 2026-07-17（v1.9.0 = Googleカレンダーのフィルタチップ）
 
 - オーナー: Google連携成功。要望でチップフィルタに「Googleカレンダー」を追加（passFilterでgcalをfへ・allFilterIds/チップ条件にgcalConnected()）。チェックで表示/非表示。新規5＋回帰44 PASS

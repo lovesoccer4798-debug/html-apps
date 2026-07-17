@@ -192,7 +192,11 @@ input, select, textarea { font: inherit; color: inherit; }
   color: var(--tc-ink3);
   text-align: right;
   padding-top: 16px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
 }
+.tl-time .tl-start { color: var(--tc-ink2); font-weight: 600; }
+.tl-time .tl-end { font-size: 10.5px; color: var(--tc-ink3); }
+.tl-time .tl-end::before { content: "〜"; }
 .tl-rail { position: relative; }
 .tl-rail::before {
   content: "";
@@ -1340,3 +1344,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .gcal-uri { margin: 10px 0; padding: 10px; background: var(--tc-surface2); border-radius: 12px; }
 .gcal-uri-label { font-size: 11px; color: var(--tc-ink3); }
 .gcal-uri .sh-code { font-size: 11px; word-break: break-all; letter-spacing: 0; }
+
+/* ---------- v17: 会議リンク・日ビュー終了時刻 ---------- */
+.join-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+.join-btn .icon { width: 18px; height: 18px; }
+#f-meeting-btns { margin-top: 8px; }
+#f-meeting-btns .who-chip { border-style: dashed; }
