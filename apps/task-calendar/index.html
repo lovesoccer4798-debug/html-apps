@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=18">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="tokens.css?v=19">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 
@@ -117,6 +117,12 @@
       <div class="card">
         <div id="people-body"></div>
         <p class="hint">登録しておくと、予定の「誰と」でワンタップで選べます（最大30人）。いない人は予定の追加時にその場で自由入力もできます。</p>
+      </div>
+
+      <p class="section-label">表示する項目</p>
+      <div class="card">
+        <div id="visibility-body"></div>
+        <p class="hint">使わないビュー・タブを隠して、画面をすっきりさせられます（データは消えません・いつでも戻せます）。</p>
       </div>
 
       <p class="section-label">色ルール</p>
@@ -225,8 +231,8 @@
           <input type="time" id="f-time" class="mono">
         </div>
       </div>
-      <div class="f-row" id="task-only-fields">
-        <div class="f-col">
+      <div class="f-row">
+        <div class="f-col" id="minutes-col">
           <label class="f-label" for="f-minutes">所要時間（分・任意）</label>
           <input type="number" id="f-minutes" class="mono" min="1" max="600" placeholder="--">
         </div>
@@ -262,8 +268,10 @@
       <label class="f-label" for="f-cal" id="f-cal-label">カレンダー</label>
       <select id="f-cal"></select>
       <label class="f-label" for="f-memo">メモ（任意）</label>
-      <textarea id="f-memo" rows="2" maxlength="500" placeholder="ふりかえり用のひとこと・気づきなど"></textarea>
-      <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます（メモだけはこの日の分として保存）。</p>
+      <textarea id="f-memo" rows="2" maxlength="500" placeholder="ひとこと・気づき・持ち物など"></textarea>
+      <label class="f-label" for="f-diary">日記（任意）</label>
+      <textarea id="f-diary" rows="4" maxlength="2000" placeholder="その日の出来事・気持ちを自由に。あとで振り返れます"></textarea>
+      <p class="hint" id="repeat-hint" hidden>編集は繰り返しのすべての回に反映されます（メモ・日記だけはこの日の分として保存＝日記になります）。</p>
       <button type="submit" class="cta" id="sheet-save">保存</button>
     </form>
   </div>
@@ -363,11 +371,34 @@
     <form id="anniv-form" autocomplete="off">
       <label class="f-label" for="a-title">名前</label>
       <input type="text" id="a-title" maxlength="40" placeholder="例：つきあった日・誕生日">
-      <label class="f-label" for="a-date">日付</label>
-      <input type="date" id="a-date" class="mono">
-      <label class="a-check"><input type="checkbox" id="a-yearly" checked> 毎年くりかえす（記念日・誕生日）</label>
+      <div class="f-row">
+        <div class="f-col">
+          <label class="f-label" for="a-date">日付</label>
+          <input type="date" id="a-date" class="mono">
+        </div>
+        <div class="f-col">
+          <label class="f-label" for="a-repeat">くりかえし</label>
+          <select id="a-repeat">
+            <option value="yearly">毎年</option>
+            <option value="monthly">毎月</option>
+            <option value="once">くりかえさない</option>
+          </select>
+        </div>
+      </div>
       <button type="submit" class="cta" id="anniv-save">保存</button>
+      <button type="button" class="cta danger" id="anniv-delete" hidden>削除</button>
     </form>
+  </div>
+</div>
+
+<!-- 詳細（タップで表示・ペンで編集） -->
+<div class="sheet-scrim" id="detail-scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="detail-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <button type="button" class="sheet-edit" id="detail-edit" aria-label="編集"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    <h2 class="sheet-title" id="detail-title"></h2>
+    <div id="detail-body"></div>
   </div>
 </div>
 
@@ -460,7 +491,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="firebase-config.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

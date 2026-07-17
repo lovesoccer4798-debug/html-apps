@@ -216,6 +216,11 @@ function memoFor(it) {
   if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
   return r.memo || null;
 }
+function diaryFor(it) {
+  const r = it.ref;
+  if (r.repeat) return (r.diaryDates || {})[it.key] ?? r.diary ?? null;
+  return r.diary || null;
+}
 
 function itemsFor(key) {
   const items = [];
@@ -224,8 +229,8 @@ function itemsFor(key) {
     items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: t.time || '', minutes: t.minutes || null, repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
-    if (e.date !== key) continue;
-    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: e.time || '', minutes: null, repeat: null, done: false });
+    if (!occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate）
+    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: e.time || '', minutes: null, repeat: e.repeat || null, done: false });
   }
   items.push(...gcalItemsFor(key)); // Googleカレンダーの予定（連携ON時のみ・読み取り専用）
   return items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99') || (a.ref.createdAt || 0) - (b.ref.createdAt || 0));
@@ -422,27 +427,18 @@ function toggleItem(it) {
 
 function deleteItem(it) {
   if (sharedBlocked(it.ref.calendarId)) return;
-  if (it.kind === 'event') {
-    const index = db.events.indexOf(it.ref);
-    db.events.splice(index, 1);
-    save(); renderAll();
-    showUndoToast(`「${it.title}」を削除しました`, () => {
-      db.events.splice(Math.min(index, db.events.length), 0, it.ref);
-      save(); renderAll();
-    });
-    return;
-  }
-  if (it.ref.repeat) { // 繰り返しは「この回のみ／すべて」を選ぶ
+  if (it.ref.repeat) { // 繰り返し（タスク・予定とも）は「この回のみ／すべて」を選ぶ
     ui.confirmTarget = it;
     $('#confirm-name').textContent = `「${it.title}」（${REPEAT_LABEL[it.ref.repeat]}）`;
     $('#confirm-scrim').hidden = false;
     return;
   }
-  const index = db.tasks.indexOf(it.ref);
-  db.tasks.splice(index, 1);
+  const arr = it.kind === 'event' ? db.events : db.tasks;
+  const index = arr.indexOf(it.ref);
+  arr.splice(index, 1);
   save(); renderAll();
   showUndoToast(`「${it.title}」を削除しました`, () => {
-    db.tasks.splice(Math.min(index, db.tasks.length), 0, it.ref);
+    arr.splice(Math.min(index, arr.length), 0, it.ref);
     save(); renderAll();
   });
 }
@@ -463,11 +459,12 @@ $('#del-all').addEventListener('click', () => {
   const it = ui.confirmTarget;
   closeConfirm();
   if (!it) return;
-  const index = db.tasks.indexOf(it.ref);
-  db.tasks.splice(index, 1);
+  const arr = it.kind === 'event' ? db.events : db.tasks;
+  const index = arr.indexOf(it.ref);
+  arr.splice(index, 1);
   save(); renderAll();
   showUndoToast(`「${it.title}」の繰り返しを削除しました`, () => {
-    db.tasks.splice(Math.min(index, db.tasks.length), 0, it.ref);
+    arr.splice(Math.min(index, arr.length), 0, it.ref);
     save(); renderAll();
   });
 });
@@ -567,11 +564,8 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     card.append(play);
   }
 
-  // タップで選択（アクセント色の枠）— 設定で色を変えられる
-  card.addEventListener('click', () => {
-    ui.selectedItemId = ui.selectedItemId === it.id ? null : it.id;
-    renderAll();
-  });
+  // タップで詳細（読み取り）を開く。編集は詳細のペンボタンから
+  card.addEventListener('click', () => openDetail(it));
 
   if (it.kind === 'gcal') return card; // Googleの予定は読み取り専用（スワイプ編集なし）
 
@@ -701,6 +695,7 @@ function navigate(dir) {
 /* ========== rendering ========== */
 
 function renderAll() {
+  applyVisibility();
   $('#scr-cal').hidden = ui.screen !== 'cal';
   $('#scr-insights').hidden = ui.screen !== 'insights';
   $('#scr-settings').hidden = ui.screen !== 'settings';
@@ -957,11 +952,7 @@ function renderGrid(body) {
       if (c2) block.style.background = c2;
       block.append(el('span', 'tg-ittl', it.title));
       if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.ref.timeEnd ? `${it.time}〜${it.ref.timeEnd}` : it.time));
-      block.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (it.kind === 'gcal') { flashToast('Googleカレンダーの予定（このアプリからは編集できません）'); return; }
-        openSheet('edit', { item: it });
-      });
+      block.addEventListener('click', (e) => { e.stopPropagation(); openDetail(it); });
       col.append(block);
     }
     if (key === todayKey()) { // 現在時刻の線
@@ -1071,12 +1062,14 @@ function renderDay(body) {
   if (db.running) body.append(buildRunCard());
 
   // この日の記念日をお祝い表示（あれば）
+  const cur = ui.cursor;
   for (const a of db.anniversaries) {
-    const n = annivNext(a);
-    if (toKey(n.next) !== key) continue;
+    if (!annivOccursOn(a, cur)) continue;
+    const [ay] = a.date.split('-').map(Number);
+    const years = annivRepeat(a) === 'yearly' ? cur.getFullYear() - ay : null;
     const banner = el('div', 'anniv-banner');
     banner.innerHTML = ICONS.sprout || '';
-    banner.append(el('span', '', `今日は「${a.title}」${a.yearly && n.years ? `（${n.years}周年）` : ''}`));
+    banner.append(el('span', '', `✨ 「${a.title}」${years ? `（${years}周年）` : ''}`));
     body.append(banner);
   }
 
@@ -1185,7 +1178,9 @@ function renderMonth(body) {
     ].filter(Boolean).join(' '));
     cell.type = 'button';
     cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
-    cell.append(el('span', `dnum${dayColorClass(day)}`, String(day.getDate())));
+    const dnum = el('span', `dnum${dayColorClass(day)}`, String(day.getDate()));
+    if (dayHasAnniv(day)) dnum.append(el('span', 'mo-star', '✨')); // 記念日の日は小さく星
+    cell.append(dnum);
     if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
       for (const it of items.slice(0, 4)) {
         const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}`, it.title);
@@ -1633,6 +1628,7 @@ function renderPeopleCard() {
 
 function renderSettings() {
   renderCalManage();
+  renderVisibilityCard();
   renderPeopleCard();
   renderSyncCard();
   renderSharedCard();
@@ -1706,9 +1702,60 @@ const sheetEls = {
   fMinutes: $('#f-minutes'),
   fRepeat: $('#f-repeat'),
   fMemo: $('#f-memo'),
-  taskOnly: $('#task-only-fields'),
+  fDiary: $('#f-diary'),
+  minutesCol: $('#minutes-col'),
   repeatHint: $('#repeat-hint'),
 };
+
+/* タップで開く詳細ビュー（読み取り）。右上ペンで編集シートへ */
+let detailItem = null;
+function openDetail(it) {
+  detailItem = it;
+  $('#detail-title').textContent = it.title;
+  const isGcal = it.kind === 'gcal';
+  $('#detail-edit').hidden = isGcal; // Googleの予定は編集不可
+  const body = $('#detail-body');
+  body.textContent = '';
+  const row = (label, value) => {
+    if (!value) return;
+    const r = el('div', 'dt-row');
+    r.append(el('span', 'dt-key', label));
+    r.append(el('span', 'dt-val', value));
+    body.append(r);
+  };
+  const d = fromKey(it.key);
+  row('日付', `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`);
+  const timeStr = it.time ? `${it.time}${(it.kind === 'event' || isGcal) && it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}` : '';
+  row('時刻', timeStr);
+  if (it.repeat) row('くりかえし', REPEAT_LABEL[it.repeat]);
+  if (it.kind === 'task' && it.ref.minutes) row('所要時間', `${it.ref.minutes}分`);
+  row('種類', isGcal ? 'Googleカレンダー' : it.kind === 'event' ? '予定' : 'タスク');
+  if (!isGcal) {
+    if ((it.ref.who || []).length) row('誰と', it.ref.who.join('、'));
+    row('場所', it.ref.place);
+    const cal = db.calendars.find((c) => c.id === it.ref.calendarId);
+    if (cal && cal.id !== 'c-default') row('カレンダー', cal.name);
+    const memo = memoFor(it);
+    if (memo) { const r = el('div', 'dt-block'); r.append(el('span', 'dt-key', 'メモ')); r.append(el('p', 'dt-text', memo)); body.append(r); }
+    const diary = diaryFor(it);
+    if (diary) { const r = el('div', 'dt-block'); r.append(el('span', 'dt-key', '日記')); r.append(el('p', 'dt-text', diary)); body.append(r); }
+  } else if (it.ref.place) {
+    row('場所', it.ref.place);
+  }
+  if (it.kind === 'task') { // 完了トグルも詳細から
+    const btn = el('button', `cta ${it.done ? 'ghost' : ''}`, it.done ? '完了を取り消す' : '完了にする');
+    btn.type = 'button';
+    btn.addEventListener('click', () => { toggleItem(it); $('#detail-scrim').hidden = true; });
+    body.append(btn);
+  }
+  $('#detail-scrim').hidden = false;
+}
+$('#detail-close').addEventListener('click', () => { $('#detail-scrim').hidden = true; });
+$('#detail-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#detail-edit').addEventListener('click', () => {
+  $('#detail-scrim').hidden = true;
+  if (detailItem) openSheet('edit', { item: detailItem });
+});
 
 function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = null, type = null } = {}) {
   ui.editing = mode === 'edit' ? item : null;
@@ -1725,6 +1772,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fMinutes.value = r.minutes || '';
     sheetEls.fRepeat.value = r.repeat || '';
     sheetEls.fMemo.value = memoFor(item) || '';
+    sheetEls.fDiary.value = diaryFor(item) || '';
     sheetEls.repeatHint.hidden = !r.repeat;
     $('#f-time-end').value = r.timeEnd || '';
     $('#f-place').value = r.place || '';
@@ -1736,6 +1784,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fMinutes.value = '';
     sheetEls.fRepeat.value = '';
     sheetEls.fMemo.value = '';
+    sheetEls.fDiary.value = '';
     sheetEls.repeatHint.hidden = true;
     $('#f-time-end').value = timeEnd || '';
     $('#f-place').value = '';
@@ -1852,7 +1901,7 @@ sheetEls.typeSeg.addEventListener('click', (e) => {
 });
 function syncSheetType() {
   sheetEls.typeSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b.dataset.type === ui.sheetType));
-  sheetEls.taskOnly.hidden = ui.sheetType !== 'task';
+  sheetEls.minutesCol.hidden = ui.sheetType !== 'task'; // 所要時間はタスクのみ（繰り返しは両方）
   $('#event-only-fields').hidden = ui.sheetType !== 'event';
 }
 
@@ -1880,6 +1929,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const minutes = Number.isInteger(rawMin) && rawMin >= 1 && rawMin <= 600 ? rawMin : null;
   const repeat = sheetEls.fRepeat.value || null;
   const memo = sheetEls.fMemo.value.trim() || null;
+  const diary = sheetEls.fDiary.value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
@@ -1887,17 +1937,20 @@ $('#sheet-form').addEventListener('submit', (e) => {
   if (ui.editing && sharedBlocked(ui.editing.ref.calendarId)) return;
 
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, color, calendarId, timeEnd, place, who });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who });
   } else if (ui.sheetType === 'event') {
-    const ev = { id: newId('e'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, memo, color, calendarId, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, memo, diary, color, calendarId, createdAt: Date.now() };
+    const ev = repeat
+      ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
+      : { ...base, date: dateKey };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, minutes, done: false, doneAt: null, memo, diary, color, calendarId, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -1911,45 +1964,56 @@ function newId(prefix) {
   return `${prefix}${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, color, calendarId, timeEnd, place, who }) {
+function setPerDayField(r, base, datesKey, key, val, perDay) {
+  if (perDay) {
+    r[datesKey] = r[datesKey] || {};
+    if (val) r[datesKey][key] = val; else delete r[datesKey][key];
+  } else if (val) {
+    r[base] = val;
+  } else {
+    delete r[base];
+  }
+}
+
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who }) {
   const r = item.ref;
   r.title = title;
   r.time = time;
   r.color = color;
   r.calendarId = calendarId;
   if (item.kind === 'event') {
-    r.date = dateKey;
-    r.memo = memo;
     r.timeEnd = time ? timeEnd : null;
     r.place = place;
     r.who = who && who.length ? who : null;
-    return;
-  }
-  if (r.repeat && repeat) { // 繰り返しのメモは「この日の分」として保存（日記になる）
-    r.memoDates = r.memoDates || {};
-    if (memo) r.memoDates[item.key] = memo;
-    else delete r.memoDates[item.key];
   } else {
-    r.memo = memo;
+    r.minutes = minutes;
   }
-  r.minutes = minutes;
+  // メモ・日記: 繰り返し中はこの日の分として保存（＝日記になる）、単発は本体に
+  const perDay = Boolean(r.repeat) && Boolean(repeat);
+  setPerDayField(r, 'memo', 'memoDates', item.key, memo, perDay);
+  setPerDayField(r, 'diary', 'diaryDates', item.key, diary, perDay);
+  // 繰り返しの切替（タスク・予定共通）
   const wasRepeat = Boolean(r.repeat);
   const nowRepeat = Boolean(repeat);
   if (nowRepeat) {
     r.repeat = repeat;
     r.startDate = dateKey;
     r.exDates = r.exDates || [];
-    if (!wasRepeat) { // 単発→繰り返しへ変換
+    if (item.kind === 'task' && !wasRepeat) {
       r.doneDates = r.done && r.date ? { [r.date]: r.doneAt || Date.now() } : {};
-      delete r.date; delete r.done; delete r.doneAt;
+      delete r.done; delete r.doneAt;
     }
-  } else if (wasRepeat) { // 繰り返し→単発へ変換（この画面の日付の1件にする）
-    r.date = dateKey;
-    r.done = Boolean((r.doneDates || {})[dateKey]);
-    r.doneAt = (r.doneDates || {})[dateKey] || null;
-    delete r.repeat; delete r.startDate; delete r.doneDates; delete r.exDates;
+    delete r.date;
   } else {
     r.date = dateKey;
+    if (wasRepeat) { // 繰り返し→単発へ
+      if (item.kind === 'task') {
+        r.done = Boolean((r.doneDates || {})[dateKey]);
+        r.doneAt = (r.doneDates || {})[dateKey] || null;
+        delete r.doneDates;
+      }
+      delete r.repeat; delete r.startDate; delete r.exDates;
+    }
   }
 }
 
@@ -2164,6 +2228,9 @@ $('#timer-toggle').addEventListener('click', () => {
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!$('#focus').hidden) { closeFocus(); renderAll(); return; }
+  if (!$('#detail-scrim').hidden) { $('#detail-scrim').hidden = true; return; }
+  if (!$('#anniv-scrim').hidden) { $('#anniv-scrim').hidden = true; return; }
+  if (!$('#search-scrim').hidden) { $('#search-scrim').hidden = true; return; }
   if (!sheetEls.scrim.hidden) { closeSheet(); return; }
   if (!$('#confirm-scrim').hidden) { closeConfirm(); return; }
   if (!$('#picker-scrim').hidden) { closePicker(); return; }
@@ -3161,9 +3228,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=18');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=18');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=18');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=19');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=19');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=19');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
@@ -3628,22 +3695,79 @@ function renderSharedCard() {
   wrap.append(mkForm('招待コードで参加', '参加', 8, shJoin));
 }
 
+/* ========== v15: ホーム表示のON/OFF（使わないビュー・タブを隠す） ========== */
+
+const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
+const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['routines', 'ルーティン']];
+
+function applyVisibility() {
+  const h = db.settings.hidden || {};
+  for (const [v] of HIDE_VIEWS) {
+    const btn = document.querySelector(`.seg-btn[data-view="${v}"]`);
+    if (btn) btn.hidden = !!h[`view:${v}`];
+  }
+  for (const [n] of HIDE_NAVS) {
+    const btn = document.querySelector(`#bottomnav button[data-nav="${n}"]`);
+    if (btn) btn.hidden = !!h[`nav:${n}`];
+  }
+  // 隠したビュー・画面を今開いていたら安全な場所へ退避
+  if ((h[`view:${ui.view}`]) && ui.screen === 'cal') ui.view = 'day';
+  if (h[`nav:${ui.screen}`]) { ui.screen = 'cal'; }
+}
+
+function renderVisibilityCard() {
+  const wrap = $('#visibility-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const h = db.settings.hidden = db.settings.hidden || {};
+  const mk = (k, label) => {
+    const row = el('label', 'vis-row');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !h[k]; // チェック=表示
+    cb.addEventListener('change', () => {
+      if (cb.checked) delete h[k]; else h[k] = true;
+      save();
+      applyVisibility();
+      renderAll();
+    });
+    row.append(cb, ` ${label}`);
+    wrap.append(row);
+  };
+  HIDE_VIEWS.forEach(([v, label]) => mk(`view:${v}`, label));
+  HIDE_NAVS.forEach(([n, label]) => mk(`nav:${n}`, label));
+}
+
 /* ========== v14: 記念日（あと◯日カウントダウン） ========== */
 
-function annivNext(a) { // 次の到来日と残り日数（毎年は今年/来年の近い方、単発はその日）
+function annivRepeat(a) { return a.repeat || (a.yearly === false ? 'once' : 'yearly'); } // 旧データ互換
+function annivNext(a) { // 次の到来日と残り日数
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const [y, m, d] = a.date.split('-').map(Number);
+  const rep = annivRepeat(a);
   let next;
-  if (a.yearly) {
+  if (rep === 'yearly') {
     next = new Date(today.getFullYear(), m - 1, d);
     if (next < today) next = new Date(today.getFullYear() + 1, m - 1, d);
+  } else if (rep === 'monthly') {
+    next = new Date(today.getFullYear(), today.getMonth(), d);
+    if (next < today) next = new Date(today.getFullYear(), today.getMonth() + 1, d);
   } else {
     next = new Date(y, m - 1, d);
   }
   const days = Math.round((next - today) / 86400000);
-  const years = a.yearly ? next.getFullYear() - y : null;
-  return { next, days, years };
+  const years = rep === 'yearly' ? next.getFullYear() - y : null;
+  return { next, days, years, rep };
 }
+// この日付に記念日が当たるか（月カレンダーの星印用・繰り返しを考慮）
+function annivOccursOn(a, dateObj) {
+  const [y, m, d] = a.date.split('-').map(Number);
+  const rep = annivRepeat(a);
+  if (rep === 'monthly') return dateObj.getDate() === d;
+  if (rep === 'yearly') return dateObj.getMonth() === m - 1 && dateObj.getDate() === d;
+  return dateObj.getFullYear() === y && dateObj.getMonth() === m - 1 && dateObj.getDate() === d;
+}
+function dayHasAnniv(dateObj) { return db.anniversaries.some((a) => annivOccursOn(a, dateObj)); }
 
 function renderAnniv() {
   const body = $('#anniv-body');
@@ -3660,18 +3784,19 @@ function renderAnniv() {
     body.append(el('p', 'hint', 'つきあった日・誕生日・入社日など、大切な日を登録すると「あと◯日」で表示されます。'));
     return;
   }
-  for (const { a, days, years, next } of list) {
+  const REP_LABEL = { yearly: '毎年', monthly: '毎月', once: '単発' };
+  for (const { a, days, years, next, rep } of list) {
     const card = el('div', 'anniv-card');
     const main = el('div', 'anniv-main');
     main.append(el('span', 'anniv-title', a.title));
-    const sub = `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日（${WD_JA[next.getDay()]}）${a.yearly && years ? ` ・ ${years}周年` : ''}`;
+    const sub = `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日（${WD_JA[next.getDay()]}）・${REP_LABEL[rep]}${rep === 'yearly' && years ? `・${years}周年` : ''}`;
     main.append(el('span', 'anniv-sub', sub));
     card.append(main);
     const badge = el('div', `anniv-badge${days === 0 ? ' is-today' : ''}`);
     badge.innerHTML = days === 0 ? '<b>当日</b>' : `あと<b>${days}</b>日`;
     card.append(badge);
-    card.addEventListener('click', () => openAnnivSheet(a));
-    body.append(makeSwipe(card, { onEdit: () => openAnnivSheet(a), onDelete: () => deleteAnniv(a) }));
+    card.addEventListener('click', () => openAnnivSheet(a)); // タップで編集（削除はシート内のボタン）
+    body.append(card);
   }
 }
 
@@ -3681,7 +3806,8 @@ function openAnnivSheet(a = null) {
   $('#anniv-sheet-title').textContent = a ? '記念日を編集' : '記念日を追加';
   $('#a-title').value = a ? a.title : '';
   $('#a-date').value = a ? a.date : todayKey();
-  $('#a-yearly').checked = a ? a.yearly !== false : true;
+  $('#a-repeat').value = a ? annivRepeat(a) : 'yearly';
+  $('#anniv-delete').hidden = !a;
   $('#anniv-scrim').hidden = false;
   $('#a-title').focus();
 }
@@ -3696,19 +3822,24 @@ function deleteAnniv(a) {
 }
 $('#anniv-close').addEventListener('click', () => { $('#anniv-scrim').hidden = true; });
 $('#anniv-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#anniv-delete').addEventListener('click', () => {
+  if (annivEditing) { $('#anniv-scrim').hidden = true; deleteAnniv(annivEditing); annivEditing = null; }
+});
 $('#anniv-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = $('#a-title').value.trim();
   if (!title) { $('#a-title').focus(); return; }
   const date = $('#a-date').value || todayKey();
-  const yearly = $('#a-yearly').checked;
+  const repeat = $('#a-repeat').value;
   if (annivEditing) {
-    annivEditing.title = title; annivEditing.date = date; annivEditing.yearly = yearly;
+    annivEditing.title = title; annivEditing.date = date; annivEditing.repeat = repeat;
+    delete annivEditing.yearly;
   } else {
-    db.anniversaries.push({ id: newId('a'), title, date, yearly });
+    db.anniversaries.push({ id: newId('a'), title, date, repeat });
   }
   save();
   $('#anniv-scrim').hidden = true;
+  annivEditing = null;
   renderAnniv();
 });
 

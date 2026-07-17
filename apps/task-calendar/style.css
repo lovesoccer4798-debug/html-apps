@@ -1301,3 +1301,27 @@ input, select, textarea { font: inherit; color: inherit; }
 .pn-row:last-child { border-bottom: none; }
 .pn-date { display: block; font-size: 11px; color: var(--tc-ink3); font-family: var(--tc-mono); margin-bottom: 2px; }
 .pn-text { font-size: 13px; color: var(--tc-ink2); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---------- v15: 詳細ビュー・ペン・記念日星・日記 ---------- */
+
+.sheet-edit {
+  position: absolute; top: 14px; right: 54px;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--tc-surface2); color: var(--tc-ink2);
+}
+.sheet-edit:hover { color: var(--tc-accent); }
+.dt-row { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--tc-line); }
+.dt-row:last-child { border-bottom: none; }
+.dt-key { flex-shrink: 0; width: 84px; font-size: 12.5px; color: var(--tc-ink3); }
+.dt-val { flex: 1; font-size: 14px; color: var(--tc-ink); overflow-wrap: anywhere; }
+.dt-block { padding: 10px 0; border-bottom: 1px solid var(--tc-line); }
+.dt-block:last-child { border-bottom: none; }
+.dt-block .dt-key { display: block; width: auto; margin-bottom: 4px; }
+.dt-text { font-size: 14px; color: var(--tc-ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+#detail-body .cta { margin-top: 14px; }
+.mo-star { font-size: 9px; margin-left: 1px; vertical-align: top; }
+.mo-grid.schedule .mo-star { font-size: 8px; }
+.vis-row { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
+.vis-row:last-child { border-bottom: none; }
+.vis-row input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
