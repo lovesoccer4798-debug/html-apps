@@ -1247,3 +1247,57 @@ input, select, textarea { font: inherit; color: inherit; }
 .who-suggest-box { margin-top: 6px; margin-bottom: 0; }
 .who-chip.who-suggest { border-style: dashed; color: var(--tc-ink); }
 .tl-row.is-gcal .tl-rail::after { background: transparent; border-color: var(--tc-sat); }
+
+/* ---------- v14: つながる横スワイプ（前後ページのゴースト） ---------- */
+#cal-body { position: relative; }
+.cal-ghost { position: absolute; top: 0; width: 100%; pointer-events: none; }
+.cal-ghost.prev { left: -100%; }
+.cal-ghost.next { left: 100%; }
+
+/* ---------- v14: 記念日・色ルール・期間メモ ---------- */
+
+.anniv-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--tc-surface); border-radius: var(--tc-r-card); box-shadow: var(--tc-shadow);
+  padding: 14px 16px; margin-bottom: 10px;
+}
+.anniv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.anniv-title { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.anniv-sub { font-size: 12px; color: var(--tc-ink3); }
+.anniv-badge {
+  flex-shrink: 0; text-align: center; font-size: 11px; color: var(--tc-ink2);
+  background: var(--tc-surface2); border-radius: 12px; padding: 6px 12px; line-height: 1.3;
+}
+.anniv-badge b { font-size: 19px; color: var(--tc-accent); font-family: var(--tc-mono); }
+.anniv-badge.is-today { background: var(--tc-accent); color: var(--tc-accent-ink); }
+.anniv-badge.is-today b { color: var(--tc-accent-ink); }
+#anniv-body > .cta { margin-bottom: 14px; }
+.a-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin: 8px 0 4px; }
+.a-check input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
+.anniv-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--tc-accent-soft); border: 1px solid var(--tc-accent-line);
+  border-radius: var(--tc-r-card); padding: 11px 15px; margin-bottom: 12px;
+  font-size: 13.5px; font-weight: 600;
+}
+.anniv-banner .icon { color: var(--tc-accent); }
+
+.cr-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
+.cr-row:last-of-type { border-bottom: none; }
+.cr-row.is-example { opacity: .5; }
+.cr-swatch { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; }
+.cr-label { font-size: 14px; color: var(--tc-ink2); }
+.cr-row input { flex: 1; min-width: 0; font-size: 14px; background: none; border: none; border-bottom: 1px solid transparent; padding: 4px 0; color: var(--tc-ink); }
+.cr-row input:focus { outline: none; border-bottom-color: var(--tc-accent); }
+
+.period-note {
+  width: 100%; font: inherit; font-size: 14px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px;
+  padding: 10px 12px; margin-top: 4px; resize: vertical; min-height: 56px;
+}
+.period-note:focus { outline: none; border-color: var(--tc-accent); }
+.pn-review { margin-top: 14px; }
+.pn-row { padding: 8px 0; border-bottom: 1px solid var(--tc-line); }
+.pn-row:last-child { border-bottom: none; }
+.pn-date { display: block; font-size: 11px; color: var(--tc-ink3); font-family: var(--tc-mono); margin-bottom: 2px; }
+.pn-text { font-size: 13px; color: var(--tc-ink2); white-space: pre-wrap; overflow-wrap: anywhere; }

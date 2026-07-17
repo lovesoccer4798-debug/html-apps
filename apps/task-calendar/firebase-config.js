@@ -11,4 +11,4 @@ window.TC_FIREBASE_CONFIG = {
 
 // Googleカレンダー連携（読み込み）用のOAuthクライアントID（Google Cloud Consoleで作成したWebクライアント）。
 // 空のままだと設定画面に準備手順が表示される。公開してよい識別子（シークレットではない）。
-window.TC_GCAL_CLIENT_ID = '';
+window.TC_GCAL_CLIENT_ID = '797466638176-19rigs39bohcr665sb22iq228c1qcitn.apps.googleusercontent.com';
