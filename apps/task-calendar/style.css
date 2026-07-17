@@ -1324,3 +1324,19 @@ input, select, textarea { font: inherit; color: inherit; }
 .vis-row { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
 .vis-row:last-child { border-bottom: none; }
 .vis-row input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
+
+/* ---------- v16: 睡眠一覧・ルーティン期間・gcal URI ---------- */
+.sleep-list { margin-top: 14px; }
+.sleep-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); font-size: 12.5px; }
+.sleep-row:last-child { border-bottom: none; }
+.sl-date { flex-shrink: 0; width: 70px; color: var(--tc-ink2); }
+.sl-date.sun { color: var(--tc-sun); }
+.sl-date.sat { color: var(--tc-sat); }
+.sl-times { flex: 1; color: var(--tc-ink); }
+.sl-dur { flex-shrink: 0; color: var(--tc-accent); font-weight: 700; }
+.r-period { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--tc-ink3); margin-top: 4px; }
+.r-period .icon { width: 13px; height: 13px; }
+.r-period.is-over { color: var(--tc-ink4); text-decoration: line-through; }
+.gcal-uri { margin: 10px 0; padding: 10px; background: var(--tc-surface2); border-radius: 12px; }
+.gcal-uri-label { font-size: 11px; color: var(--tc-ink3); }
+.gcal-uri .sh-code { font-size: 11px; word-break: break-all; letter-spacing: 0; }
