@@ -605,6 +605,27 @@ $('#nav-today').addEventListener('click', () => {
   ui.selectedKey = todayKey();
   renderAll();
 });
+// カレンダー本体の横スワイプで前後の日・週・月へ（カードのスワイプ操作・時間枠の上では発動しない）
+(() => {
+  const body = $('#cal-body');
+  let sx = 0;
+  let sy = 0;
+  let tracking = false;
+  body.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.swipe, .tg-draft, .tg-handle')) { tracking = false; return; }
+    tracking = true;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+  body.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) navigate(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
 function navigate(dir) {
   const c = ui.cursor;
   if (ui.view === 'day') ui.cursor = addDays(c, dir);
@@ -743,6 +764,7 @@ function renderCal() {
     goalLine.classList.toggle('is-empty', !g);
   }
   const body = $('#cal-body');
+  tgPrevScrollY = window.scrollY; // 再描画で一瞬ページが縮んでも見ていた位置へ戻せるように
   body.textContent = '';
   openSwipeEl = null;
 
@@ -776,11 +798,13 @@ function renderCal() {
   if (ui.view === 'week') renderWeek(body);
   if (ui.view === 'month') renderMonth(body);
   if (ui.view === 'year') renderYear(body);
+  ui.lastView = ui.view; // 時間割の自動スクロール判定用（ビューに入った時だけスクロール）
 }
 
 /* ----- 時間割（Googleカレンダー風・日×時間のグリッド。既存の日・週ビューとは別口の追加ビュー） ----- */
 
 const TG_HOUR_H = 48; // 1時間の高さ(px)
+let tgPrevScrollY = 0; // 再描画前のスクロール位置（時間割で日付を送っても時間帯を保つ）
 
 function gridStart() {
   if (ui.gridDays === 7) return startOfWeekMon(ui.cursor);
@@ -885,13 +909,18 @@ function renderGrid(body) {
   wrap.append(grid);
   body.append(wrap);
 
-  // 初期スクロール: 今日を含むなら現在時刻の少し上、それ以外は7時へ
-  const hasToday = days.some((d) => toKey(d) === todayKey());
-  const targetHour = hasToday ? Math.max(0, new Date().getHours() - 1) : 7;
-  requestAnimationFrame(() => {
-    const y = grid.getBoundingClientRect().top + window.scrollY + targetHour * TG_HOUR_H - 140;
-    window.scrollTo(0, Math.max(0, y));
-  });
+  // 自動スクロールは「時間割に入った時」だけ。日付を送った時は見ていた時間帯を保つ
+  if (ui.lastView !== 'grid') {
+    const hasToday = days.some((d) => toKey(d) === todayKey());
+    const targetHour = hasToday ? Math.max(0, new Date().getHours() - 1) : 7;
+    requestAnimationFrame(() => {
+      const y = grid.getBoundingClientRect().top + window.scrollY + targetHour * TG_HOUR_H - 140;
+      window.scrollTo(0, Math.max(0, y));
+    });
+  } else {
+    const keep = tgPrevScrollY;
+    requestAnimationFrame(() => window.scrollTo(0, keep));
+  }
 }
 
 /* ----- 時間割: タップで時間枠（下書き）→ つまみで開始・終了を調整 → 「予定」として追加 ----- */
@@ -942,6 +971,29 @@ function tgAddDraft(col, key, y) {
   };
   drag(h1, (m) => { start = Math.max(0, Math.min(end - 15, m)); });
   drag(h2, (m) => { end = Math.min(24 * 60, Math.max(start + 15, m)); });
+  // 枠そのものを掴む → 長さはそのまま上下に移動（15分刻み）
+  d.addEventListener('pointerdown', (e) => {
+    if (e.target !== d && e.target !== lbl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    d.setPointerCapture(e.pointerId);
+    const rect = col.getBoundingClientRect();
+    const dur = end - start;
+    const grab = (e.clientY - rect.top) - (start / 60) * TG_HOUR_H; // 枠内のどこを掴んだか
+    const move = (ev) => {
+      let ns = Math.round((ev.clientY - rect.top - grab) / (TG_HOUR_H / 4)) * 15;
+      ns = Math.max(0, Math.min(24 * 60 - dur, ns));
+      start = ns;
+      end = ns + dur;
+      sync();
+    };
+    const up = () => {
+      d.removeEventListener('pointermove', move);
+      d.removeEventListener('pointerup', up);
+    };
+    d.addEventListener('pointermove', move);
+    d.addEventListener('pointerup', up);
+  });
   okB.addEventListener('click', (e) => {
     e.stopPropagation();
     d.remove();
@@ -1651,7 +1703,41 @@ function buildWhoChips(selected) {
   wrap.hidden = !db.people.length;
   // リストにない名前は自由入力欄へ
   $('#f-who').value = selected.filter((n) => !db.people.includes(n)).join('、');
+  $('#f-who-suggest').textContent = '';
 }
+
+/* 自由入力の名前補完: よく会う人＋過去の予定に登場した名前から候補を出す */
+function whoNameUniverse() {
+  const s = new Set(db.people);
+  for (const e of db.events) (e.who || []).forEach((n) => s.add(n));
+  return [...s];
+}
+$('#f-who').addEventListener('input', () => {
+  const input = $('#f-who');
+  const box = $('#f-who-suggest');
+  box.textContent = '';
+  const parts = input.value.split(/[、,]/);
+  const frag = parts[parts.length - 1].trim();
+  if (!frag) return;
+  const already = [
+    ...parts.slice(0, -1).map((s) => s.trim()),
+    ...[...document.querySelectorAll('#f-who-chips .who-chip.is-on')].map((b) => b.dataset.name),
+  ];
+  const cands = whoNameUniverse()
+    .filter((n) => n.toLowerCase().includes(frag.toLowerCase()) && n !== frag && !already.includes(n))
+    .slice(0, 5);
+  for (const n of cands) {
+    const b = el('button', 'who-chip who-suggest', n);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      parts[parts.length - 1] = n;
+      input.value = parts.map((s) => s.trim()).filter(Boolean).join('、');
+      box.textContent = '';
+      input.focus();
+    });
+    box.append(b);
+  }
+})
 
 function buildSheetColors(current) {
   const wrap = $('#f-colors');
@@ -2853,9 +2939,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=15');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=15');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=15');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=16');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=16');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=16');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）

@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=15">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="tokens.css?v=16">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -228,6 +228,7 @@
         <label class="f-label">誰と（任意 — タップで選択。設定の「よく会う人」から追加できます）</label>
         <div class="who-chips" id="f-who-chips"></div>
         <input type="text" id="f-who" maxlength="120" placeholder="その他の人（「、」区切りで複数OK）">
+        <div class="who-chips who-suggest-box" id="f-who-suggest"></div>
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
       <div class="r-colors" id="f-colors"></div>
@@ -415,7 +416,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="firebase-config.js?v=16"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>

@@ -1229,8 +1229,9 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .tg-h1 { top: -9px; left: 10px; }
 .tg-h2 { bottom: -9px; right: 10px; }
-.tg-dbar {
-  position: absolute; right: 0; bottom: -38px; display: flex; gap: 6px; z-index: 6;
+.tg-draft { cursor: grab; }
+.tg-dbar { /* つまみ（右下）と重ならないよう左下に・少し離す */
+  position: absolute; left: 0; bottom: -46px; display: flex; align-items: center; gap: 10px; z-index: 6;
 }
 .tg-dok {
   background: var(--tc-accent); color: var(--tc-accent-ink);
@@ -1241,3 +1242,5 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--tc-surface); color: var(--tc-ink2); border: 1px solid var(--tc-line);
   border-radius: 50%; width: 30px; height: 30px; font-size: 15px; box-shadow: var(--tc-shadow);
 }
+.who-suggest-box { margin-top: 6px; margin-bottom: 0; }
+.who-chip.who-suggest { border-style: dashed; color: var(--tc-ink); }
