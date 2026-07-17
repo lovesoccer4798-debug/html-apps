@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=19">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="tokens.css?v=20">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -129,6 +129,15 @@
       <div class="card">
         <div id="colorrule-body"></div>
         <p class="hint">「遊び＝緑」「仕事＝オレンジ」のように、色の意味を自分で決めておけます。予定・タスクの色を選ぶときの目安に（表示用のメモです）。</p>
+      </div>
+
+      <p class="section-label">睡眠の記録</p>
+      <div class="card">
+        <div class="theme-seg" id="sleep-seg">
+          <button data-sleep="evening">夜に就寝→翌朝起床</button>
+          <button data-sleep="morning">朝に起床→夜に就寝</button>
+        </div>
+        <p class="hint">睡眠時間は「就寝〜起床」から自動計算します。日ビューでの入力の並び順を、いつものスタイルに合わせて選べます。振り返りで週・月ごとの平均就寝・起床・睡眠時間も見られます。</p>
       </div>
 
       <p class="section-label">文字サイズ</p>
@@ -491,7 +500,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="firebase-config.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

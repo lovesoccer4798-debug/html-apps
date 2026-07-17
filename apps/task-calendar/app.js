@@ -43,12 +43,13 @@ const ICONS = {
   search: `<svg ${ICON_ATTRS}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
   mapPin: `<svg ${ICON_ATTRS}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`,
   users: `<svg ${ICON_ATTRS}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  sparkles: `<svg ${ICON_ATTRS}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>`,
 };
 
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening' }, running: null };
 }
 
 function loadDb() {
@@ -606,43 +607,19 @@ $('#nav-today').addEventListener('click', () => {
   ui.selectedKey = todayKey();
   renderAll();
 });
-// カレンダー本体の横スワイプで前後へ — 前後ページを両隣に置いて一緒に動かすので、隙間なくつながって見える（Googleカレンダー風）
+// カレンダー本体の横スワイプで前後へ。はみ出さないよう本体だけを指に追従させ、離したら新しい内容をスッと差し替える
 (() => {
   const body = $('#cal-body');
   let sx = 0;
   let sy = 0;
   let active = false;
   let horiz = null;    // 横ジェスチャーと確定したか（縦スクロールとの取り合い防止）
-  let ghostsBuilt = false;
 
-  function buildGhosts() { // 両隣のページを描画してゴーストとして左右に配置
-    const cur = ui.cursor;
-    const make = (dir, cls) => {
-      ui.cursor = shiftedCursor(dir);
-      renderCal();
-      const g = el('div', `cal-ghost ${cls}`);
-      g.innerHTML = $('#cal-body').innerHTML;
-      return g;
-    };
-    const next = make(1, 'next');
-    const prev = make(-1, 'prev');
-    ui.cursor = cur;
-    renderCal(); // 現在ページに戻す（同期的なので画面はちらつかない）
-    body.append(prev, next);
-    ghostsBuilt = true;
-  }
-  function clearGhosts() { body.querySelectorAll('.cal-ghost').forEach((n) => n.remove()); ghostsBuilt = false; }
-  const settle = (animate) => {
-    body.style.transition = animate ? 'transform .18s ease' : 'none';
-    body.style.transform = '';
-    if (animate) setTimeout(clearGhosts, 190); else clearGhosts();
-  };
-
+  const reset = () => { body.style.transition = 'transform .16s ease, opacity .16s ease'; body.style.transform = ''; body.style.opacity = ''; };
   body.addEventListener('touchstart', (e) => {
     if (e.target.closest('.swipe, .tg-draft, .tg-handle')) { active = false; return; }
     active = true;
     horiz = null;
-    ghostsBuilt = false;
     sx = e.touches[0].clientX;
     sy = e.touches[0].clientY;
   }, { passive: true });
@@ -652,9 +629,9 @@ $('#nav-today').addEventListener('click', () => {
     const dy = e.touches[0].clientY - sy;
     if (horiz === null && (Math.abs(dx) > 14 || Math.abs(dy) > 14)) horiz = Math.abs(dx) > Math.abs(dy) * 1.4;
     if (horiz) {
-      if (!ghostsBuilt) buildGhosts();
       body.style.transition = 'none';
-      body.style.transform = `translateX(${dx}px)`;
+      body.style.transform = `translateX(${dx * 0.5}px)`; // 追従（減衰つき・はみ出さない）
+      body.style.opacity = String(Math.max(0.5, 1 - Math.abs(dx) / 900));
     }
   }, { passive: true });
   body.addEventListener('touchend', (e) => {
@@ -662,18 +639,19 @@ $('#nav-today').addEventListener('click', () => {
     active = false;
     if (!horiz) return;
     const dx = e.changedTouches[0].clientX - sx;
-    const w = body.clientWidth || 390;
-    if (Math.abs(dx) < 60) { settle(true); return; } // 戻す
+    if (Math.abs(dx) < 55) { reset(); return; } // 戻す
     const dir = dx < 0 ? 1 : -1;
-    body.style.transition = 'transform .18s ease-out';
-    body.style.transform = `translateX(${-dir * w}px)`; // 隣ページを中央へ滑らせる
-    setTimeout(() => {
-      navigate(dir); // 新しい日付で再描画（ゴーストも消える）→ ゴーストと同じ内容なのでちらつかない
-      body.style.transition = 'none';
+    navigate(dir); // 新しい日付で再描画
+    body.style.transition = 'none'; // 反対側から短くスライドイン
+    body.style.transform = `translateX(${dir * 34}px)`;
+    body.style.opacity = '0.4';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      body.style.transition = 'transform .2s ease-out, opacity .2s ease-out';
       body.style.transform = '';
-    }, 180);
+      body.style.opacity = '';
+    }));
   }, { passive: true });
-  body.addEventListener('touchcancel', () => { if (active) { active = false; settle(true); } });
+  body.addEventListener('touchcancel', () => { if (active) { active = false; reset(); } });
 })();
 
 // ビューに応じて cursor を dir ぶんずらした Date を返す（副作用なし）
@@ -1068,8 +1046,8 @@ function renderDay(body) {
     const [ay] = a.date.split('-').map(Number);
     const years = annivRepeat(a) === 'yearly' ? cur.getFullYear() - ay : null;
     const banner = el('div', 'anniv-banner');
-    banner.innerHTML = ICONS.sprout || '';
-    banner.append(el('span', '', `✨ 「${a.title}」${years ? `（${years}周年）` : ''}`));
+    banner.innerHTML = ICONS.sparkles;
+    banner.append(el('span', '', `「${a.title}」${years ? `（${years}周年）` : ''}`));
     body.append(banner);
   }
 
@@ -1179,7 +1157,7 @@ function renderMonth(body) {
     cell.type = 'button';
     cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
     const dnum = el('span', `dnum${dayColorClass(day)}`, String(day.getDate()));
-    if (dayHasAnniv(day)) dnum.append(el('span', 'mo-star', '✨')); // 記念日の日は小さく星
+    if (dayHasAnniv(day)) { const st = el('span', 'mo-star'); st.innerHTML = ICONS.sparkles; dnum.append(st); } // 記念日の日は小さく星
     cell.append(dnum);
     if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
       for (const it of items.slice(0, 4)) {
@@ -1332,7 +1310,8 @@ function fmtClock(min) { const m2 = ((Math.round(min) % 1440) + 1440) % 1440; re
 function buildSleepCard(key) {
   const rec = db.sleep[key] || {};
   const card = el('div', 'sleep-card');
-  card.innerHTML = `${ICONS.clock}<span>就寝</span>`;
+  card.innerHTML = ICONS.clock;
+  const bedLabel = el('span', '', '就寝');
   const bed = document.createElement('input');
   bed.type = 'time'; bed.value = rec.bed || '';
   const wakeLabel = el('span', '', '起床');
@@ -1348,7 +1327,9 @@ function buildSleepCard(key) {
   bed.addEventListener('change', sync);
   wake.addEventListener('change', sync);
   if (rec.bed && rec.wake) dur.textContent = fmtDur(sleepDurMin(rec));
-  card.append(bed, wakeLabel, wake, dur);
+  // 記録方法の設定で並び順を変える（夜に就寝→翌朝 / 朝に起床→夜に就寝）
+  if (db.settings.sleepMode === 'morning') card.append(wakeLabel, wake, bedLabel, bed, dur);
+  else card.append(bedLabel, bed, wakeLabel, wake, dur);
   return card;
 }
 
@@ -1640,6 +1621,9 @@ function renderSettings() {
   document.querySelectorAll('#size-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sizeOpt === (db.settings.fontSize || 'large'));
   });
+  document.querySelectorAll('#sleep-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
+  });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
     const missing = fontMissing(b.dataset.fontOpt);
@@ -1687,6 +1671,12 @@ document.querySelectorAll('#size-seg button').forEach((b) => {
   b.addEventListener('click', () => {
     db.settings.fontSize = b.dataset.sizeOpt;
     save(); applySize(); renderAll();
+  });
+});
+document.querySelectorAll('#sleep-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.sleepMode = b.dataset.sleep;
+    save(); renderAll();
   });
 });
 
@@ -3228,9 +3218,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=19');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=19');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=19');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=20');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=20');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=20');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
