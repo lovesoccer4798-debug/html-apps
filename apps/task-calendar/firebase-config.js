@@ -8,3 +8,7 @@ window.TC_FIREBASE_CONFIG = {
   messagingSenderId: '797466638176',
   appId: '1:797466638176:web:3ed98db5247558c815d005',
 };
+
+// Googleカレンダー連携（読み込み）用のOAuthクライアントID（Google Cloud Consoleで作成したWebクライアント）。
+// 空のままだと設定画面に準備手順が表示される。公開してよい識別子（シークレットではない）。
+window.TC_GCAL_CLIENT_ID = '';

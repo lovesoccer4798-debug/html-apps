@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=13">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="tokens.css?v=17">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
@@ -26,6 +26,7 @@
       <div class="appbar-top">
         <span class="eyebrow mono" id="cal-eyebrow"></span>
         <div class="appbar-actions">
+          <button class="iconbtn" id="search-open" aria-label="検索"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
           <span class="streak-chip"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg><b class="mono" id="chip-streak">0</b></span>
           <button class="iconbtn" data-goto="settings" aria-label="設定"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg></button>
         </div>
@@ -41,6 +42,7 @@
       <nav class="seg" role="tablist" aria-label="表示の切り替え">
         <button class="seg-btn" data-view="day" role="tab">日</button>
         <button class="seg-btn" data-view="week" role="tab">週</button>
+        <button class="seg-btn" data-view="grid" role="tab">時間</button>
         <button class="seg-btn" data-view="month" role="tab">月</button>
         <button class="seg-btn" data-view="year" role="tab">年</button>
       </nav>
@@ -111,6 +113,12 @@
         <p class="hint">タスク・予定の分類に使えます（最大8個）。名前はタップで編集、色は丸をタップで切替。</p>
       </div>
 
+      <p class="section-label">よく会う人</p>
+      <div class="card">
+        <div id="people-body"></div>
+        <p class="hint">登録しておくと、予定の「誰と」でワンタップで選べます（最大30人）。いない人は予定の追加時にその場で自由入力もできます。</p>
+      </div>
+
       <p class="section-label">文字サイズ</p>
       <div class="card">
         <div class="theme-seg" id="size-seg">
@@ -130,6 +138,12 @@
       <div class="card">
         <div id="shared-body"></div>
         <p class="hint">招待コードを知っている人だけが参加できます。権限は「編集可」「閲覧専用」から選べ、「解除」で相手から見えなくなります（同じコードで再参加はできるので、完全に見せたくない場合はカレンダーごと削除して作り直してね）。</p>
+      </div>
+
+      <p class="section-label">Googleカレンダー連携</p>
+      <div class="card">
+        <div id="gcal-body"></div>
+        <p class="hint">Googleカレンダー（メインカレンダー）の予定を読み込んで、日・週・時間・月に一緒に表示します（青色・「Google」ラベルつき・このアプリからの編集は不可）。同じ日時・同じ名前の予定は重複表示しません。書き込み（双方向）連携は次の段階で対応予定。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -205,6 +219,22 @@
             <option value="yearly">毎年</option>
           </select>
         </div>
+      </div>
+      <div id="event-only-fields" hidden>
+        <div class="f-row">
+          <div class="f-col">
+            <label class="f-label" for="f-time-end">終了時刻（任意）</label>
+            <input type="time" id="f-time-end" class="mono">
+          </div>
+          <div class="f-col">
+            <label class="f-label" for="f-place">場所（任意）</label>
+            <input type="text" id="f-place" maxlength="60" placeholder="例：渋谷・自宅">
+          </div>
+        </div>
+        <label class="f-label">誰と（任意 — タップで選択。設定の「よく会う人」から追加できます）</label>
+        <div class="who-chips" id="f-who-chips"></div>
+        <input type="text" id="f-who" maxlength="120" placeholder="その他の人（「、」区切りで複数OK）">
+        <div class="who-chips who-suggest-box" id="f-who-suggest"></div>
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
       <div class="r-colors" id="f-colors"></div>
@@ -303,6 +333,18 @@
 </div>
 <input type="file" id="vb-file" accept="image/*" hidden>
 
+<!-- 検索 -->
+<div class="sheet-scrim" id="search-scrim" hidden>
+  <div class="sheet sheet-search" role="dialog" aria-modal="true" aria-labelledby="search-title">
+    <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="search-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 class="sheet-title" id="search-title">検索</h2>
+    <input type="search" id="search-input" maxlength="60" placeholder="タスク・予定・メモをキーワードで" autocomplete="off">
+    <div id="search-results"></div>
+    <p class="hint">タップするとその日のデイリーへジャンプします。繰り返しタスクは直近の予定日、日記（日ごとのメモ）がヒットしたときは書いた日へ。</p>
+  </div>
+</div>
+
 <!-- ルーティン共有／読み込み -->
 <div class="sheet-scrim" id="share-scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true">
@@ -380,7 +422,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="firebase-config.js?v=17"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>
