@@ -2,6 +2,13 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.16.0] - 2026-07-18
+
+### Added
+
+- Notion連携: 日々の記録（日記・ひとことメモ・できたこと数・就寝/起床）を自分のNotionデータベースへ1日1ページで自動転記。設定 → Notion連携 で Worker URL・合言葉・データベースID を入れてON。手動送信ボタンもあり。同じ日付は上書き（重複しない）
+- 中継は無料の Cloudflare Worker（`notion-worker.js`）。Notionトークンは Worker 側の環境変数に保持し、ブラウザには出さない。合言葉（`TC_SHARED_SECRET`）でURLが漏れても勝手に書き込まれないように保護。保存後は8秒デバウンスで無料枠にやさしく送信
+
 ## [1.15.0] - 2026-07-18
 
 ### Added

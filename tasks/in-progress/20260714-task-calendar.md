@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.16.0 = Notion連携）
+
+- Notion連携: 日々の記録（日記＝タスク/予定の日記＋ひとことメモ、できたこと数、就寝/起床）を自分のNotion DBへ1日1ページで転記。同じ日付は上書き（upsert：日付一致でPATCH、なければPOST create）
+- 中継は Cloudflare Worker（`notion-worker.js`）。Notion API はCORS非対応でブラウザ直呼び不可＋トークン秘匿が必要 → Worker が token を環境変数に保持して中継。アプリはWorker URL・合言葉・DB IDだけ持つ
+- 合言葉（`X-TC-Secret` ↔ env `TC_SHARED_SECRET`）でWorker URLが漏れても勝手に書き込まれない。保存後8秒デバウンスで自動送信（無料枠にやさしく・今日の分のみ）＋手動送信ボタン
+- 設定 → Notion連携（`#notion-body`）: URL・合言葉[password]・DB ID・自動送信ON/OFF。app.jsのNotionモジュール（notionCfg/notionReady/notionDayPayload/notionPush/scheduleNotionPush/renderNotionCard）。save()にscheduleNotionPush()をフック。settings.notion={url,secret,dbId,on}（追加のみ・後方互換）
+- 新規10（Notion）＋回帰44 PASS。オーナー側の準備: Workerデプロイ＋環境変数、Notionでintegration作成・DB接続・プロパティ用意（名前/日付/日記/メモ/できたこと/就寝/起床）
+
 ### 2026-07-18（v1.15.0 = 日別時刻・タイマー自動反映・5分刻み・ユーザー名）
 
 - 時刻を日別独立化: timeOn/timeEndOn（timeDates/timeEndDates優先＞master）をitemsForに反映。applyEditは繰り返し時setPerDayFieldで日別保存。表示はit.timeEnd（occurrence）へ統一。ルーティン定義の時刻=master（全日既定）、各日編集=独立

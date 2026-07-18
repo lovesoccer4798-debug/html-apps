@@ -50,7 +50,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', userName: '', senderName: '' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -90,6 +90,7 @@ function save() {
   persistLocal();
   scheduleCloudPush(); // ログイン中ならクラウドへも（デバウンス）
   scheduleSharedPush(); // 共有カレンダーの変更も（デバウンス・差分があるときだけ書く）
+  scheduleNotionPush(); // Notion連携ONなら今日の分を（デバウンス）
 }
 
 /* ========== ui state (not persisted) ========== */
@@ -1674,6 +1675,7 @@ function renderSettings() {
   renderSharedCard();
   renderGcalCard();
   renderColorRuleCard();
+  renderNotionCard();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
@@ -3517,9 +3519,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=28');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=28');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=28');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=29');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=29');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=29');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
@@ -4233,6 +4235,102 @@ function renderPeriodNote(container, period, periodLabel) {
     card.append(rev);
   }
   container.append(card);
+}
+
+/* ========== v15: Notion連携（Cloudflare Worker中継で日々の記録をNotionへ） ========== */
+
+let notionPushTimer = null;
+function notionCfg() { return db.settings.notion || (db.settings.notion = { url: '', secret: '', dbId: '', on: false }); }
+function notionReady() { const n = notionCfg(); return Boolean(n.url && n.secret && n.dbId); }
+
+// その日の記録をひとまとめに（日記＝タスク/予定の日記＋ひとことメモ）
+function notionDayPayload(key) {
+  const n = notionCfg();
+  const diaries = [];
+  const note = db.notes[key];
+  if (note) diaries.push(`【ひとこと】${note}`);
+  for (const it of itemsFor(key)) {
+    const d = diaryFor(it);
+    if (d) diaries.push(`【${it.title}】${d}`);
+  }
+  const d = fromKey(key);
+  const rec = db.sleep[key] || {};
+  return {
+    dbId: n.dbId,
+    date: key,
+    title: `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`,
+    diary: diaries.join('\n') || null,
+    memo: note || null,
+    doneCount: tasksStatsFor(key).done,
+    bed: rec.bed || null,
+    wake: rec.wake || null,
+  };
+}
+
+async function notionPush(key, { silent = true } = {}) {
+  const n = notionCfg();
+  if (!notionReady()) { if (!silent) flashToast('先にNotion連携の設定（URL・合言葉・DB ID）を入れてね'); return false; }
+  try {
+    const res = await fetch(n.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-TC-Secret': n.secret },
+      body: JSON.stringify(notionDayPayload(key)),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      if (!silent) flashToast(`Notionへ送れませんでした（${data.error || res.status}）`);
+      return false;
+    }
+    n.lastPushAt = Date.now();
+    persistLocal();
+    if (!silent) flashToast(data.updated ? 'Notionの今日のページを更新しました' : 'Notionに今日のページを作成しました');
+    if (ui.screen === 'settings') renderNotionCard();
+    return true;
+  } catch (err) {
+    if (!silent) flashToast('Notionへの送信に失敗しました（Worker URLを確認してね）');
+    return false;
+  }
+}
+// 保存後の自動送信（ON時・今日の分だけ・8秒デバウンスで無料枠にやさしく）
+function scheduleNotionPush() {
+  if (!notionCfg().on || !notionReady()) return;
+  clearTimeout(notionPushTimer);
+  notionPushTimer = setTimeout(() => notionPush(todayKey(), { silent: true }), 8000);
+}
+
+function renderNotionCard() {
+  const wrap = $('#notion-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const n = notionCfg();
+  const field = (label, key, ph, type) => {
+    const l = el('label', 'f-label', label);
+    const inp = document.createElement('input');
+    inp.type = type || 'text';
+    inp.value = n[key] || '';
+    inp.placeholder = ph;
+    inp.addEventListener('change', () => { n[key] = inp.value.trim(); persistLocal(); if (ui.screen === 'settings') renderNotionCard(); });
+    wrap.append(l, inp);
+  };
+  field('Worker URL', 'url', 'https://xxx.workers.dev');
+  field('合言葉（Workerに設定した TC_SHARED_SECRET）', 'secret', '長めの文字列', 'password');
+  field('NotionデータベースID', 'dbId', '32桁の英数字');
+
+  const tg = el('label', 'sync-toggle');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = n.on !== false && !!n.on;
+  cb.addEventListener('change', () => { n.on = cb.checked; persistLocal(); });
+  tg.append(cb, ' 保存時に自動でNotionへ送る（今日の分）');
+  wrap.append(tg);
+
+  const btn = el('button', 'cta', '今日の記録をNotionに送る');
+  btn.type = 'button';
+  btn.disabled = !notionReady();
+  btn.addEventListener('click', () => notionPush(todayKey(), { silent: false }));
+  wrap.append(btn);
+
+  if (n.lastPushAt) wrap.append(el('p', 'hint', `最後に送信: ${new Date(n.lastPushAt).toLocaleString('ja-JP')}`));
 }
 
 /* ========== PWA ========== */

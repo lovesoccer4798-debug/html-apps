@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=28">
-<link rel="stylesheet" href="style.css?v=28">
+<link rel="stylesheet" href="tokens.css?v=29">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 
@@ -199,6 +199,12 @@
         <label class="f-label" for="sender-name">招待メールの差出人名（任意）</label>
         <input type="text" id="sender-name" maxlength="40" placeholder="空欄のときはユーザー名を使います">
         <p class="hint">ユーザー名はこのアプリでのあなたの呼び名です。招待メールの差出人名は、空欄ならユーザー名が使われます。※メールの件名や送信元アドレスはGoogleアカウント側の設定に従うため、アプリからは変更できません。</p>
+      </div>
+
+      <p class="section-label">Notion連携</p>
+      <div class="card">
+        <div id="notion-body"></div>
+        <p class="hint">日記・ふりかえりメモ・できたこと・睡眠を、あなたのNotionデータベースへ1日1ページで自動保存できます（AIに自分を把握してもらうためのデータ蓄積にも）。使うには無料のCloudflare Worker中継が1つ必要です（apps/task-calendar/notion-worker.js に手順あり）。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -562,7 +568,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=28"></script>
-<script src="app.js?v=28"></script>
+<script src="firebase-config.js?v=29"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>
