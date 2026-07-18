@@ -24,6 +24,12 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.13.0 = 招待メール・共有コピー・トグル不具合修正）
+
+- **不具合修正**: 予定シートの「Googleにも登録/Meet自動発行」がiOSのシート内でネイティブcheckboxが反応しづらく無反応に見えた → 自前トグル（.opt-row/.opt-toggle・click切替）に置換。ヘッドレスでは元々toggleできていたのでiOS固有と判断
+- 招待メール（attendees＋sendUpdates=all）でGoogleが招待送信。詳細に「共有用にコピー」（日時/リンク/ID/パスコード・Meet/Zoomコード抽出）。混乱回避で外部「＋Meet作成」ボタン廃止（自動発行に一本化）
+- 新規11＋回帰44 PASS。**オーナー: calendar.eventsスコープ追加＋再連携が前提（PR #35と同じ）**
+
 ### 2026-07-18（v1.12.0 = Googleカレンダー双方向＋Meet自動発行）
 
 - スコープをcalendar.eventsへ。予定シートに「Googleにも登録」「Meet自動発行」（連携中のみ）。作成POST(conferenceDataVersion=1)→gcalId/hangoutLink保存、編集PATCH、削除DELETE、Undoで再作成。単発のみ・重複は表示側で統合。401/403で再連携促し

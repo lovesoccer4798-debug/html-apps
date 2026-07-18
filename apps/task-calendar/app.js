@@ -1752,6 +1752,22 @@ const sheetEls = {
   repeatHint: $('#repeat-hint'),
 };
 
+/* 会議の共有用テキスト（日時・リンク・ID・パスコードを埋める） */
+function meetingShareText(it, url) {
+  const d = fromKey(it.key);
+  const timeStr = it.time ? `${it.time}${it.ref.timeEnd ? ` - ${it.ref.timeEnd}` : ''}` : '（時刻未設定）';
+  const when = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 (${WD_JA[d.getDay()]}) ${timeStr}（Asia/Tokyo）`;
+  let id = '';
+  let pass = '';
+  const meet = url.match(/meet\.google\.com\/([a-z-]+)/i);
+  if (meet) { id = meet[1]; pass = '不要（Meetはリンクから参加）'; }
+  const zoomId = url.match(/\/j\/(\d+)/);
+  if (zoomId) id = zoomId[1];
+  const zoomPw = url.match(/[?&]pwd=([^&]+)/);
+  if (zoomPw) pass = decodeURIComponent(zoomPw[1]);
+  return ['日時：' + when, 'リンク：' + url, 'ID：' + (id || '—'), 'パスコード：' + (pass || '—')].join('\n');
+}
+
 /* タップで開く詳細ビュー（読み取り）。右上ペンで編集シートへ */
 let detailItem = null;
 function openDetail(it) {
@@ -1787,7 +1803,7 @@ function openDetail(it) {
   } else if (it.ref.place) {
     row('場所', it.ref.place);
   }
-  // 会議リンク（アプリの予定 or GoogleのconferenceData）→「会議に参加」ボタン
+  // 会議リンク（アプリの予定 or GoogleのconferenceData）→「会議に参加」＋「共有用にコピー」
   const meetUrl = it.ref.meetUrl || it.ref.hangoutLink || null;
   if (meetUrl) {
     const join = el('a', 'cta join-btn');
@@ -1797,6 +1813,15 @@ function openDetail(it) {
     join.innerHTML = ICONS.video || '';
     join.append(el('span', '', '会議に参加'));
     body.append(join);
+    const copyBtn = el('button', 'cta ghost join-btn');
+    copyBtn.type = 'button';
+    copyBtn.innerHTML = ICONS.copy || '';
+    copyBtn.append(el('span', '', '共有用にコピー'));
+    copyBtn.addEventListener('click', () => {
+      const text = meetingShareText(it, meetUrl);
+      navigator.clipboard?.writeText(text).then(() => flashToast('コピーしました')).catch(() => flashToast(text));
+    });
+    body.append(copyBtn);
   }
   if (it.kind === 'task') { // 完了トグルも詳細から
     const btn = el('button', `cta ${it.done ? 'ghost' : ''}`, it.done ? '完了を取り消す' : '完了にする');
@@ -1833,8 +1858,9 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-time-end').value = r.timeEnd || '';
     $('#f-place').value = r.place || '';
     $('#f-meeting').value = r.meetUrl || '';
-    $('#f-push-google').checked = Boolean(r.pushGoogle || r.gcalId);
-    $('#f-auto-meet').checked = false;
+    setOpt('#opt-push', Boolean(r.pushGoogle || r.gcalId));
+    setOpt('#opt-meet', false);
+    $('#f-invite').value = (r.attendees || []).join('、');
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
   } else {
     sheetEls.fTitle.value = '';
@@ -1848,8 +1874,9 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-time-end').value = timeEnd || '';
     $('#f-place').value = '';
     $('#f-meeting').value = '';
-    $('#f-push-google').checked = false;
-    $('#f-auto-meet').checked = false;
+    setOpt('#opt-push', false);
+    setOpt('#opt-meet', false);
+    $('#f-invite').value = '';
     buildWhoChips([]);
   }
   $('#f-gcal-sync').hidden = !gcalCanWrite(); // Google連携中のみ表示
@@ -1968,7 +1995,19 @@ function syncSheetType() {
   $('#event-only-fields').hidden = ui.sheetType !== 'event';
 }
 
-// 「＋ Google Meet を作成」「＋ Zoom を開く」→ 新規会議ページを開いて、発行されたURLを会議リンク欄に貼ってもらう
+// カスタムトグル（iOSでネイティブcheckboxがシート内で反応しづらいため自前）
+function setOpt(sel, on) { $(sel).classList.toggle('is-on', !!on); }
+function getOpt(sel) { return $(sel).classList.contains('is-on'); }
+$('#opt-push').addEventListener('click', () => {
+  setOpt('#opt-push', !getOpt('#opt-push'));
+  if (!getOpt('#opt-push')) setOpt('#opt-meet', false); // 登録オフならMeetもオフ
+});
+$('#opt-meet').addEventListener('click', () => {
+  const on = !getOpt('#opt-meet');
+  setOpt('#opt-meet', on);
+  if (on) setOpt('#opt-push', true); // Meet発行はGoogle登録が前提
+});
+// 「＋ Zoom を開く」→ 新規会議ページを開いて、発行されたURLを会議リンク欄に貼ってもらう
 $('#f-meeting-btns').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-meet]');
   if (!btn) return;
@@ -2003,8 +2042,9 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const memo = sheetEls.fMemo.value.trim() || null;
   const diary = sheetEls.fDiary.value.trim() || null;
   const meetUrl = $('#f-meeting').value.trim() || null;
-  const pushGoogle = $('#f-push-google').checked;
-  const autoMeet = $('#f-auto-meet').checked;
+  const pushGoogle = getOpt('#opt-push');
+  const autoMeet = getOpt('#opt-meet');
+  const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
@@ -2016,10 +2056,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl });
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
+      ui.editing.ref.attendees = attendees.length ? attendees : null;
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, color, calendarId, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, color, calendarId, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey };
@@ -3307,6 +3348,7 @@ function gcalEventBody(ev, key, wantMeet) {
     body.start = { date: dateStr };
     body.end = { date: toKey(addDays(fromKey(dateStr), 1)) };
   }
+  if ((ev.attendees || []).length) body.attendees = ev.attendees.map((email) => ({ email }));
   if (wantMeet) body.conferenceData = { createRequest: { requestId: `tc-${Math.random().toString(36).slice(2)}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } };
   return body;
 }
@@ -3315,10 +3357,11 @@ function gcalEventBody(ev, key, wantMeet) {
 async function gcalSyncEvent(ev, key, wantMeet) {
   if (ev.repeat) { flashToast('繰り返しの予定はGoogle連携の対象外です（単発の予定のみ）'); return; }
   try {
-    const cd = wantMeet ? '?conferenceDataVersion=1' : '';
+    const send = (ev.attendees || []).length ? '&sendUpdates=all' : ''; // 招待メールを送る
+    const q = `?conferenceDataVersion=1${send}`;
     let out;
-    if (ev.gcalId) out = await gcalWrite('PATCH', `calendars/primary/events/${ev.gcalId}${cd}`, gcalEventBody(ev, key, wantMeet && !ev.hangoutLink));
-    else out = await gcalWrite('POST', `calendars/primary/events${cd || '?conferenceDataVersion=1'}`, gcalEventBody(ev, key, wantMeet));
+    if (ev.gcalId) out = await gcalWrite('PATCH', `calendars/primary/events/${ev.gcalId}${q}`, gcalEventBody(ev, key, wantMeet && !ev.hangoutLink));
+    else out = await gcalWrite('POST', `calendars/primary/events${q}`, gcalEventBody(ev, key, wantMeet));
     if (out && out.id) {
       ev.gcalId = out.id;
       if (out.hangoutLink) ev.hangoutLink = out.hangoutLink;
@@ -3326,7 +3369,8 @@ async function gcalSyncEvent(ev, key, wantMeet) {
     gcalFetched = {}; // 取得キャッシュを無効化（次表示で最新を取り直す）
     persistLocal();
     renderAll();
-    flashToast(wantMeet ? 'Googleに登録し、会議リンクを発行しました' : 'Googleカレンダーに登録しました');
+    const invited = (ev.attendees || []).length ? '・招待メールを送信しました' : '';
+    flashToast((wantMeet ? 'Googleに登録し、会議リンクを発行しました' : 'Googleカレンダーに登録しました') + invited);
   } catch (err) {
     if (String(err.message).includes('scope')) { flashToast('Googleへの書き込み権限がありません。設定から「再連携」してね'); if (ui.screen === 'settings') renderGcalCard(); }
     else flashToast('Googleへの登録に失敗しました');
@@ -3420,9 +3464,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=25');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=25');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=25');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=26');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=26');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=26');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）

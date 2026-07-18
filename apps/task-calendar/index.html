@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=25">
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="tokens.css?v=26">
+<link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -288,16 +288,18 @@
         <div class="who-chips" id="f-who-chips"></div>
         <input type="text" id="f-who" maxlength="120" placeholder="その他の人（「、」区切りで複数OK）">
         <div class="who-chips who-suggest-box" id="f-who-suggest"></div>
-        <label class="f-label" for="f-meeting">会議リンク（任意）</label>
-        <input type="url" id="f-meeting" maxlength="500" placeholder="Google Meet / Zoom などのURL" inputmode="url">
-        <div class="who-chips" id="f-meeting-btns">
-          <button type="button" class="who-chip" data-meet="https://meet.google.com/new">＋ Google Meet を作成</button>
-          <button type="button" class="who-chip" data-meet="https://zoom.us/start/videomeeting">＋ Zoom を開く</button>
-        </div>
         <div id="f-gcal-sync" hidden>
-          <label class="vis-row"><input type="checkbox" id="f-push-google"> この予定をGoogleカレンダーにも登録</label>
-          <label class="vis-row"><input type="checkbox" id="f-auto-meet"> Google Meet のリンクを自動発行（Googleに登録時）</label>
-          <p class="hint">Googleに登録すると、他の端末やGoogleカレンダーアプリでも見られます。編集・削除もGoogle側に反映されます（単発の予定のみ）。</p>
+          <label class="f-label">Googleカレンダー連携</label>
+          <button type="button" class="opt-row" id="opt-push"><span class="opt-txt">この予定をGoogleカレンダーにも登録</span><span class="opt-toggle"></span></button>
+          <button type="button" class="opt-row" id="opt-meet"><span class="opt-txt">Google Meet のリンクを自動発行</span><span class="opt-toggle"></span></button>
+          <label class="f-label" for="f-invite">招待するメール（任意・「、」区切り）</label>
+          <input type="text" id="f-invite" maxlength="300" placeholder="例：friend@example.com" inputmode="email">
+          <p class="hint">オンにするとGoogleカレンダーに登録します（編集・削除もGoogle側に反映・単発の予定のみ）。メールを入れると、あなたのGoogleアカウントから招待メール＋Meetリンクが相手に届きます。</p>
+        </div>
+        <label class="f-label" for="f-meeting">会議リンク（任意・自分で貼る場合）</label>
+        <input type="url" id="f-meeting" maxlength="500" placeholder="Zoom などのURL（Meetは上の自動発行が便利）" inputmode="url">
+        <div class="who-chips" id="f-meeting-btns">
+          <button type="button" class="who-chip" data-meet="https://zoom.us/start/videomeeting">＋ Zoom を開く</button>
         </div>
       </div>
       <label class="f-label">色（任意 — 月カレンダーの「予定表」モードで使われます）</label>
@@ -539,7 +541,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="firebase-config.js?v=26"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>

@@ -2,6 +2,18 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.13.0] - 2026-07-18
+
+### Added
+
+- 予定に「招待するメール」を追加。Googleに登録すると、あなたのGoogleアカウントから招待メール＋Meetリンクが相手に届く
+- 会議の詳細に「共有用にコピー」ボタン: 日時・リンク・ID・パスコードを整形してコピー（Meet/Zoomのコードを自動抽出）
+
+### Fixed
+
+- 予定シートの「Googleにも登録」「Meet自動発行」がiPhoneで反応しなかった問題（ネイティブのチェックボックスをやめ、確実にタップできるトグルスイッチに変更）。オンにするだけでGoogle登録＋Meet発行まで完了（Googleカレンダーと同じ操作感）
+- 紛らわしかった「＋ Google Meet を作成」ボタンを廃止（自動発行に一本化。Zoom等の手動URL貼り付けは維持）
+
 ## [1.12.0] - 2026-07-18
 
 ### Added

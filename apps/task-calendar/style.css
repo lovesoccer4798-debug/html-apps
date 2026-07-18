@@ -1350,3 +1350,22 @@ input, select, textarea { font: inherit; color: inherit; }
 .join-btn .icon { width: 18px; height: 18px; }
 #f-meeting-btns { margin-top: 8px; }
 #f-meeting-btns .who-chip { border-style: dashed; }
+
+/* ---------- v18: 会議連携のカスタムトグル ---------- */
+.opt-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 12px 4px; border-bottom: 1px solid var(--tc-line);
+  font-size: 14px; color: var(--tc-ink); text-align: left; -webkit-tap-highlight-color: transparent;
+}
+.opt-txt { flex: 1; min-width: 0; }
+.opt-toggle {
+  flex-shrink: 0; width: 46px; height: 28px; border-radius: 999px;
+  background: var(--tc-surface2); border: 1px solid var(--tc-line); position: relative; transition: background .18s ease;
+}
+.opt-toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: var(--tc-shadow); transition: transform .18s ease;
+}
+.opt-row.is-on .opt-toggle { background: var(--tc-accent); border-color: var(--tc-accent); }
+.opt-row.is-on .opt-toggle::after { transform: translateX(18px); }
+#f-invite { width: 100%; }
