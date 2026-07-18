@@ -42,6 +42,9 @@ const ICONS = {
   copy: `<svg ${ICON_ATTRS}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
   search: `<svg ${ICON_ATTRS}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
   sun: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+  heart: `<svg ${ICON_ATTRS}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
+  cake: `<svg ${ICON_ATTRS}><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></svg>`,
+  party: `<svg ${ICON_ATTRS}><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11-.11.7-.72 1.22-1.43 1.22H17"/><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98-.7.11-1.22.72-1.22 1.43V7"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/></svg>`,
   moon: `<svg ${ICON_ATTRS}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
   sunMoon: `<svg ${ICON_ATTRS}><path d="M12 8a2.828 2.828 0 1 0 4 4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
   mapPin: `<svg ${ICON_ATTRS}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`,
@@ -53,7 +56,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -926,6 +929,10 @@ function renderCal() {
   updateCalStickH(); // フィルタチップを固定ヘッダーの真下に貼り付けるための高さ計測
 }
 
+// 上部固定のON/OFF（設定で切替。OFFなら通常スクロール）
+function applyStickyHeader() {
+  document.documentElement.dataset.sticky = db.settings.stickyHeader === false ? 'off' : 'on';
+}
 // 固定ヘッダー（appbar全体）の高さを測って、下のフィルタチップの sticky 位置に使う
 function updateCalStickH() {
   const cs = document.querySelector('#scr-cal .appbar');
@@ -1143,7 +1150,7 @@ function renderDay(body) {
     const [ay] = a.date.split('-').map(Number);
     const years = annivRepeat(a) === 'yearly' ? cur.getFullYear() - ay : null;
     const banner = el('div', 'anniv-banner');
-    banner.innerHTML = ICONS.sparkles;
+    banner.innerHTML = ICONS[annivIconName(a)];
     banner.append(el('span', '', `「${a.title}」${years ? `（${years}周年）` : ''}`));
     body.append(banner);
   }
@@ -1324,7 +1331,9 @@ function renderPackages(body) {
     save(); renderAll();
     flashToast(`「${title}」を作成しました（${items.length}件）`);
   });
-  make.append(el('label', 'f-label', 'または、既存の1日から取り込む'), dIn, mkBtn);
+  const sub = el('div', 'pkg-make-sub');
+  sub.append(el('span', 'pkg-sub-label', 'または、既存の1日から取り込む'), dIn, mkBtn);
+  make.append(sub);
   body.append(make);
 
   if (!db.packages.length) {
@@ -1503,7 +1512,8 @@ function renderMonth(body) {
     cell.type = 'button';
     cell.setAttribute('aria-label', `${day.getMonth() + 1}月${day.getDate()}日を選択`);
     const dnum = el('span', `dnum${dayColorClass(day)}`, String(day.getDate()));
-    if (dayHasAnniv(day)) { const st = el('span', 'mo-star'); st.innerHTML = ICONS.sparkles; dnum.append(st); } // 記念日の日は小さく星
+    const annivDay = annivOnDay(day);
+    if (annivDay) { const st = el('span', 'mo-star'); st.innerHTML = ICONS[annivIconName(annivDay)]; dnum.append(st); } // 記念日の日は小さくアイコン
     cell.append(dnum);
     if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
       for (const it of items.slice(0, 4)) {
@@ -2029,6 +2039,8 @@ function renderSettings() {
   if (tn) tn.checked = !!db.settings.timerNotify;
   const me = $('#month-edge-toggle');
   if (me) me.checked = !!db.settings.monthEdge;
+  const sh = $('#sticky-toggle');
+  if (sh) sh.checked = db.settings.stickyHeader !== false;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
   });
@@ -2116,6 +2128,12 @@ $('#month-edge-toggle').addEventListener('change', (e) => {
   db.settings.monthEdge = e.target.checked;
   save();
   renderAll();
+});
+
+$('#sticky-toggle').addEventListener('change', (e) => {
+  db.settings.stickyHeader = e.target.checked;
+  applyStickyHeader();
+  save();
 });
 
 /* ========== add / edit sheet ========== */
@@ -4401,6 +4419,9 @@ function annivOccursOn(a, dateObj) {
   return dateObj.getFullYear() === y && dateObj.getMonth() === m - 1 && dateObj.getDate() === d;
 }
 function dayHasAnniv(dateObj) { return db.anniversaries.some((a) => annivOccursOn(a, dateObj)); }
+const ANNIV_ICONS = ['sparkles', 'heart', 'cake', 'party'];
+function annivIconName(a) { return (a && ANNIV_ICONS.includes(a.icon)) ? a.icon : 'sparkles'; }
+function annivOnDay(dateObj) { return db.anniversaries.find((a) => annivOccursOn(a, dateObj)) || null; }
 
 function renderAnniv() {
   const body = $('#anniv-body');
@@ -4420,6 +4441,9 @@ function renderAnniv() {
   const REP_LABEL = { yearly: '毎年', monthly: '毎月', once: '単発' };
   for (const { a, days, years, next, rep } of list) {
     const card = el('div', 'anniv-card');
+    const ic = el('span', 'anniv-ic');
+    ic.innerHTML = ICONS[annivIconName(a)];
+    card.append(ic);
     const main = el('div', 'anniv-main');
     main.append(el('span', 'anniv-title', a.title));
     const sub = `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日（${WD_JA[next.getDay()]}）・${REP_LABEL[rep]}${rep === 'yearly' && years ? `・${years}周年` : ''}`;
@@ -4440,6 +4464,7 @@ function openAnnivSheet(a = null) {
   $('#a-title').value = a ? a.title : '';
   $('#a-date').value = a ? a.date : todayKey();
   $('#a-repeat').value = a ? annivRepeat(a) : 'yearly';
+  setAnnivIconSel(a ? a.icon : 'sparkles');
   $('#anniv-delete').hidden = !a;
   $('#anniv-scrim').hidden = false;
   $('#a-title').focus();
@@ -4453,6 +4478,22 @@ function deleteAnniv(a) {
     save(); renderAnniv();
   });
 }
+// 記念日アイコンの選択UI（絵文字ではなく線アイコン）
+document.querySelectorAll('#a-icon-seg button').forEach((b) => {
+  b.innerHTML = ICONS[b.dataset.icon] || ICONS.sparkles;
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#a-icon-seg button').forEach((x) => x.classList.remove('is-active'));
+    b.classList.add('is-active');
+  });
+});
+function setAnnivIconSel(name) {
+  const n = ANNIV_ICONS.includes(name) ? name : 'sparkles';
+  document.querySelectorAll('#a-icon-seg button').forEach((b) => b.classList.toggle('is-active', b.dataset.icon === n));
+}
+function getAnnivIconSel() {
+  const b = document.querySelector('#a-icon-seg button.is-active');
+  return b ? b.dataset.icon : 'sparkles';
+}
 $('#anniv-close').addEventListener('click', () => { $('#anniv-scrim').hidden = true; });
 $('#anniv-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
 $('#anniv-delete').addEventListener('click', () => {
@@ -4464,11 +4505,12 @@ $('#anniv-form').addEventListener('submit', (e) => {
   if (!title) { $('#a-title').focus(); return; }
   const date = $('#a-date').value || todayKey();
   const repeat = $('#a-repeat').value;
+  const icon = getAnnivIconSel();
   if (annivEditing) {
-    annivEditing.title = title; annivEditing.date = date; annivEditing.repeat = repeat;
+    annivEditing.title = title; annivEditing.date = date; annivEditing.repeat = repeat; annivEditing.icon = icon;
     delete annivEditing.yearly;
   } else {
-    db.anniversaries.push({ id: newId('a'), title, date, repeat });
+    db.anniversaries.push({ id: newId('a'), title, date, repeat, icon });
   }
   save();
   $('#anniv-scrim').hidden = true;
@@ -4696,6 +4738,7 @@ applyFont();
 applySize();
 applyStyle();
 applyZoomLock();
+applyStickyHeader();
 // 実行中タイマーの復元（リロード・再起動後）
 if (db.running) {
   const r = db.running;

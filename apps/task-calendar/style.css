@@ -1525,3 +1525,37 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .pkg-ie-title:focus { outline: none; border-color: var(--tc-accent); }
 .pkg-add-item { font-size: 13px; font-weight: 700; color: var(--tc-accent); padding: 8px 0 4px; }
+
+/* ---------- v34: 上部固定ON/OFF・記念日アイコン・パッケージ作成UI整え ---------- */
+/* 上部固定OFF（設定） */
+:root[data-sticky="off"] #scr-cal .appbar { position: static; }
+:root[data-sticky="off"] .cal-chips { position: static; top: auto; }
+
+/* 記念日アイコンの選択（線アイコン・絵文字なし） */
+.icon-seg { display: flex; gap: 8px; margin-bottom: 8px; }
+.icon-seg button {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 11px 0; border-radius: 12px;
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); color: var(--tc-ink2);
+}
+.icon-seg button .icon { width: 21px; height: 21px; }
+.icon-seg button.is-active { background: var(--tc-accent-soft); border-color: var(--tc-accent); color: var(--tc-accent); }
+/* 記念日リストのアイコン */
+.anniv-ic { color: var(--tc-accent); display: flex; align-items: center; flex: 0 0 auto; }
+.anniv-ic .icon { width: 22px; height: 22px; }
+
+/* パッケージ作成カードの整え */
+.pkg-make { gap: 6px; }
+.pkg-make .f-label { color: var(--tc-ink2); margin-top: 4px; }
+.pkg-make .f-label:first-child { margin-top: 0; }
+.pkg-make input { text-align: left; }
+.pkg-make-sub {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--tc-line);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pkg-sub-label { font-size: 12px; color: var(--tc-ink2); }
+.pkg-make-sub input[type="date"] {
+  width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink); text-align: left;
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 10px 12px;
+}
+.pkg-make-sub .cta.ghost { margin-top: 0; }

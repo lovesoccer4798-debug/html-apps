@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.20.0 = 記念日アイコン選択・上部固定ON/OFF・パッケージUI整え）
+
+- 記念日アイコン: ICONSにheart/cake/party追加（線アイコン）。`a.icon`（既定sparkles）。シートに`#a-icon-seg`（4択・setAnnivIconSel/getAnnivIconSel）。mo-star/日バナー/一覧`.anniv-ic`で選択アイコン反映。ANNIV_ICONS/annivIconName/annivOnDay追加
+- 上部固定ON/OFF: `db.settings.stickyHeader`（既定true）。applyStickyHeader()で`data-sticky`属性、CSSで`[data-sticky=off] #scr-cal .appbar/.cal-chips`をstatic化。設定「画面」に`#sticky-toggle`
+- パッケージUI: 取り込み部を`.pkg-make-sub`（border-top区切り・pkg-sub-label）に整理。ラベルink2・日付left寄せ。ダークで乱れていた見た目を改善
+- ③Dynamic Islandは不可（PWAはActivityKit非対応）と回答。④日跨ぎ予定は次の集中実装へ
+- 新機能11＋回帰44＋既存smoke 全PASS。アセットv34
+
 ### 2026-07-18（v1.19.1 = 上部固定の修正・パッケージ編集）
 
 - 上部固定バグ修正: `position:sticky` は親のボックス内でしか効かず、短い`.appbar`の子（`.cal-stick`）をstickyにしていたため約50pxで固定解除→「すべて・マイカレンダー」で固定でなくなっていた。親が画面全体の`#scr-cal .appbar`自体をstickyにして常時固定に。フィルタチップ`.cal-chips`も`top:var(--cal-stick-h)`（appbar高さをupdateCalStickHで計測）で真下に固定

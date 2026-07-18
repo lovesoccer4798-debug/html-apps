@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=33">
-<link rel="stylesheet" href="style.css?v=33">
+<link rel="stylesheet" href="tokens.css?v=34">
+<link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
 
@@ -152,6 +152,8 @@
           <button data-zoom="free">自由（ピンチで拡大）</button>
         </div>
         <p class="hint">「固定」にすると、iPhoneでうっかり画面が拡大されて表示がブレるのを防げます（入力欄を開いたときの勝手なズームも止まります）。文字を大きくしたいときは上の「文字サイズ」をどうぞ。</p>
+        <label class="vis-row" style="margin-top:10px"><input type="checkbox" id="sticky-toggle"> カレンダー上部（日付・タブ・フィルタ）を固定する</label>
+        <p class="hint">オンにすると、スクロールしても日付・ビュータブ・フィルタが上部に固定されます。オフにすると全部いっしょにスクロールします。お好みでどうぞ。</p>
       </div>
 
       <p class="section-label">タイマー終了の通知</p>
@@ -467,6 +469,13 @@
     <form id="anniv-form" autocomplete="off">
       <label class="f-label" for="a-title">名前</label>
       <input type="text" id="a-title" maxlength="40" placeholder="例：つきあった日・誕生日">
+      <label class="f-label">アイコン</label>
+      <div class="icon-seg" id="a-icon-seg">
+        <button type="button" data-icon="sparkles" aria-label="きらきら"></button>
+        <button type="button" data-icon="heart" aria-label="ハート"></button>
+        <button type="button" data-icon="cake" aria-label="ケーキ"></button>
+        <button type="button" data-icon="party" aria-label="お祝い"></button>
+      </div>
       <div class="f-row">
         <div class="f-col">
           <label class="f-label" for="a-date">日付</label>
@@ -587,7 +596,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=33"></script>
-<script src="app.js?v=33"></script>
+<script src="firebase-config.js?v=34"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>
