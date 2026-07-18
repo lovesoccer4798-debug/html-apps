@@ -50,7 +50,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', senderName: '' }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', userName: '', senderName: '' }, running: null };
 }
 
 function loadDb() {
@@ -167,6 +167,9 @@ function occursOn(t, key) {
 }
 function taskDoneOn(t, key) { return t.repeat ? Boolean((t.doneDates || {})[key]) : Boolean(t.done); }
 function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null : t.doneAt; }
+// 時刻は「日ごと（timeDates）＞マスタ（time）」。繰り返しは日別に独立、単発はそのまま
+function timeOn(r, key) { return (r.repeat ? (r.timeDates || {})[key] : null) ?? r.time ?? ''; }
+function timeEndOn(r, key) { return (r.repeat ? (r.timeEndDates || {})[key] : null) ?? r.timeEnd ?? null; }
 const MAX_CALENDARS = 8; // 仕様§7: 色の見分けとチップ視認性の上限
 
 function allFilterIds() {
@@ -231,11 +234,11 @@ function itemsFor(key) {
   const items = [];
   for (const t of db.tasks) {
     if (!occursOn(t, key)) continue;
-    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: t.time || '', minutes: t.minutes || null, repeat: t.repeat || null, done: taskDoneOn(t, key) });
+    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: t.minutes || null, repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
     if (!occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate）
-    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: e.time || '', minutes: null, repeat: e.repeat || null, done: false });
+    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: timeOn(e, key), timeEnd: timeEndOn(e, key), minutes: null, repeat: e.repeat || null, done: false });
   }
   items.push(...gcalItemsFor(key)); // Googleカレンダーの予定（連携ON時のみ・読み取り専用）
   return items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99') || (a.ref.createdAt || 0) - (b.ref.createdAt || 0));
@@ -426,6 +429,19 @@ function makeSwipe(item, { onEdit, onDelete }) {
 
 /* ========== item operations ========== */
 
+// タイマーで実行したタスクを完了した時、開始時刻が未入力なら時刻を自動記録
+// 終了＝完了時刻を5分単位に切り上げ、開始＝終了−タイマーの長さ（繰り返しは日別に独立）
+function autoFillTimerTime(t, key, totalMs) {
+  if (!totalMs || timeOn(t, key)) return; // 既に時刻があるものは触らない
+  const now = new Date();
+  let endMin = now.getHours() * 60 + Math.ceil(now.getMinutes() / 5) * 5;
+  if (endMin > 1439) endMin = 1439;
+  const startMin = Math.max(0, endMin - Math.round(totalMs / 60000));
+  const perDay = Boolean(t.repeat);
+  setPerDayField(t, 'time', 'timeDates', key, tgMinToStr(startMin), perDay);
+  setPerDayField(t, 'timeEnd', 'timeEndDates', key, tgMinToStr(endMin), perDay);
+}
+
 function toggleItem(it) {
   if (sharedBlocked(it.ref.calendarId)) return;
   const t = it.ref;
@@ -436,6 +452,10 @@ function toggleItem(it) {
   } else {
     t.done = !t.done;
     t.doneAt = t.done ? Date.now() : null;
+  }
+  // タイマー実行中／実行済みのタスクを完了にしたら時刻を自動記録
+  if (taskDoneOn(t, it.key) && db.running && db.running.taskId === t.id && db.running.dateKey === it.key) {
+    autoFillTimerTime(t, it.key, db.running.totalMs);
   }
   ui.justToggledId = taskDoneOn(t, it.key) ? it.id : null;
   save();
@@ -526,12 +546,12 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   main.append(el('span', 'item-title', it.title));
   const memo = memoFor(it);
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
-  if (it.kind === 'event' && !compact && (it.ref.place || (it.ref.who || []).length || (it.time && it.ref.timeEnd))) {
+  if (it.kind === 'event' && !compact && (it.ref.place || (it.ref.who || []).length || (it.time && it.timeEnd))) {
     const meta = el('span', 'item-meta'); // 時間・誰と・どこで（日記的な記録）
-    if (it.time && it.ref.timeEnd) {
+    if (it.time && it.timeEnd) {
       const tm = el('span', 'meta-bit mono');
       tm.innerHTML = ICONS.clock;
-      tm.append(` ${it.time}〜${it.ref.timeEnd}`);
+      tm.append(` ${it.time}〜${it.timeEnd}`);
       meta.append(tm);
     }
     if ((it.ref.who || []).length) {
@@ -561,7 +581,7 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   if (showTime && it.time) {
     const c = el('span', 'chip mono');
     c.innerHTML = ICONS.clock;
-    c.append(` ${it.time}${it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}`);
+    c.append(` ${it.time}${it.timeEnd ? `〜${it.timeEnd}` : ''}`);
     card.append(c);
   }
   if (it.repeat) {
@@ -940,8 +960,8 @@ function renderGrid(body) {
     for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
       const [hh, mm] = it.time.split(':').map(Number);
       // 長さ: 予定は終了時刻まで、タスクは所要時間、どちらもなければ1時間ぶん
-      const durMin = it.ref.timeEnd
-        ? Math.max(15, tgStrToMin(it.ref.timeEnd) - tgStrToMin(it.time))
+      const durMin = it.timeEnd
+        ? Math.max(15, tgStrToMin(it.timeEnd) - tgStrToMin(it.time))
         : (it.minutes || 60);
       const block = el('button', `tg-item${it.done ? ' is-done' : ''}`);
       block.type = 'button';
@@ -950,7 +970,7 @@ function renderGrid(body) {
       const c2 = itemColor(it);
       if (c2) block.style.background = c2;
       block.append(el('span', 'tg-ittl', it.title));
-      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.ref.timeEnd ? `${it.time}〜${it.ref.timeEnd}` : it.time));
+      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.timeEnd ? `${it.time}〜${it.timeEnd}` : it.time));
       block.addEventListener('click', (e) => { e.stopPropagation(); openDetail(it); });
       col.append(block);
     }
@@ -1092,7 +1112,7 @@ function renderDay(body) {
     const timeCell = el('span', 'tl-time mono');
     if (it.time) {
       timeCell.append(el('span', 'tl-start', it.time));
-      if (it.ref.timeEnd) timeCell.append(el('span', 'tl-end', it.ref.timeEnd)); // 終了時刻を下に添える
+      if (it.timeEnd) timeCell.append(el('span', 'tl-end', it.timeEnd)); // 終了時刻を下に添える
     }
     row.append(timeCell);
     row.append(el('span', 'tl-rail'));
@@ -1339,10 +1359,10 @@ function buildSleepCard(key) {
   card.innerHTML = ICONS.clock;
   const bedLabel = el('span', '', '就寝');
   const bed = document.createElement('input');
-  bed.type = 'time'; bed.value = rec.bed || '';
+  bed.type = 'time'; bed.step = 300; bed.value = rec.bed || '';
   const wakeLabel = el('span', '', '起床');
   const wake = document.createElement('input');
-  wake.type = 'time'; wake.value = rec.wake || '';
+  wake.type = 'time'; wake.step = 300; wake.value = rec.wake || '';
   const dur = el('span', 'sleep-dur');
   const sync = () => {
     const r = { bed: bed.value || null, wake: wake.value || null };
@@ -1666,6 +1686,8 @@ function renderSettings() {
   document.querySelectorAll('#style-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.styleOpt === (db.settings.styleVariant || 'round'));
   });
+  const un = $('#user-name');
+  if (un) un.value = db.settings.userName || '';
   const sn = $('#sender-name');
   if (sn) sn.value = db.settings.senderName || '';
   const tn = $('#timer-notify');
@@ -1740,6 +1762,7 @@ document.querySelectorAll('#style-seg button').forEach((b) => {
     save(); applyStyle(); renderAll();
   });
 });
+$('#user-name').addEventListener('change', (e) => { db.settings.userName = e.target.value.trim(); save(); });
 $('#sender-name').addEventListener('change', (e) => { db.settings.senderName = e.target.value.trim(); save(); });
 $('#timer-notify').addEventListener('change', async (e) => {
   if (e.target.checked && 'Notification' in window && Notification.permission === 'default') {
@@ -1772,7 +1795,7 @@ const sheetEls = {
 /* 会議の共有用テキスト（日時・リンク・ID・パスコードを埋める） */
 function meetingShareText(it, url) {
   const d = fromKey(it.key);
-  const timeStr = it.time ? `${it.time}${it.ref.timeEnd ? ` - ${it.ref.timeEnd}` : ''}` : '（時刻未設定）';
+  const timeStr = it.time ? `${it.time}${it.timeEnd ? ` - ${it.timeEnd}` : ''}` : '（時刻未設定）';
   const when = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 (${WD_JA[d.getDay()]}) ${timeStr}（Asia/Tokyo）`;
   let id = '';
   let pass = '';
@@ -1803,7 +1826,7 @@ function openDetail(it) {
   };
   const d = fromKey(it.key);
   row('日付', `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`);
-  const timeStr = it.time ? `${it.time}${it.ref.timeEnd ? `〜${it.ref.timeEnd}` : ''}` : '';
+  const timeStr = it.time ? `${it.time}${it.timeEnd ? `〜${it.timeEnd}` : ''}` : '';
   row('時刻', timeStr);
   if (it.repeat) row('くりかえし', REPEAT_LABEL[it.repeat]);
   if (it.kind === 'task' && it.ref.minutes) row('所要時間', `${it.ref.minutes}分`);
@@ -1866,13 +1889,13 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     const r = item.ref;
     sheetEls.fTitle.value = r.title;
     sheetEls.fDate.value = r.repeat ? r.startDate : r.date;
-    sheetEls.fTime.value = r.time || '';
+    sheetEls.fTime.value = timeOn(r, item.key) || ''; // 繰り返しは「この日」の時刻を表示
     sheetEls.fMinutes.value = r.minutes || '';
     sheetEls.fRepeat.value = r.repeat || '';
     sheetEls.fMemo.value = memoFor(item) || '';
     sheetEls.fDiary.value = diaryFor(item) || '';
     sheetEls.repeatHint.hidden = !r.repeat;
-    $('#f-time-end').value = r.timeEnd || '';
+    $('#f-time-end').value = timeEndOn(r, item.key) || '';
     $('#f-place').value = r.place || '';
     $('#f-meeting').value = r.meetUrl || '';
     setOpt('#opt-push', Boolean(r.pushGoogle || r.gcalId));
@@ -2122,10 +2145,8 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
 function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl }) {
   const r = item.ref;
   r.title = title;
-  r.time = time;
   r.color = color;
   r.calendarId = calendarId;
-  r.timeEnd = time ? timeEnd : null; // 開始があるときだけ終了を持つ（タスク・予定とも）
   if (item.kind === 'event') {
     r.place = place;
     r.who = who && who.length ? who : null;
@@ -2133,10 +2154,12 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   } else {
     r.minutes = minutes;
   }
-  // メモ・日記: 繰り返し中はこの日の分として保存（＝日記になる）、単発は本体に
+  // メモ・日記・時刻: 繰り返し中は「この日」の分として独立保存、単発は本体に
   const perDay = Boolean(r.repeat) && Boolean(repeat);
   setPerDayField(r, 'memo', 'memoDates', item.key, memo, perDay);
   setPerDayField(r, 'diary', 'diaryDates', item.key, diary, perDay);
+  setPerDayField(r, 'time', 'timeDates', item.key, time || null, perDay);
+  setPerDayField(r, 'timeEnd', 'timeEndDates', item.key, time ? timeEnd : null, perDay);
   // 繰り返しの切替（タスク・予定共通）
   const wasRepeat = Boolean(r.repeat);
   const nowRepeat = Boolean(repeat);
@@ -2296,6 +2319,7 @@ function completeRunning() {
   if (t && !taskDoneOn(t, r.dateKey)) {
     if (t.repeat) { t.doneDates = t.doneDates || {}; t.doneDates[r.dateKey] = Date.now(); }
     else { t.done = true; t.doneAt = Date.now(); }
+    autoFillTimerTime(t, r.dateKey, r.totalMs); // 開始/終了時刻を自動記録
   }
   db.running = null;
   save();
@@ -2589,9 +2613,9 @@ function routineItemRow(data = {}) {
   });
   rep.value = data.repeat || 'daily';
   const time = document.createElement('input');
-  time.type = 'time'; time.className = 'mono'; time.value = data.time || '';
+  time.type = 'time'; time.step = 300; time.className = 'mono'; time.value = data.time || '';
   const min = document.createElement('input');
-  min.type = 'number'; min.min = 1; min.max = 600; min.placeholder = '分'; min.className = 'mono'; min.value = data.minutes || '';
+  min.type = 'number'; min.min = 5; min.max = 600; min.step = 5; min.placeholder = '分'; min.className = 'mono'; min.value = data.minutes || '';
   const rm = el('button', 'del-btn');
   rm.type = 'button'; rm.setAttribute('aria-label', 'この行を削除'); rm.innerHTML = ICONS.trash;
   rm.addEventListener('click', () => row.remove());
@@ -3334,7 +3358,7 @@ function gcalItemsFor(key) {
   return (gcalEvents[key] || [])
     // このアプリ側に同じ予定（同日・同時刻・同タイトル）があれば重複表示しない
     .filter((e) => !db.events.some((l) => l.date === key && (l.time || '') === (e.time || '') && l.title === e.title))
-    .map((e) => ({ kind: 'gcal', id: `g${e.id}@${key}`, ref: e, key, title: e.title, time: e.time, minutes: null, repeat: null, done: false }));
+    .map((e) => ({ kind: 'gcal', id: `g${e.id}@${key}`, ref: e, key, title: e.title, time: e.time, timeEnd: e.timeEnd || null, minutes: null, repeat: null, done: false }));
 }
 
 /* ===== 双方向書き込み（アプリの予定→Google・Meet自動発行）===== */
@@ -3361,7 +3385,7 @@ function gcalEventBody(ev, key, wantMeet) {
   const dateStr = ev.date || key;
   const body = { summary: ev.title };
   if (ev.place) body.location = ev.place;
-  const name = (db.settings.senderName || '').trim();
+  const name = ((db.settings.senderName || db.settings.userName) || '').trim(); // 差出人名が無ければユーザー名
   const descParts = [
     (ev.attendees || []).length && name ? `${name}さんからのご案内です。` : '',
     (ev.who || []).length ? `誰と: ${ev.who.join('、')}` : '',
@@ -3493,9 +3517,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=27');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=27');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=27');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=28');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=28');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=28');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）

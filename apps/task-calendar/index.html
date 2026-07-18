@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=27">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="tokens.css?v=28">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -192,10 +192,13 @@
         <p class="hint">Googleカレンダー（メインカレンダー）の予定を読み込んで表示します（青色・「Google」ラベル）。さらに、予定を追加/編集するときに「Googleカレンダーにも登録」を選ぶと、こちら→Googleへ書き込み・Google Meetのリンク自動発行もできます（双方向）。すでに連携済みの場合は、書き込みを有効にするため一度「再連携」してください。同じ日時・同じ名前の予定は重複表示しません。</p>
       </div>
 
-      <p class="section-label">招待メールの差出人名</p>
+      <p class="section-label">あなたの名前</p>
       <div class="card">
-        <input type="text" id="sender-name" maxlength="40" placeholder="例：山田 太郎">
-        <p class="hint">Googleから招待メールを送るとき、本文に「〇〇さんからのご案内」として反映します。※メールの件名や送信元アドレスはGoogleアカウント側の設定に従うため、アプリからは変更できません（差出人名はGoogleアカウントの名前設定をご確認ください）。</p>
+        <label class="f-label" for="user-name">ユーザー名（ニックネームOK）</label>
+        <input type="text" id="user-name" maxlength="40" placeholder="例：つばさ">
+        <label class="f-label" for="sender-name">招待メールの差出人名（任意）</label>
+        <input type="text" id="sender-name" maxlength="40" placeholder="空欄のときはユーザー名を使います">
+        <p class="hint">ユーザー名はこのアプリでのあなたの呼び名です。招待メールの差出人名は、空欄ならユーザー名が使われます。※メールの件名や送信元アドレスはGoogleアカウント側の設定に従うため、アプリからは変更できません。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -270,17 +273,17 @@
       <div class="f-row">
         <div class="f-col">
           <label class="f-label" for="f-time">開始時刻（任意）</label>
-          <input type="time" id="f-time" class="mono">
+          <input type="time" id="f-time" class="mono" step="300">
         </div>
         <div class="f-col">
           <label class="f-label" for="f-time-end">終了時刻（任意）</label>
-          <input type="time" id="f-time-end" class="mono">
+          <input type="time" id="f-time-end" class="mono" step="300">
         </div>
       </div>
       <div class="f-row">
         <div class="f-col" id="minutes-col">
           <label class="f-label" for="f-minutes">所要時間（分・任意）</label>
-          <input type="number" id="f-minutes" class="mono" min="1" max="600" placeholder="--">
+          <input type="number" id="f-minutes" class="mono" min="5" max="600" step="5" placeholder="--">
         </div>
         <div class="f-col">
           <label class="f-label" for="f-repeat">繰り返し</label>
@@ -559,7 +562,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=27"></script>
-<script src="app.js?v=27"></script>
+<script src="firebase-config.js?v=28"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

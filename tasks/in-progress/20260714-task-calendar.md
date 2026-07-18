@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.15.0 = 日別時刻・タイマー自動反映・5分刻み・ユーザー名）
+
+- 時刻を日別独立化: timeOn/timeEndOn（timeDates/timeEndDates優先＞master）をitemsForに反映。applyEditは繰り返し時setPerDayFieldで日別保存。表示はit.timeEnd（occurrence）へ統一。ルーティン定義の時刻=master（全日既定）、各日編集=独立
+- タイマー完了で時刻自動記録: autoFillTimerTime（完了時刻5分切り上げ=終了、−totalMs=開始）をtoggleItem/completeRunningにフック。既存時刻があれば触らない
+- 5分刻み: 時刻inputにstep=300、所要時間/ルーティン分にstep=5・min=5
+- ユーザー名（settings.userName）＋差出人名フォールバック（senderName||userName）
+- 新規13＋回帰44 PASS
+
 ### 2026-07-18（v1.14.0 = gcal重複バグ修正・スタイル変更・招待差出人/追記）
 
 - **重複バグ修正**: gcalFetch={}後に古いgcalEventsが残り再取得でpush重複 → 月の既存を再取得前にクリア
