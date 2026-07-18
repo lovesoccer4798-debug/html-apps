@@ -1387,7 +1387,7 @@ input, select, textarea { font: inherit; color: inherit; }
 :root[data-style="crisp"] .pill-btn { border-width: 1.5px; }
 
 /* ---------- v20: Notion連携の設定入力 ---------- */
-#notion-body input, #sender-name, #user-name {
+#notion-body input:not([type=checkbox]), #sender-name, #user-name {
   width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink);
   background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px;
   padding: 10px 12px; margin-bottom: 8px;
