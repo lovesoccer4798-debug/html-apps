@@ -1,7 +1,8 @@
-# Task Calendar — Notion連携 仕様（構想・未実装）
+# Task Calendar — Notion連携 仕様（実装済み）
 
-- **ステータス**: 構想。次の段階で実装（この段階では未着手）
+- **ステータス**: 実装済み（v1.16.0）。中継は Cloudflare Worker（`notion-worker.js`）、アプリ側は 設定 → Notion連携 で Worker URL・合言葉・DB ID を設定
 - **関連**: オーナー要望「Notionとの連携も進めたい」・日記/振り返りメモを自分データベース化する構想
+- **利用手順（無料・カード不要）**: `notion-worker.js` の先頭コメント参照（Cloudflare Worker デプロイ → 環境変数 `NOTION_TOKEN`／`TC_SHARED_SECRET`／`ALLOW_ORIGIN` → Notion側で integration 作成・DB接続・プロパティ用意）
 
 ## 1. なぜ中継（プロキシ）が必要か
 
