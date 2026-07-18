@@ -24,6 +24,36 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.20.0 = 記念日アイコン選択・上部固定ON/OFF・パッケージUI整え）
+
+- 記念日アイコン: ICONSにheart/cake/party追加（線アイコン）。`a.icon`（既定sparkles）。シートに`#a-icon-seg`（4択・setAnnivIconSel/getAnnivIconSel）。mo-star/日バナー/一覧`.anniv-ic`で選択アイコン反映。ANNIV_ICONS/annivIconName/annivOnDay追加
+- 上部固定ON/OFF: `db.settings.stickyHeader`（既定true）。applyStickyHeader()で`data-sticky`属性、CSSで`[data-sticky=off] #scr-cal .appbar/.cal-chips`をstatic化。設定「画面」に`#sticky-toggle`
+- パッケージUI: 取り込み部を`.pkg-make-sub`（border-top区切り・pkg-sub-label）に整理。ラベルink2・日付left寄せ。ダークで乱れていた見た目を改善
+- ③Dynamic Islandは不可（PWAはActivityKit非対応）と回答。④日跨ぎ予定は次の集中実装へ
+- 新機能11＋回帰44＋既存smoke 全PASS。アセットv34
+
+### 2026-07-18（v1.19.1 = 上部固定の修正・パッケージ編集）
+
+- 上部固定バグ修正: `position:sticky` は親のボックス内でしか効かず、短い`.appbar`の子（`.cal-stick`）をstickyにしていたため約50pxで固定解除→「すべて・マイカレンダー」で固定でなくなっていた。親が画面全体の`#scr-cal .appbar`自体をstickyにして常時固定に。フィルタチップ`.cal-chips`も`top:var(--cal-stick-h)`（appbar高さをupdateCalStickHで計測）で真下に固定
+- パッケージ編集: renderPackages刷新。各項目を種類トグル（タスク/予定）・開始/終了時刻input・名前inputで編集可、「＋項目を追加」「＋空で新規作成」。適用時は空タイトル項目を除外
+- 新機能9（v34）＋回帰44＋既存smoke 全PASS。アセットv33
+
+### 2026-07-18（v1.19.0 = パッケージ・タスク一覧）
+
+- パッケージ: `db.packages`（SYNC_KEYS_ARRに追加）。ルーティン画面のrvSegに3つ目のタブ追加。renderPackages/pkgItemsFromDay（itemsForから日付非依存のひな型化）/applyPackage（tasks/eventsへ複製→入れた日へジャンプ）。作成は「取り込む日付」→その日のitemsForを取込、適用は各カードの日付inputで別日へ。項目の個別削除・パッケージ削除（undo）
+- タスク一覧: 新画面`scr-tasklist`＋ボトムナビ6項目化（data-nav="tasks"）。renderTaskList（db.tasksを日付順、未完了/すべて切替、単発はt.doneチェック・繰り返しは代表表示、タップで該当日へ）。setScreen/renderAll/bottomnav activeに配線。bottomnavアイコンpaddingを細めに調整して6項目対応
+- 新機能11＋回帰44＋既存smoke全PASS。アセットv32
+
+### 2026-07-18（v1.18.0 = テーマ切替・上部固定・時間軸あいだ・まとめ日記・月の縁色）
+
+- ヘッダーにテーマ切替（#theme-toggle・sun/moon/sunMoonアイコン・THEME_CYCLE auto→light→dark）。applyTheme()がupdateThemeToggle()を呼び、設定#theme-segとsyncThemeSegで双方向同期
+- カレンダー上部を`.cal-stick`でsticky（appbar-top/date-row/segを包む。goal-lineは外に置きスクロール）。`#scr-cal .appbar`のpadding-topを0にして二重を回避
+- 「日」の時間軸: renderDayで直前予定の終了(prevEnd)から次の開始までの空きを`.tl-gaprow`/`.tl-gap`で表示。spineは`.tl-rail::before`をsolidに
+- まとめ日記「あのね。ノート」: buildDayLogCard→`db.dayLogs[key]`（SYNC_KEYS_OBJに追加・後方互換）。notionDayPayloadの日記先頭にも【あのね。ノート】で合流
+- 月の縁色: itemEdgeColor(it)＝colorRules（title/whoに一致）優先→なければmonthEdge ONで黒っぽい縁。chipはinset box-shadow、dotはリング。設定に`#month-edge-toggle`＋色ルールを「人・意味で分ける（自分の画面だけ）」に説明更新。colorRulesはユーザー個人同期のみで共有相手に非影響
+- notion-worker.js: NOTION_TOKEN/TC_SHARED_SECRETを.trim()（貼付けの空白・改行対策で401を起きにくく）
+- 新機能9＋5分/睡眠8＋回帰44＋Notion10＋トグル3 PASS。アセットv31
+
 ### 2026-07-18（v1.16.0 = Notion連携）
 
 - Notion連携: 日々の記録（日記＝タスク/予定の日記＋ひとことメモ、できたこと数、就寝/起床）を自分のNotion DBへ1日1ページで転記。同じ日付は上書き（upsert：日付一致でPATCH、なければPOST create）

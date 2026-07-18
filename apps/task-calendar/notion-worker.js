@@ -34,7 +34,10 @@ export default {
     if (request.method !== 'POST') return json({ error: 'method' }, 405, cors);
 
     // 合言葉チェック（Worker URLが漏れても勝手に書き込まれないように）
-    if ((request.headers.get('X-TC-Secret') || '') !== env.TC_SHARED_SECRET) {
+    // 貼り付け時に紛れ込みがちな前後の空白・改行は除去して比較・利用する
+    const secret = (env.TC_SHARED_SECRET || '').trim();
+    const token = (env.NOTION_TOKEN || '').trim();
+    if ((request.headers.get('X-TC-Secret') || '').trim() !== secret) {
       return json({ error: 'unauthorized' }, 401, cors);
     }
 
@@ -44,7 +47,7 @@ export default {
     if (!dbId || !date) return json({ error: 'missing dbId/date' }, 400, cors);
 
     const headers = {
-      Authorization: `Bearer ${env.NOTION_TOKEN}`,
+      Authorization: `Bearer ${token}`,
       'Notion-Version': NOTION_VERSION,
       'Content-Type': 'application/json',
     };

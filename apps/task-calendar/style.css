@@ -201,7 +201,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .tl-rail::before {
   content: "";
   position: absolute; top: 0; bottom: 0; left: 8px;
-  border-left: 2px dotted var(--tc-line);
+  border-left: 2px solid var(--tc-line);
 }
 .tl-rail::after {
   content: "";
@@ -948,11 +948,19 @@ input, select, textarea { font: inherit; color: inherit; }
   color: var(--tc-ink);
 }
 .sleep-card input[type="time"]:focus { outline: none; border-color: var(--tc-accent); }
+.sleep-field { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 6px; }
+.sleep-field .sleep-day { grid-column: 1 / -1; font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--tc-ink3); }
+.sleep-field .sleep-flabel { color: var(--tc-ink2); }
 .sleep-dur { margin-left: auto; font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }
 
 /* ---------- v6: マイカレンダー ---------- */
 
-.cal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.cal-chips {
+  position: sticky; top: var(--cal-stick-h, 120px); z-index: 25;
+  background: var(--tc-bg);
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px 0 10px; margin-bottom: 4px;
+}
 .cal-chip {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1.5px solid var(--tc-line);
@@ -1394,3 +1402,160 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 #notion-body input:focus, #sender-name:focus, #user-name:focus { outline: none; border-color: var(--tc-accent); }
 #notion-body .cta { margin-top: 6px; }
+
+/* ---------- v31: 上部固定・テーマ切替・時間軸のあいだ・まとめ日記・月の縁色 ---------- */
+/* 上部（日付・ビュータブ）を固定して、下のリストだけスクロール */
+/* ヘッダー全体（日付・タブ・目標）を常時固定。親が画面全体（.screen）なのでスクロール中もずっと固定される */
+#scr-cal .appbar {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--tc-bg);
+  padding-top: 0;
+}
+.cal-stick { padding-top: max(14px, env(safe-area-inset-top)); }
+
+/* 「日」の時間軸: 予定と予定の“あいだ”の時間を薄く表示して流れを感じさせる */
+.tl-gaprow { display: grid; grid-template-columns: 46px 18px 1fr; align-items: center; min-height: 24px; }
+.tl-rail-gap { position: relative; }
+.tl-rail-gap::before {
+  content: ""; position: absolute; top: -2px; bottom: -2px; left: 8px;
+  border-left: 2px dotted var(--tc-line);
+}
+.tl-gap { font-size: 10.5px; color: var(--tc-ink4); padding-left: 4px; }
+
+/* まとめ日記「あのね。ノート」 */
+.daylog-card {
+  background: var(--tc-surface); border-radius: var(--tc-r-card);
+  box-shadow: var(--tc-shadow); padding: 12px 14px; margin: 20px 0 8px;
+}
+.daylog-title { font-size: 13px; font-weight: 700; color: var(--tc-ink2); margin-bottom: 6px; }
+.daylog-input {
+  width: 100%; border: none; background: transparent; resize: vertical;
+  font: inherit; font-size: 14px; color: var(--tc-ink); min-height: 62px; line-height: 1.6;
+}
+.daylog-input:focus { outline: none; }
+.daylog-input::placeholder { color: var(--tc-ink4); }
+
+/* ---------- v32: パッケージ・タスク一覧 ---------- */
+/* ボトムナビ6項目に対応（アイコン背景をやや細く） */
+.bottomnav button .icon { padding: 3px 11px; }
+.bottomnav button { font-size: 10.5px; }
+
+/* パッケージ */
+.pkg-make {
+  background: var(--tc-surface); border-radius: var(--tc-r-card); box-shadow: var(--tc-shadow);
+  padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.pkg-make input {
+  width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 10px 12px;
+}
+.pkg-make input:focus { outline: none; border-color: var(--tc-accent); }
+.pkg-make .cta { margin-top: 8px; width: 100%; }
+.pkg-card {
+  background: var(--tc-surface); border-radius: var(--tc-r-card); box-shadow: var(--tc-shadow);
+  padding: 14px; margin-bottom: 14px;
+}
+.pkg-title {
+  width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--tc-ink);
+  background: transparent; border: none; border-bottom: 1.5px solid transparent; padding: 2px 0; margin-bottom: 8px;
+}
+.pkg-title:focus { outline: none; border-bottom-color: var(--tc-accent); }
+.pkg-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.pkg-item { display: grid; grid-template-columns: 104px 1fr auto; align-items: center; gap: 8px; }
+.pkg-item-time { color: var(--tc-ink3); font-size: 12px; }
+.pkg-item-title { color: var(--tc-ink); font-size: 14px; overflow-wrap: anywhere; }
+.pkg-item-del { color: var(--tc-ink4); }
+.pkg-item-del .icon { width: 15px; height: 15px; }
+.pkg-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pkg-actions input[type="date"] {
+  font: inherit; font-size: 13px; background: var(--tc-surface2);
+  border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 8px 10px; color: var(--tc-ink);
+}
+.pkg-actions .cta { width: auto; margin-top: 0; padding: 9px 16px; font-size: 14px; }
+.pkg-actions .cta.ghost { margin-top: 0; }
+
+/* タスク一覧 */
+.tasklist { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.tkrow {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--tc-surface); border-radius: var(--tc-r-run);
+  box-shadow: var(--tc-shadow); padding: 12px 14px;
+}
+.tkrow.is-done { opacity: .62; }
+.tkcheck {
+  width: 24px; height: 24px; flex: 0 0 auto; border-radius: 50%;
+  border: 2px solid var(--tc-line); display: flex; align-items: center; justify-content: center;
+  color: #fff;
+}
+.tkcheck.is-done { background: var(--tc-accent); border-color: var(--tc-accent); }
+.tkcheck.is-done .icon { width: 15px; height: 15px; }
+.tkcheck.is-repeat { border-style: dashed; border-color: var(--tc-ink4); }
+.tkmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tkrow.is-done .tk-title { text-decoration: line-through; text-decoration-color: var(--tc-accent-line); }
+.tk-title { font-size: 15px; font-weight: 500; color: var(--tc-ink); overflow-wrap: anywhere; }
+.tk-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tc-ink3); flex-wrap: wrap; }
+.tk-chip { background: var(--tc-surface2); border-radius: var(--tc-r-pill); padding: 1px 8px; font-size: 11px; }
+.tk-time { color: var(--tc-ink2); }
+
+/* ---------- v33: パッケージ項目の編集・空で新規作成 ---------- */
+.pkg-make .cta.ghost { margin-top: 8px; }
+.pkg-item-edit {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; border: 1px solid var(--tc-line); border-radius: 10px;
+}
+.pkg-ie-top { display: flex; align-items: center; gap: 6px; }
+.pkg-kind {
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: var(--tc-accent-soft); color: var(--tc-accent);
+  border-radius: 8px; padding: 6px 9px; flex: 0 0 auto;
+}
+.pkg-item-edit input[type="time"] {
+  font-size: 13px; font-family: var(--tc-mono); color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line);
+  border-radius: 8px; padding: 6px 6px; width: auto; min-width: 0;
+}
+.pkg-item-edit input[type="time"]:focus { outline: none; border-color: var(--tc-accent); }
+.pkg-ie-tilde { color: var(--tc-ink3); flex: 0 0 auto; }
+.pkg-item-edit .pkg-item-del { margin-left: auto; color: var(--tc-ink4); flex: 0 0 auto; }
+.pkg-item-edit .pkg-item-del .icon { width: 16px; height: 16px; }
+.pkg-ie-title {
+  width: 100%; font: inherit; font-size: 14px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line);
+  border-radius: 8px; padding: 8px 10px;
+}
+.pkg-ie-title:focus { outline: none; border-color: var(--tc-accent); }
+.pkg-add-item { font-size: 13px; font-weight: 700; color: var(--tc-accent); padding: 8px 0 4px; }
+
+/* ---------- v34: 上部固定ON/OFF・記念日アイコン・パッケージ作成UI整え ---------- */
+/* 上部固定OFF（設定） */
+:root[data-sticky="off"] #scr-cal .appbar { position: static; }
+:root[data-sticky="off"] .cal-chips { position: static; top: auto; }
+
+/* 記念日アイコンの選択（線アイコン・絵文字なし） */
+.icon-seg { display: flex; gap: 8px; margin-bottom: 8px; }
+.icon-seg button {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 11px 0; border-radius: 12px;
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); color: var(--tc-ink2);
+}
+.icon-seg button .icon { width: 21px; height: 21px; }
+.icon-seg button.is-active { background: var(--tc-accent-soft); border-color: var(--tc-accent); color: var(--tc-accent); }
+/* 記念日リストのアイコン */
+.anniv-ic { color: var(--tc-accent); display: flex; align-items: center; flex: 0 0 auto; }
+.anniv-ic .icon { width: 22px; height: 22px; }
+
+/* パッケージ作成カードの整え */
+.pkg-make { gap: 6px; }
+.pkg-make .f-label { color: var(--tc-ink2); margin-top: 4px; }
+.pkg-make .f-label:first-child { margin-top: 0; }
+.pkg-make input { text-align: left; }
+.pkg-make-sub {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--tc-line);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pkg-sub-label { font-size: 12px; color: var(--tc-ink2); }
+.pkg-make-sub input[type="date"] {
+  width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink); text-align: left;
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 10px 12px;
+}
+.pkg-make-sub .cta.ghost { margin-top: 0; }
