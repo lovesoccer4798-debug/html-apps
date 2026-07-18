@@ -1369,3 +1369,19 @@ input, select, textarea { font: inherit; color: inherit; }
 .opt-row.is-on .opt-toggle { background: var(--tc-accent); border-color: var(--tc-accent); }
 .opt-row.is-on .opt-toggle::after { transform: translateX(18px); }
 #f-invite { width: 100%; }
+
+/* ---------- v19: スタイル変更（カクカク／くっきり） ---------- */
+:root[data-style="square"] .item,
+:root[data-style="square"] .card,
+:root[data-style="square"] .sleep-card,
+:root[data-style="square"] .anniv-card,
+:root[data-style="square"] .run-card { border: 1px solid var(--tc-line); }
+:root[data-style="square"] .cal-chip,
+:root[data-style="square"] .pill-btn,
+:root[data-style="square"] .chip { border-radius: var(--tc-r-pill); }
+:root[data-style="crisp"] .item,
+:root[data-style="crisp"] .card,
+:root[data-style="crisp"] .sleep-card,
+:root[data-style="crisp"] .anniv-card { border: 1.5px solid var(--tc-ink4); }
+:root[data-style="crisp"] .cal-chip,
+:root[data-style="crisp"] .pill-btn { border-width: 1.5px; }

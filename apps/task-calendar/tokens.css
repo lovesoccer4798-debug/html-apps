@@ -95,3 +95,14 @@
   --tc-scrim: rgba(8, 12, 16, .6);
   --tc-accent: #3fb07e;
 }
+
+/* スタイル変更（設定）— 角丸・影・線だけを一括で切替。既定=まる（何もしない） */
+:root[data-style="square"] {
+  --tc-r-card: 5px; --tc-r-run: 8px; --tc-r-cell: 4px; --tc-r-sheet: 14px; --tc-r-pill: 7px;
+  --tc-shadow: 0 1px 0 rgba(40, 50, 65, .05);
+}
+:root[data-style="crisp"] {
+  --tc-r-card: 12px; --tc-r-run: 14px; --tc-r-cell: 8px; --tc-r-sheet: 20px; --tc-r-pill: 10px;
+  --tc-shadow: 0 2px 6px rgba(40, 50, 65, .14);
+}
+:root[data-theme="dark"][data-style="crisp"], :root[data-style="crisp"] { }

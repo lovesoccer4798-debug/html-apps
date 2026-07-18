@@ -50,7 +50,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', senderName: '' }, running: null };
 }
 
 function loadDb() {
@@ -304,6 +304,11 @@ function applySize() {
 function applyFont() {
   if (!db.settings.font || db.settings.font === 'gothic') delete document.documentElement.dataset.font;
   else document.documentElement.dataset.font = db.settings.font;
+}
+function applyStyle() { // スタイル変更（まる/カクカク/くっきり）
+  const s = db.settings.styleVariant;
+  if (!s || s === 'round') delete document.documentElement.dataset.style;
+  else document.documentElement.dataset.style = s;
 }
 function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手なズームを止める
   const vp = document.getElementById('tc-viewport');
@@ -1658,6 +1663,11 @@ function renderSettings() {
   document.querySelectorAll('#zoom-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.zoom === (db.settings.zoomLock === false ? 'free' : 'lock'));
   });
+  document.querySelectorAll('#style-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.styleOpt === (db.settings.styleVariant || 'round'));
+  });
+  const sn = $('#sender-name');
+  if (sn) sn.value = db.settings.senderName || '';
   const tn = $('#timer-notify');
   if (tn) tn.checked = !!db.settings.timerNotify;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
@@ -1724,6 +1734,13 @@ document.querySelectorAll('#zoom-seg button').forEach((b) => {
     save(); applyZoomLock(); renderAll();
   });
 });
+document.querySelectorAll('#style-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.styleVariant = b.dataset.styleOpt;
+    save(); applyStyle(); renderAll();
+  });
+});
+$('#sender-name').addEventListener('change', (e) => { db.settings.senderName = e.target.value.trim(); save(); });
 $('#timer-notify').addEventListener('change', async (e) => {
   if (e.target.checked && 'Notification' in window && Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch (err) { /* 拒否でもトグルは有効（音・バイブは動く） */ }
@@ -1861,6 +1878,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     setOpt('#opt-push', Boolean(r.pushGoogle || r.gcalId));
     setOpt('#opt-meet', false);
     $('#f-invite').value = (r.attendees || []).join('、');
+    $('#f-invite-note').value = r.inviteNote || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
   } else {
     sheetEls.fTitle.value = '';
@@ -1877,6 +1895,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     setOpt('#opt-push', false);
     setOpt('#opt-meet', false);
     $('#f-invite').value = '';
+    $('#f-invite-note').value = '';
     buildWhoChips([]);
   }
   $('#f-gcal-sync').hidden = !gcalCanWrite(); // Google連携中のみ表示
@@ -2045,6 +2064,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const pushGoogle = getOpt('#opt-push');
   const autoMeet = getOpt('#opt-meet');
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
+  const inviteNote = $('#f-invite-note').value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
@@ -2057,10 +2077,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
       ui.editing.ref.attendees = attendees.length ? attendees : null;
+      ui.editing.ref.inviteNote = inviteNote;
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, color, calendarId, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey };
@@ -3282,6 +3303,8 @@ async function gcalEnsureMonth(key) {
       return;
     }
     const data = await res.json();
+    // この月の既存データを一旦クリア（再取得時に二重登録されるのを防ぐ）
+    Object.keys(gcalEvents).forEach((k) => { if (k.slice(0, 7) === m) delete gcalEvents[k]; });
     for (const it of data.items || []) {
       const sd = it.start || {};
       const ed = it.end || {};
@@ -3338,7 +3361,13 @@ function gcalEventBody(ev, key, wantMeet) {
   const dateStr = ev.date || key;
   const body = { summary: ev.title };
   if (ev.place) body.location = ev.place;
-  const descParts = [(ev.who || []).length ? `誰と: ${ev.who.join('、')}` : '', ev.memo || ''].filter(Boolean);
+  const name = (db.settings.senderName || '').trim();
+  const descParts = [
+    (ev.attendees || []).length && name ? `${name}さんからのご案内です。` : '',
+    (ev.who || []).length ? `誰と: ${ev.who.join('、')}` : '',
+    ev.memo || '',
+    ev.inviteNote ? `【追記】${ev.inviteNote}` : '',
+  ].filter(Boolean);
   if (descParts.length) body.description = descParts.join('\n');
   if (ev.time) {
     const endT = ev.timeEnd || tgMinToStr(Math.min(1439, tgStrToMin(ev.time) + 60));
@@ -3464,9 +3493,9 @@ function loadScriptOnce(src) {
 async function ensureFirebase() { // SDKは必要になった時だけ読み込む（同梱・CDN不使用）
   if (fbReady) return true;
   if (!window.TC_FIREBASE_CONFIG) return false;
-  await loadScriptOnce('vendor/firebase-app-compat.js?v=26');
-  await loadScriptOnce('vendor/firebase-auth-compat.js?v=26');
-  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=26');
+  await loadScriptOnce('vendor/firebase-app-compat.js?v=27');
+  await loadScriptOnce('vendor/firebase-auth-compat.js?v=27');
+  await loadScriptOnce('vendor/firebase-firestore-compat.js?v=27');
   window.firebase.initializeApp(window.TC_FIREBASE_CONFIG);
   fbReady = true;
   // リダイレクト方式ログインの戻りを回収（失敗理由もここで分かる）
@@ -4198,6 +4227,7 @@ if ('serviceWorker' in navigator) {
 applyTheme();
 applyFont();
 applySize();
+applyStyle();
 applyZoomLock();
 // 実行中タイマーの復元（リロード・再起動後）
 if (db.running) {
