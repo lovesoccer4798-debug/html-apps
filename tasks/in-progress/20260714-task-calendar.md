@@ -24,6 +24,13 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.14.0 = gcal重複バグ修正・スタイル変更・招待差出人/追記）
+
+- **重複バグ修正**: gcalFetch={}後に古いgcalEventsが残り再取得でpush重複 → 月の既存を再取得前にクリア
+- スタイル変更（round/square/crisp）: tokens.cssで角丸/影/線トークンを一括override＋applyStyle。既定round
+- 招待: settings.senderName＋予定のinviteNote→Google eventのdescriptionに反映（件名/送信元はAPI変更不可を明記）。削除の双方向はv1.12で実装済（gcalId→DELETE）
+- **次回に集中実装（大きめ）: ①タイマー完了で開始/終了時刻を自動反映（5分丸め・逆算）②タスク/ルーティンの時刻を日別独立（timeDates/timeEndDates）**。新規10＋回帰44 PASS
+
 ### 2026-07-18（v1.13.0 = 招待メール・共有コピー・トグル不具合修正）
 
 - **不具合修正**: 予定シートの「Googleにも登録/Meet自動発行」がiOSのシート内でネイティブcheckboxが反応しづらく無反応に見えた → 自前トグル（.opt-row/.opt-toggle・click切替）に置換。ヘッドレスでは元々toggleできていたのでiOS固有と判断
