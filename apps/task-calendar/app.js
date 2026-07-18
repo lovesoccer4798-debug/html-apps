@@ -53,7 +53,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -662,6 +662,7 @@ $('#bottomnav').addEventListener('click', (e) => {
   if (nav === 'calendar') { ui.view = 'month'; ui.selectedKey = ui.selectedKey || todayKey(); setScreen('cal'); }
   if (nav === 'insights') setScreen('insights');
   if (nav === 'anniv') setScreen('anniv');
+  if (nav === 'tasks') setScreen('tasklist');
   if (nav === 'routines') setScreen('routines');
 });
 
@@ -747,6 +748,7 @@ function renderAll() {
   $('#scr-settings').hidden = ui.screen !== 'settings';
   $('#scr-routines').hidden = ui.screen !== 'routines';
   $('#scr-anniv').hidden = ui.screen !== 'anniv';
+  $('#scr-tasklist').hidden = ui.screen !== 'tasklist';
   $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv';
 
   const streak = String(streakDays());
@@ -759,6 +761,7 @@ function renderAll() {
       || (nav === 'calendar' && ui.screen === 'cal' && ui.view !== 'day')
       || (nav === 'insights' && ui.screen === 'insights')
       || (nav === 'anniv' && ui.screen === 'anniv')
+      || (nav === 'tasks' && ui.screen === 'tasklist')
       || (nav === 'routines' && ui.screen === 'routines');
     b.classList.toggle('is-active', active);
   });
@@ -768,6 +771,7 @@ function renderAll() {
   if (ui.screen === 'insights') renderInsights();
   if (ui.screen === 'settings') renderSettings();
   if (ui.screen === 'routines') renderRoutines();
+  if (ui.screen === 'tasklist') renderTaskList();
 }
 
 function streakDays() {
@@ -1243,6 +1247,181 @@ function renderWeek(body) {
 }
 
 /* ----- month ----- */
+
+/* ========== パッケージ（1日のタイムスケジュールを束ねて別の日にコピー） ========== */
+
+// その日の予定・タスク（繰り返し展開後）を、日付に依存しない“ひな型”として取り込む
+function pkgItemsFromDay(key) {
+  return itemsFor(key).map((it) => ({
+    title: it.title,
+    kind: it.kind === 'event' || it.kind === 'gcal' ? 'event' : 'task',
+    time: it.time || '',
+    timeEnd: it.timeEnd || '',
+    minutes: it.minutes || null,
+    color: (it.ref && it.ref.color) || null,
+    place: (it.ref && it.ref.place) || '',
+    who: (it.ref && it.ref.who) ? [...it.ref.who] : [],
+  }));
+}
+
+// パッケージの各項目を、指定した日付の予定・タスクとして追加
+function applyPackage(pkg, key) {
+  let n = 0;
+  for (const p of pkg.items) {
+    if (p.kind === 'event') {
+      db.events.push({ id: newId('e'), title: p.title, date: key, time: p.time || '', timeEnd: p.timeEnd || null, who: p.who || [], place: p.place || '', color: p.color || null, calendarId: 'c-default', createdAt: Date.now() });
+    } else {
+      db.tasks.push({ id: newId('t'), title: p.title, date: key, time: p.time || '', timeEnd: p.timeEnd || null, minutes: p.minutes || null, color: p.color || null, calendarId: 'c-default', done: false, createdAt: Date.now() });
+    }
+    n += 1;
+  }
+  save();
+  return n;
+}
+
+function renderPackages(body) {
+  body.append(el('p', 'r-note', 'お気に入りの1日のタイムスケジュールを「パッケージ」として保存して、別の日にまるごとコピーできます。'));
+
+  const make = el('div', 'pkg-make');
+  const tIn = document.createElement('input');
+  tIn.type = 'text'; tIn.maxLength = 40; tIn.placeholder = '例：理想の朝';
+  const dIn = document.createElement('input');
+  dIn.type = 'date'; dIn.className = 'mono'; dIn.value = todayKey();
+  const mkBtn = el('button', 'cta', 'この日から作る');
+  mkBtn.type = 'button';
+  mkBtn.addEventListener('click', () => {
+    const title = tIn.value.trim();
+    const key = dIn.value;
+    if (!title) { flashToast('パッケージ名を入れてね'); return; }
+    if (!key) { flashToast('日付を選んでね'); return; }
+    const items = pkgItemsFromDay(key);
+    if (!items.length) { flashToast('その日には予定・タスクがありません'); return; }
+    db.packages.unshift({ id: newId('pkg'), title, items, createdAt: Date.now() });
+    tIn.value = '';
+    save(); renderAll();
+    flashToast(`「${title}」を作成しました（${items.length}件）`);
+  });
+  make.append(el('label', 'f-label', 'パッケージ名'), tIn, el('label', 'f-label', '取り込む日付（その日の予定・タスクをまとめます）'), dIn, mkBtn);
+  body.append(make);
+
+  if (!db.packages.length) {
+    body.append(el('p', 'empty', 'まだパッケージがありません。上で名前と日付を選んで作ってみましょう。'));
+    return;
+  }
+
+  for (const pkg of db.packages) {
+    const card = el('div', 'pkg-card');
+    const name = document.createElement('input');
+    name.type = 'text'; name.className = 'pkg-title'; name.value = pkg.title; name.maxLength = 40;
+    name.addEventListener('blur', () => { pkg.title = name.value.trim() || pkg.title; save(); });
+    card.append(name);
+
+    const list = el('div', 'pkg-items');
+    pkg.items.forEach((p, i) => {
+      const row = el('div', 'pkg-item');
+      const tm = p.time ? (p.timeEnd ? `${p.time}〜${p.timeEnd}` : p.time) : '';
+      row.append(el('span', 'pkg-item-time mono', tm));
+      row.append(el('span', 'pkg-item-title', p.title));
+      const del = el('button', 'iconbtn pkg-item-del');
+      del.type = 'button'; del.setAttribute('aria-label', '外す'); del.innerHTML = ICONS.trash;
+      del.addEventListener('click', () => { pkg.items.splice(i, 1); save(); renderAll(); });
+      row.append(del);
+      list.append(row);
+    });
+    card.append(list);
+
+    const actions = el('div', 'pkg-actions');
+    const applyIn = document.createElement('input');
+    applyIn.type = 'date'; applyIn.className = 'mono'; applyIn.value = todayKey();
+    const applyBtn = el('button', 'cta', 'この日に入れる');
+    applyBtn.type = 'button';
+    applyBtn.addEventListener('click', () => {
+      const key = applyIn.value;
+      if (!key) { flashToast('日付を選んでね'); return; }
+      const n = applyPackage(pkg, key);
+      const d = fromKey(key);
+      flashToast(`${d.getMonth() + 1}月${d.getDate()}日に${n}件入れました`);
+      ui.cursor = d; ui.view = 'day'; ui.screen = 'cal'; renderAll();
+    });
+    const delPkg = el('button', 'cta ghost', '削除');
+    delPkg.type = 'button';
+    delPkg.addEventListener('click', () => {
+      const idx = db.packages.indexOf(pkg);
+      const removed = pkg;
+      db.packages.splice(idx, 1);
+      save(); renderAll();
+      showUndoToast(`「${removed.title}」を削除しました`, () => { db.packages.splice(Math.min(idx, db.packages.length), 0, removed); save(); renderAll(); });
+    });
+    actions.append(applyIn, applyBtn, delPkg);
+    card.append(actions);
+    body.append(card);
+  }
+}
+
+/* ========== タスク一覧（日/週/時間/月/年 とは別の、タスクだけの一覧） ========== */
+
+function renderTaskList() {
+  const body = $('#tasklist-body');
+  if (!body) return;
+  body.textContent = '';
+  const filter = ui.taskFilter || 'todo';
+
+  const seg = el('div', 'seg');
+  [['todo', '未完了'], ['all', 'すべて']].forEach(([v, label]) => {
+    const b = el('button', `seg-btn${filter === v ? ' is-active' : ''}`, label);
+    b.type = 'button';
+    b.addEventListener('click', () => { ui.taskFilter = v; renderAll(); });
+    seg.append(b);
+  });
+  body.append(seg);
+
+  const keyOf = (t) => (t.repeat ? t.startDate : t.date) || '';
+  const list = db.tasks.slice().sort((a, b) => keyOf(a).localeCompare(keyOf(b)) || (a.time || '').localeCompare(b.time || ''));
+  const rows = list.filter((t) => (filter === 'all' ? true : (t.repeat ? true : !t.done)));
+
+  if (!rows.length) {
+    body.append(el('p', 'empty', filter === 'todo' ? '未完了のタスクはありません。お疲れさま！' : 'タスクはまだありません。右下の「＋」から追加できます。'));
+    return;
+  }
+
+  const wrap = el('div', 'tasklist');
+  for (const t of rows) {
+    const done = t.repeat ? false : !!t.done;
+    const row = el('div', `tkrow${done ? ' is-done' : ''}`);
+    if (!t.repeat) {
+      const cb = el('button', `tkcheck${done ? ' is-done' : ''}`);
+      cb.type = 'button'; cb.setAttribute('aria-label', '完了を切り替え');
+      if (done) cb.innerHTML = ICONS.check;
+      cb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        t.done = !t.done;
+        if (t.done) t.doneAt = Date.now();
+        save(); renderAll();
+      });
+      row.append(cb);
+    } else {
+      row.append(el('span', 'tkcheck is-repeat'));
+    }
+    const main = el('div', 'tkmain');
+    main.append(el('span', 'tk-title', t.title));
+    const meta = el('span', 'tk-meta');
+    if (t.repeat) {
+      meta.append(el('span', 'tk-chip', REPEAT_LABEL[t.repeat] || '繰り返し'));
+    } else {
+      const d = fromKey(t.date);
+      meta.append(el('span', `tk-date mono${dayColorClass(d)}`, `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）`));
+    }
+    if (t.time) meta.append(el('span', 'tk-time mono', t.timeEnd ? `${t.time}〜${t.timeEnd}` : t.time));
+    main.append(meta);
+    row.append(main);
+    row.addEventListener('click', () => {
+      const key = t.repeat ? todayKey() : t.date;
+      ui.cursor = fromKey(key); ui.view = 'day'; setScreen('cal');
+    });
+    wrap.append(row);
+  }
+  body.append(wrap);
+}
 
 function renderMonth(body) {
   const c = ui.cursor;
@@ -2578,9 +2757,9 @@ function renderRoutines() {
   const body = $('#routines-body');
   body.textContent = '';
 
-  // ルーティン｜ビジョン 切替（仕様: ビジョンボードはこのタブ内）
+  // ルーティン｜パッケージ｜ビジョン 切替
   const rvSeg = el('div', 'seg rv-seg');
-  [['routines', 'ルーティン'], ['vision', 'ビジョン']].forEach(([v, label]) => {
+  [['routines', 'ルーティン'], ['packages', 'パッケージ'], ['vision', 'ビジョン']].forEach(([v, label]) => {
     const b = el('button', `seg-btn${(ui.routineTab || 'routines') === v ? ' is-active' : ''}`, label);
     b.type = 'button';
     b.addEventListener('click', () => { ui.routineTab = v; renderAll(); });
@@ -2588,6 +2767,7 @@ function renderRoutines() {
   });
   body.append(rvSeg);
   if ((ui.routineTab || 'routines') === 'vision') { vbPicked = null; renderVisions(body); return; }
+  if ((ui.routineTab || 'routines') === 'packages') { renderPackages(body); return; }
 
   const ctaRow = el('div', 'r-cta-row');
   const addBtn = el('button', 'cta', '＋ 新しいルーティン');
@@ -3610,7 +3790,7 @@ function renderGcalCard() {
 
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
-const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules'];
+const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules', 'packages'];
 const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs'];
 const SH_PREFIX = 's:'; // 共有カレンダー所属の calendarId は 's:招待コード'
 function isSharedCal(id) { return typeof id === 'string' && id.startsWith(SH_PREFIX); }

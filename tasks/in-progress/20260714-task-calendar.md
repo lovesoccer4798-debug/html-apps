@@ -24,6 +24,12 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.19.0 = パッケージ・タスク一覧）
+
+- パッケージ: `db.packages`（SYNC_KEYS_ARRに追加）。ルーティン画面のrvSegに3つ目のタブ追加。renderPackages/pkgItemsFromDay（itemsForから日付非依存のひな型化）/applyPackage（tasks/eventsへ複製→入れた日へジャンプ）。作成は「取り込む日付」→その日のitemsForを取込、適用は各カードの日付inputで別日へ。項目の個別削除・パッケージ削除（undo）
+- タスク一覧: 新画面`scr-tasklist`＋ボトムナビ6項目化（data-nav="tasks"）。renderTaskList（db.tasksを日付順、未完了/すべて切替、単発はt.doneチェック・繰り返しは代表表示、タップで該当日へ）。setScreen/renderAll/bottomnav activeに配線。bottomnavアイコンpaddingを細めに調整して6項目対応
+- 新機能11＋回帰44＋既存smoke全PASS。アセットv32
+
 ### 2026-07-18（v1.18.0 = テーマ切替・上部固定・時間軸あいだ・まとめ日記・月の縁色）
 
 - ヘッダーにテーマ切替（#theme-toggle・sun/moon/sunMoonアイコン・THEME_CYCLE auto→light→dark）。applyTheme()がupdateThemeToggle()を呼び、設定#theme-segとsyncThemeSegで双方向同期

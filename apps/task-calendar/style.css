@@ -1428,3 +1428,65 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .daylog-input:focus { outline: none; }
 .daylog-input::placeholder { color: var(--tc-ink4); }
+
+/* ---------- v32: パッケージ・タスク一覧 ---------- */
+/* ボトムナビ6項目に対応（アイコン背景をやや細く） */
+.bottomnav button .icon { padding: 3px 11px; }
+.bottomnav button { font-size: 10.5px; }
+
+/* パッケージ */
+.pkg-make {
+  background: var(--tc-surface); border-radius: var(--tc-r-card); box-shadow: var(--tc-shadow);
+  padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px;
+}
+.pkg-make input {
+  width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 10px 12px;
+}
+.pkg-make input:focus { outline: none; border-color: var(--tc-accent); }
+.pkg-make .cta { margin-top: 8px; width: 100%; }
+.pkg-card {
+  background: var(--tc-surface); border-radius: var(--tc-r-card); box-shadow: var(--tc-shadow);
+  padding: 14px; margin-bottom: 14px;
+}
+.pkg-title {
+  width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--tc-ink);
+  background: transparent; border: none; border-bottom: 1.5px solid transparent; padding: 2px 0; margin-bottom: 8px;
+}
+.pkg-title:focus { outline: none; border-bottom-color: var(--tc-accent); }
+.pkg-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.pkg-item { display: grid; grid-template-columns: 104px 1fr auto; align-items: center; gap: 8px; }
+.pkg-item-time { color: var(--tc-ink3); font-size: 12px; }
+.pkg-item-title { color: var(--tc-ink); font-size: 14px; overflow-wrap: anywhere; }
+.pkg-item-del { color: var(--tc-ink4); }
+.pkg-item-del .icon { width: 15px; height: 15px; }
+.pkg-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pkg-actions input[type="date"] {
+  font: inherit; font-size: 13px; background: var(--tc-surface2);
+  border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 8px 10px; color: var(--tc-ink);
+}
+.pkg-actions .cta { width: auto; margin-top: 0; padding: 9px 16px; font-size: 14px; }
+.pkg-actions .cta.ghost { margin-top: 0; }
+
+/* タスク一覧 */
+.tasklist { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.tkrow {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--tc-surface); border-radius: var(--tc-r-run);
+  box-shadow: var(--tc-shadow); padding: 12px 14px;
+}
+.tkrow.is-done { opacity: .62; }
+.tkcheck {
+  width: 24px; height: 24px; flex: 0 0 auto; border-radius: 50%;
+  border: 2px solid var(--tc-line); display: flex; align-items: center; justify-content: center;
+  color: #fff;
+}
+.tkcheck.is-done { background: var(--tc-accent); border-color: var(--tc-accent); }
+.tkcheck.is-done .icon { width: 15px; height: 15px; }
+.tkcheck.is-repeat { border-style: dashed; border-color: var(--tc-ink4); }
+.tkmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tkrow.is-done .tk-title { text-decoration: line-through; text-decoration-color: var(--tc-accent-line); }
+.tk-title { font-size: 15px; font-weight: 500; color: var(--tc-ink); overflow-wrap: anywhere; }
+.tk-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tc-ink3); flex-wrap: wrap; }
+.tk-chip { background: var(--tc-surface2); border-radius: var(--tc-r-pill); padding: 1px 8px; font-size: 11px; }
+.tk-time { color: var(--tc-ink2); }
