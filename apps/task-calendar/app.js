@@ -4278,7 +4278,8 @@ async function notionPush(key, { silent = true } = {}) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.error) {
-      if (!silent) flashToast(`Notionへ送れませんでした（${data.error || res.status}）`);
+      const code = [data.error || res.status, data.status].filter(Boolean).join(' ');
+      if (!silent) flashToast(`Notionへ送れませんでした（${code}）`);
       return false;
     }
     n.lastPushAt = Date.now();
