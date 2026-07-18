@@ -24,6 +24,12 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.19.1 = 上部固定の修正・パッケージ編集）
+
+- 上部固定バグ修正: `position:sticky` は親のボックス内でしか効かず、短い`.appbar`の子（`.cal-stick`）をstickyにしていたため約50pxで固定解除→「すべて・マイカレンダー」で固定でなくなっていた。親が画面全体の`#scr-cal .appbar`自体をstickyにして常時固定に。フィルタチップ`.cal-chips`も`top:var(--cal-stick-h)`（appbar高さをupdateCalStickHで計測）で真下に固定
+- パッケージ編集: renderPackages刷新。各項目を種類トグル（タスク/予定）・開始/終了時刻input・名前inputで編集可、「＋項目を追加」「＋空で新規作成」。適用時は空タイトル項目を除外
+- 新機能9（v34）＋回帰44＋既存smoke 全PASS。アセットv33
+
 ### 2026-07-18（v1.19.0 = パッケージ・タスク一覧）
 
 - パッケージ: `db.packages`（SYNC_KEYS_ARRに追加）。ルーティン画面のrvSegに3つ目のタブ追加。renderPackages/pkgItemsFromDay（itemsForから日付非依存のひな型化）/applyPackage（tasks/eventsへ複製→入れた日へジャンプ）。作成は「取り込む日付」→その日のitemsForを取込、適用は各カードの日付inputで別日へ。項目の個別削除・パッケージ削除（undo）

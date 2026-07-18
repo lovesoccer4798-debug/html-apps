@@ -955,7 +955,12 @@ input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- v6: マイカレンダー ---------- */
 
-.cal-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.cal-chips {
+  position: sticky; top: var(--cal-stick-h, 120px); z-index: 25;
+  background: var(--tc-bg);
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px 0 10px; margin-bottom: 4px;
+}
 .cal-chip {
   display: inline-flex; align-items: center; gap: 6px;
   border: 1.5px solid var(--tc-line);
@@ -1400,12 +1405,13 @@ input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- v31: 上部固定・テーマ切替・時間軸のあいだ・まとめ日記・月の縁色 ---------- */
 /* 上部（日付・ビュータブ）を固定して、下のリストだけスクロール */
-#scr-cal .appbar { padding-top: 0; }
-.cal-stick {
+/* ヘッダー全体（日付・タブ・目標）を常時固定。親が画面全体（.screen）なのでスクロール中もずっと固定される */
+#scr-cal .appbar {
   position: sticky; top: 0; z-index: 30;
   background: var(--tc-bg);
-  padding-top: max(14px, env(safe-area-inset-top));
+  padding-top: 0;
 }
+.cal-stick { padding-top: max(14px, env(safe-area-inset-top)); }
 
 /* 「日」の時間軸: 予定と予定の“あいだ”の時間を薄く表示して流れを感じさせる */
 .tl-gaprow { display: grid; grid-template-columns: 46px 18px 1fr; align-items: center; min-height: 24px; }
@@ -1490,3 +1496,32 @@ input, select, textarea { font: inherit; color: inherit; }
 .tk-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tc-ink3); flex-wrap: wrap; }
 .tk-chip { background: var(--tc-surface2); border-radius: var(--tc-r-pill); padding: 1px 8px; font-size: 11px; }
 .tk-time { color: var(--tc-ink2); }
+
+/* ---------- v33: パッケージ項目の編集・空で新規作成 ---------- */
+.pkg-make .cta.ghost { margin-top: 8px; }
+.pkg-item-edit {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; border: 1px solid var(--tc-line); border-radius: 10px;
+}
+.pkg-ie-top { display: flex; align-items: center; gap: 6px; }
+.pkg-kind {
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+  background: var(--tc-accent-soft); color: var(--tc-accent);
+  border-radius: 8px; padding: 6px 9px; flex: 0 0 auto;
+}
+.pkg-item-edit input[type="time"] {
+  font-size: 13px; font-family: var(--tc-mono); color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line);
+  border-radius: 8px; padding: 6px 6px; width: auto; min-width: 0;
+}
+.pkg-item-edit input[type="time"]:focus { outline: none; border-color: var(--tc-accent); }
+.pkg-ie-tilde { color: var(--tc-ink3); flex: 0 0 auto; }
+.pkg-item-edit .pkg-item-del { margin-left: auto; color: var(--tc-ink4); flex: 0 0 auto; }
+.pkg-item-edit .pkg-item-del .icon { width: 16px; height: 16px; }
+.pkg-ie-title {
+  width: 100%; font: inherit; font-size: 14px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line);
+  border-radius: 8px; padding: 8px 10px;
+}
+.pkg-ie-title:focus { outline: none; border-color: var(--tc-accent); }
+.pkg-add-item { font-size: 13px; font-weight: 700; color: var(--tc-accent); padding: 8px 0 4px; }

@@ -923,7 +923,15 @@ function renderCal() {
   if (ui.view === 'month') renderMonth(body);
   if (ui.view === 'year') renderYear(body);
   ui.lastView = ui.view; // 時間割の自動スクロール判定用（ビューに入った時だけスクロール）
+  updateCalStickH(); // フィルタチップを固定ヘッダーの真下に貼り付けるための高さ計測
 }
+
+// 固定ヘッダー（appbar全体）の高さを測って、下のフィルタチップの sticky 位置に使う
+function updateCalStickH() {
+  const cs = document.querySelector('#scr-cal .appbar');
+  if (cs) document.documentElement.style.setProperty('--cal-stick-h', `${cs.offsetHeight}px`);
+}
+window.addEventListener('resize', updateCalStickH);
 
 /* ----- 時間割（Googleカレンダー風・日×時間のグリッド。既存の日・週ビューとは別口の追加ビュー） ----- */
 
@@ -1280,14 +1288,29 @@ function applyPackage(pkg, key) {
 }
 
 function renderPackages(body) {
-  body.append(el('p', 'r-note', 'お気に入りの1日のタイムスケジュールを「パッケージ」として保存して、別の日にまるごとコピーできます。'));
+  body.append(el('p', 'r-note', 'お気に入りの1日のタイムスケジュールを「パッケージ」として保存して、別の日にまるごとコピーできます。中身はあとから自由に編集できます。'));
 
   const make = el('div', 'pkg-make');
   const tIn = document.createElement('input');
   tIn.type = 'text'; tIn.maxLength = 40; tIn.placeholder = '例：理想の朝';
+  make.append(el('label', 'f-label', 'パッケージ名'), tIn);
+
+  // ① 空で新規作成（あとから項目を足す）
+  const newBtn = el('button', 'cta', '＋ 空で新規作成');
+  newBtn.type = 'button';
+  newBtn.addEventListener('click', () => {
+    const title = tIn.value.trim() || '新しいパッケージ';
+    db.packages.unshift({ id: newId('pkg'), title, items: [], createdAt: Date.now() });
+    tIn.value = '';
+    save(); renderAll();
+    flashToast(`「${title}」を作成しました`);
+  });
+  make.append(newBtn);
+
+  // ② 既存の1日から取り込んで作る
   const dIn = document.createElement('input');
   dIn.type = 'date'; dIn.className = 'mono'; dIn.value = todayKey();
-  const mkBtn = el('button', 'cta', 'この日から作る');
+  const mkBtn = el('button', 'cta ghost', 'この日から取り込んで作る');
   mkBtn.type = 'button';
   mkBtn.addEventListener('click', () => {
     const title = tIn.value.trim();
@@ -1301,11 +1324,11 @@ function renderPackages(body) {
     save(); renderAll();
     flashToast(`「${title}」を作成しました（${items.length}件）`);
   });
-  make.append(el('label', 'f-label', 'パッケージ名'), tIn, el('label', 'f-label', '取り込む日付（その日の予定・タスクをまとめます）'), dIn, mkBtn);
+  make.append(el('label', 'f-label', 'または、既存の1日から取り込む'), dIn, mkBtn);
   body.append(make);
 
   if (!db.packages.length) {
-    body.append(el('p', 'empty', 'まだパッケージがありません。上で名前と日付を選んで作ってみましょう。'));
+    body.append(el('p', 'empty', 'まだパッケージがありません。上で作ってみましょう。'));
     return;
   }
 
@@ -1318,17 +1341,35 @@ function renderPackages(body) {
 
     const list = el('div', 'pkg-items');
     pkg.items.forEach((p, i) => {
-      const row = el('div', 'pkg-item');
-      const tm = p.time ? (p.timeEnd ? `${p.time}〜${p.timeEnd}` : p.time) : '';
-      row.append(el('span', 'pkg-item-time mono', tm));
-      row.append(el('span', 'pkg-item-title', p.title));
+      const row = el('div', 'pkg-item-edit');
+      const top = el('div', 'pkg-ie-top');
+      // 種類（タスク／予定）トグル
+      const kind = el('button', 'pkg-kind');
+      kind.type = 'button';
+      kind.textContent = p.kind === 'event' ? '予定' : 'タスク';
+      kind.addEventListener('click', () => { p.kind = p.kind === 'event' ? 'task' : 'event'; save(); kind.textContent = p.kind === 'event' ? '予定' : 'タスク'; });
+      const timeIn = document.createElement('input');
+      timeIn.type = 'time'; timeIn.step = 300; timeIn.value = p.time || '';
+      timeIn.addEventListener('change', () => { p.time = timeIn.value || ''; save(); });
+      const timeEndIn = document.createElement('input');
+      timeEndIn.type = 'time'; timeEndIn.step = 300; timeEndIn.value = p.timeEnd || '';
+      timeEndIn.addEventListener('change', () => { p.timeEnd = timeEndIn.value || ''; save(); });
       const del = el('button', 'iconbtn pkg-item-del');
-      del.type = 'button'; del.setAttribute('aria-label', '外す'); del.innerHTML = ICONS.trash;
+      del.type = 'button'; del.setAttribute('aria-label', '削除'); del.innerHTML = ICONS.trash;
       del.addEventListener('click', () => { pkg.items.splice(i, 1); save(); renderAll(); });
-      row.append(del);
+      top.append(kind, timeIn, el('span', 'pkg-ie-tilde', '〜'), timeEndIn, del);
+      const titleIn = document.createElement('input');
+      titleIn.type = 'text'; titleIn.className = 'pkg-ie-title'; titleIn.maxLength = 120; titleIn.value = p.title || ''; titleIn.placeholder = 'やること・予定名';
+      titleIn.addEventListener('input', () => { p.title = titleIn.value; save(); });
+      row.append(top, titleIn);
       list.append(row);
     });
     card.append(list);
+
+    const addItem = el('button', 'pkg-add-item', '＋ 項目を追加');
+    addItem.type = 'button';
+    addItem.addEventListener('click', () => { pkg.items.push({ title: '', kind: 'task', time: '', timeEnd: '' }); save(); renderAll(); });
+    card.append(addItem);
 
     const actions = el('div', 'pkg-actions');
     const applyIn = document.createElement('input');
@@ -1338,7 +1379,9 @@ function renderPackages(body) {
     applyBtn.addEventListener('click', () => {
       const key = applyIn.value;
       if (!key) { flashToast('日付を選んでね'); return; }
-      const n = applyPackage(pkg, key);
+      const usable = pkg.items.filter((p) => (p.title || '').trim());
+      if (!usable.length) { flashToast('中身が空です。項目を追加してね'); return; }
+      const n = applyPackage({ ...pkg, items: usable }, key);
       const d = fromKey(key);
       flashToast(`${d.getMonth() + 1}月${d.getDate()}日に${n}件入れました`);
       ui.cursor = d; ui.view = 'day'; ui.screen = 'cal'; renderAll();
