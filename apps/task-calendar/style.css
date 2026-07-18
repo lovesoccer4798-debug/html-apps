@@ -201,7 +201,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .tl-rail::before {
   content: "";
   position: absolute; top: 0; bottom: 0; left: 8px;
-  border-left: 2px dotted var(--tc-line);
+  border-left: 2px solid var(--tc-line);
 }
 .tl-rail::after {
   content: "";
@@ -1397,3 +1397,34 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 #notion-body input:focus, #sender-name:focus, #user-name:focus { outline: none; border-color: var(--tc-accent); }
 #notion-body .cta { margin-top: 6px; }
+
+/* ---------- v31: 上部固定・テーマ切替・時間軸のあいだ・まとめ日記・月の縁色 ---------- */
+/* 上部（日付・ビュータブ）を固定して、下のリストだけスクロール */
+#scr-cal .appbar { padding-top: 0; }
+.cal-stick {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--tc-bg);
+  padding-top: max(14px, env(safe-area-inset-top));
+}
+
+/* 「日」の時間軸: 予定と予定の“あいだ”の時間を薄く表示して流れを感じさせる */
+.tl-gaprow { display: grid; grid-template-columns: 46px 18px 1fr; align-items: center; min-height: 24px; }
+.tl-rail-gap { position: relative; }
+.tl-rail-gap::before {
+  content: ""; position: absolute; top: -2px; bottom: -2px; left: 8px;
+  border-left: 2px dotted var(--tc-line);
+}
+.tl-gap { font-size: 10.5px; color: var(--tc-ink4); padding-left: 4px; }
+
+/* まとめ日記「あのね。ノート」 */
+.daylog-card {
+  background: var(--tc-surface); border-radius: var(--tc-r-card);
+  box-shadow: var(--tc-shadow); padding: 12px 14px; margin: 20px 0 8px;
+}
+.daylog-title { font-size: 13px; font-weight: 700; color: var(--tc-ink2); margin-bottom: 6px; }
+.daylog-input {
+  width: 100%; border: none; background: transparent; resize: vertical;
+  font: inherit; font-size: 14px; color: var(--tc-ink); min-height: 62px; line-height: 1.6;
+}
+.daylog-input:focus { outline: none; }
+.daylog-input::placeholder { color: var(--tc-ink4); }

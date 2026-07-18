@@ -41,6 +41,9 @@ const ICONS = {
   maximize: `<svg ${ICON_ATTRS}><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
   copy: `<svg ${ICON_ATTRS}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
   search: `<svg ${ICON_ATTRS}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+  sun: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+  moon: `<svg ${ICON_ATTRS}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
+  sunMoon: `<svg ${ICON_ATTRS}><path d="M12 8a2.828 2.828 0 1 0 4 4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
   mapPin: `<svg ${ICON_ATTRS}><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`,
   users: `<svg ${ICON_ATTRS}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   sparkles: `<svg ${ICON_ATTRS}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>`,
@@ -50,7 +53,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -220,6 +223,18 @@ function itemColor(it) {
   }
   return null;
 }
+// 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）に一致すればその色、
+// なければ「フチをはっきり」ONのとき黒っぽい縁。ローカル設定なので共有相手の画面には出ない。
+function itemEdgeColor(it) {
+  const rules = db.colorRules || [];
+  if (rules.length) {
+    const hay = `${it.title || ''} ${((it.ref && it.ref.who) || []).join(' ')}`;
+    const rule = rules.find((r) => r.label && hay.includes(r.label));
+    if (rule) return (ACCENTS[rule.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+  }
+  if (db.settings.monthEdge) return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+  return null;
+}
 function memoFor(it) {
   const r = it.ref;
   if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
@@ -270,6 +285,18 @@ function applyTheme() {
   if (t === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = t;
   applyAccent();
+  updateThemeToggle();
+}
+// ヘッダーのテーマ切替（どの画面からでも 自動→ライト→ダーク を巡回）
+const THEME_CYCLE = ['auto', 'light', 'dark'];
+const THEME_ICON = { auto: 'sunMoon', light: 'sun', dark: 'moon' };
+const THEME_LABEL = { auto: '自動', light: 'ライト', dark: 'ダーク' };
+function updateThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const t = db.settings.theme || 'auto';
+  btn.innerHTML = ICONS[THEME_ICON[t] || 'sunMoon'];
+  btn.setAttribute('aria-label', `テーマ切替（今: ${THEME_LABEL[t]}）`);
 }
 function applyAccent() {
   const a = ACCENTS[db.settings.accent] || ACCENTS.green;
@@ -791,6 +818,22 @@ $('#goal-line').addEventListener('click', () => {
   });
 });
 
+$('#theme-toggle').addEventListener('click', () => {
+  const t = db.settings.theme || 'auto';
+  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(t) + 1) % THEME_CYCLE.length];
+  db.settings.theme = next;
+  applyTheme();
+  save();
+  syncThemeSeg();
+  flashToast(`テーマ: ${THEME_LABEL[next]}`);
+});
+// 設定画面のテーマ選択ボタンの選択状態を、ヘッダー切替と同期
+function syncThemeSeg() {
+  document.querySelectorAll('#theme-seg button').forEach((b) => {
+    if (b.dataset.themeOpt) b.classList.toggle('is-active', b.dataset.themeOpt === (db.settings.theme || 'auto'));
+  });
+}
+
 function renderCal() {
   document.querySelectorAll('.seg-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.view === ui.view));
   const c = ui.cursor;
@@ -1105,10 +1148,24 @@ function renderDay(body) {
 
   if (items.length === 0) {
     body.append(el('p', 'empty', 'まだ何もありません。右下の「＋」からタスクや予定を追加してみましょう。'));
+    body.append(buildDayLogCard(key));
     return;
   }
   const tl = el('div', 'tl');
+  let prevEnd = null; // 直前の予定の終了（or開始）時刻。時間の「あいだ」を表示するため
   for (const it of items) {
+    // 時間が流れている感じ: 前の予定との空き時間を薄く表示
+    if (it.time) {
+      const startMin = toMin(it.time);
+      if (prevEnd != null && startMin - prevEnd >= 30) {
+        const gap = el('div', 'tl-gaprow');
+        gap.append(el('span', ''));
+        gap.append(el('span', 'tl-rail tl-rail-gap'));
+        gap.append(el('span', 'tl-gap', `${fmtDur(startMin - prevEnd)}のあいだ`));
+        tl.append(gap);
+      }
+      prevEnd = Math.max(prevEnd ?? 0, it.timeEnd ? toMin(it.timeEnd) : startMin);
+    }
     const row = el('div', `tl-row${it.done ? ' is-done' : ''}${it.kind === 'event' ? ' is-event' : ''}${it.kind === 'gcal' ? ' is-gcal' : ''}`);
     const timeCell = el('span', 'tl-time mono');
     if (it.time) {
@@ -1123,6 +1180,26 @@ function renderDay(body) {
     tl.append(row);
   }
   body.append(tl);
+  body.append(buildDayLogCard(key));
+}
+
+// 「あのね。ノート」: その日まるごとの感想を書くまとめ日記（日ビュー最下部）
+function buildDayLogCard(key) {
+  const card = el('div', 'daylog-card');
+  card.append(el('p', 'daylog-title', 'あのね。ノート'));
+  const ta = document.createElement('textarea');
+  ta.className = 'daylog-input';
+  ta.rows = 3;
+  ta.maxLength = 2000;
+  ta.placeholder = '今日はどんな一日だった？　まるっと書き残しておこう。';
+  ta.value = db.dayLogs[key] || '';
+  ta.addEventListener('input', () => {
+    const v = ta.value.trim();
+    if (v) db.dayLogs[key] = ta.value; else delete db.dayLogs[key];
+    save();
+  });
+  card.append(ta);
+  return card;
 }
 
 /* ----- week ----- */
@@ -1211,13 +1288,18 @@ function renderMonth(body) {
         const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}`, it.title);
         const cc = itemColor(it);
         if (cc) chip.style.background = cc;
+        const ec = itemEdgeColor(it);
+        if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
         cell.append(chip);
       }
       if (items.length > 4) cell.append(el('span', 'mo-chip-more', `+${items.length - 4}`));
     } else {
       const dots = el('span', 'mo-dots');
       for (const it of items.slice(0, MAX_MONTH_DOTS)) {
-        dots.append(el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`));
+        const dot = el('span', `mdot ${it.kind === 'event' ? 'event' : it.done ? 'done' : 'undone'}`);
+        const ec = itemEdgeColor(it);
+        if (ec) dot.style.boxShadow = `0 0 0 1.5px ${ec}`;
+        dots.append(dot);
       }
       if (items.length > MAX_MONTH_DOTS) dots.append(el('span', 'mdot-more', '+'));
       cell.append(dots);
@@ -1723,6 +1805,8 @@ function renderSettings() {
   if (sn) sn.value = db.settings.senderName || '';
   const tn = $('#timer-notify');
   if (tn) tn.checked = !!db.settings.timerNotify;
+  const me = $('#month-edge-toggle');
+  if (me) me.checked = !!db.settings.monthEdge;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
   });
@@ -1804,6 +1888,12 @@ $('#timer-notify').addEventListener('change', async (e) => {
     flashToast('通知はブロックされています。端末の設定から許可すると通知バナーが出ます');
   }
   save();
+});
+
+$('#month-edge-toggle').addEventListener('change', (e) => {
+  db.settings.monthEdge = e.target.checked;
+  save();
+  renderAll();
 });
 
 /* ========== add / edit sheet ========== */
@@ -3521,7 +3611,7 @@ function renderGcalCard() {
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
 const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules'];
-const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes'];
+const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs'];
 const SH_PREFIX = 's:'; // 共有カレンダー所属の calendarId は 's:招待コード'
 function isSharedCal(id) { return typeof id === 'string' && id.startsWith(SH_PREFIX); }
 let fbReady = false;
@@ -4171,7 +4261,7 @@ function renderColorRuleCard() {
   wrap.textContent = '';
   const dark = effectiveDark();
   if (!db.colorRules.length) { // 何もなければ使い方の例（薄く表示）
-    for (const [ex, cid] of [['遊び', 'green'], ['仕事', 'orange'], ['大切な予定', 'pink']]) {
+    for (const [ex, cid] of [['村山さん', 'blue'], ['遊び', 'green'], ['仕事', 'orange']]) {
       const row = el('div', 'cr-row is-example');
       const sw = el('span', 'cr-swatch');
       sw.style.background = (ACCENTS[cid] || ACCENTS.green)[dark ? 'dark' : 'light'];
@@ -4204,7 +4294,7 @@ function renderColorRuleCard() {
   }
   const form = el('div', 'sh-form');
   const input = document.createElement('input');
-  input.type = 'text'; input.maxLength = 20; input.placeholder = '意味（例：遊び）';
+  input.type = 'text'; input.maxLength = 20; input.placeholder = '名前や意味（例：村山さん / 遊び）';
   const add = el('button', 'cta ghost', '追加');
   add.type = 'button';
   add.addEventListener('click', () => {
@@ -4276,6 +4366,8 @@ function notionReady() { const n = notionCfg(); return Boolean(n.url && n.secret
 function notionDayPayload(key) {
   const n = notionCfg();
   const diaries = [];
+  const log = db.dayLogs[key];
+  if (log) diaries.push(`【あのね。ノート】${log}`);
   const note = db.notes[key];
   if (note) diaries.push(`【ひとこと】${note}`);
   for (const it of itemsFor(key)) {
