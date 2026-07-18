@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=34">
-<link rel="stylesheet" href="style.css?v=34">
+<link rel="stylesheet" href="tokens.css?v=35">
+<link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 
@@ -326,6 +326,12 @@
       <div id="event-only-fields" hidden>
         <div class="f-row">
           <div class="f-col">
+            <label class="f-label" for="f-date-end">終了日（任意・旅行など数日にまたぐとき）</label>
+            <input type="date" id="f-date-end" class="mono">
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="f-col">
             <label class="f-label" for="f-place">場所（任意）</label>
             <input type="text" id="f-place" maxlength="60" placeholder="例：渋谷・自宅">
           </div>
@@ -596,7 +602,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=34"></script>
-<script src="app.js?v=34"></script>
+<script src="firebase-config.js?v=35"></script>
+<script src="app.js?v=35"></script>
 </body>
 </html>

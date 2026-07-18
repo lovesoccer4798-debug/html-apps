@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.21.0 = 日をまたぐ予定・TimeTree風の連日帯）
+
+- 予定に`endDate`（複数日・繰り返しなし）。eventCoversDay/eventSpan追加。itemsForで開始〜終了の各日に展開しspan情報付与（中日は時刻を出さず、複数日は終日予定のように上へソート）
+- シート`#f-date-end`（event-only）。openSheet/submit/applyEditでendDate読み書き（開始日以前・繰り返し時は無効化）
+- 日ビュー: tl-timeに「◯日目/全◯日」、カードに期間チップ（item-span）
+- 月ビュー（予定表）: mo-chip-spanでis-span-start/mid/endの角丸制御し帯を連結風に。開始日と各週の月曜だけ名前表示、中日は帯のみ
+- 新機能13＋回帰44＋既存smoke 全PASS。アセットv35。スクショ確認（旅行19-23/帰省13-15が連日帯・日ビュー3日目/5日）
+
 ### 2026-07-18（v1.20.0 = 記念日アイコン選択・上部固定ON/OFF・パッケージUI整え）
 
 - 記念日アイコン: ICONSにheart/cake/party追加（線アイコン）。`a.icon`（既定sparkles）。シートに`#a-icon-seg`（4択・setAnnivIconSel/getAnnivIconSel）。mo-star/日バナー/一覧`.anniv-ic`で選択アイコン反映。ANNIV_ICONS/annivIconName/annivOnDay追加

@@ -1559,3 +1559,16 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 10px 12px;
 }
 .pkg-make-sub .cta.ghost { margin-top: 0; }
+
+/* ---------- v35: 日をまたぐ予定（旅行・帰省など） ---------- */
+/* 日ビューのタイムライン: 何日目かを表示 */
+.tl-row.is-span .tl-time { padding-top: 14px; }
+.tl-span-day { color: var(--tc-accent); font-weight: 700; font-size: 12.5px; }
+.tl-span-of { font-size: 10px; color: var(--tc-ink3); }
+.item-span { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--tc-ink3); margin-top: 2px; }
+.item-span .icon { width: 13px; height: 13px; }
+/* 月ビュー（予定表）: 複数日は帯を繋げて見せる（開始/終了だけ角丸・中日は角なし） */
+.mo-chip-span { min-height: 13px; }
+.mo-chip-span.is-span-start:not(.is-span-end) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.mo-chip-span.is-span-end:not(.is-span-start) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.mo-chip-span.is-span-mid { border-radius: 0; }

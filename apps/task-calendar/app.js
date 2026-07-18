@@ -249,6 +249,20 @@ function diaryFor(it) {
   return r.diary || null;
 }
 
+// 複数日にまたがる予定（旅行・帰省など。endDate指定・繰り返しなし）が key を含むか
+function eventCoversDay(e, key) {
+  if (e.repeat || !e.endDate || e.endDate <= e.date) return false;
+  return key >= e.date && key <= e.endDate;
+}
+// 複数日予定の位置情報（開始/終了か・何日目/全何日）
+function eventSpan(e, key) {
+  const start = fromKey(e.date);
+  const end = fromKey(e.endDate);
+  const dayCount = Math.round((end - start) / 86400000) + 1;
+  const dayIndex = Math.round((fromKey(key) - start) / 86400000) + 1;
+  return { isStart: key === e.date, isEnd: key === e.endDate, dayIndex, dayCount };
+}
+
 function itemsFor(key) {
   const items = [];
   for (const t of db.tasks) {
@@ -256,11 +270,19 @@ function itemsFor(key) {
     items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: t.minutes || null, repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
-    if (!occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate）
-    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: timeOn(e, key), timeEnd: timeEndOn(e, key), minutes: null, repeat: e.repeat || null, done: false });
+    const multi = eventCoversDay(e, key);
+    if (!multi && !occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate、複数日は date〜endDate）
+    const span = multi ? eventSpan(e, key) : null;
+    const showTime = !span || span.isStart; // 複数日は開始日だけ時刻を表示（TimeTree風）
+    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: showTime ? timeOn(e, key) : '', timeEnd: showTime ? timeEndOn(e, key) : null, minutes: null, repeat: e.repeat || null, done: false, span });
   }
   items.push(...gcalItemsFor(key)); // Googleカレンダーの予定（連携ON時のみ・読み取り専用）
-  return items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99') || (a.ref.createdAt || 0) - (b.ref.createdAt || 0));
+  return items.sort((a, b) => {
+    const as = a.span ? 0 : 1;
+    const bs = b.span ? 0 : 1;
+    if (as !== bs) return as - bs; // 複数日（旅行など）は終日予定のように上に
+    return (a.time || '99:99').localeCompare(b.time || '99:99') || (a.ref.createdAt || 0) - (b.ref.createdAt || 0);
+  });
 }
 function tasksStatsFor(key) {
   const tasks = itemsFor(key).filter((i) => i.kind === 'task');
@@ -575,6 +597,14 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
 
   const main = el('div', 'item-main');
   main.append(el('span', 'item-title', it.title));
+  if (it.kind === 'event' && it.ref.endDate && it.ref.endDate > it.ref.date) { // 複数日予定は期間を表示
+    const s = fromKey(it.ref.date);
+    const e2 = fromKey(it.ref.endDate);
+    const range = el('span', 'item-span');
+    range.innerHTML = ICONS.calendar;
+    range.append(` ${s.getMonth() + 1}/${s.getDate()}〜${e2.getMonth() + 1}/${e2.getDate()}`);
+    main.append(range);
+  }
   const memo = memoFor(it);
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
   if (it.kind === 'event' && !compact && (it.ref.place || (it.ref.who || []).length || (it.time && it.timeEnd))) {
@@ -1185,9 +1215,12 @@ function renderDay(body) {
       }
       prevEnd = Math.max(prevEnd ?? 0, it.timeEnd ? toMin(it.timeEnd) : startMin);
     }
-    const row = el('div', `tl-row${it.done ? ' is-done' : ''}${it.kind === 'event' ? ' is-event' : ''}${it.kind === 'gcal' ? ' is-gcal' : ''}`);
+    const row = el('div', `tl-row${it.done ? ' is-done' : ''}${it.kind === 'event' ? ' is-event' : ''}${it.kind === 'gcal' ? ' is-gcal' : ''}${it.span ? ' is-span' : ''}`);
     const timeCell = el('span', 'tl-time mono');
-    if (it.time) {
+    if (it.span) {
+      timeCell.append(el('span', 'tl-span-day', `${it.span.dayIndex}日目`));
+      timeCell.append(el('span', 'tl-span-of', `/${it.span.dayCount}日`));
+    } else if (it.time) {
       timeCell.append(el('span', 'tl-start', it.time));
       if (it.timeEnd) timeCell.append(el('span', 'tl-end', it.timeEnd)); // 終了時刻を下に添える
     }
@@ -1517,7 +1550,11 @@ function renderMonth(body) {
     cell.append(dnum);
     if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
       for (const it of items.slice(0, 4)) {
-        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}`, it.title);
+        // 複数日予定は、開始日以外はタイトルを出さず「帯」だけにして横に繋がって見えるように
+        const isMidOrEnd = it.span && !it.span.isStart && day.getDay() !== 1; // 週の月曜は続きでも名前を出す
+        const label = isMidOrEnd ? '' : it.title;
+        const spanCls = it.span ? ` mo-chip-span${it.span.isStart ? ' is-span-start' : ''}${it.span.isEnd ? ' is-span-end' : ''}${!it.span.isStart && !it.span.isEnd ? ' is-span-mid' : ''}` : '';
+        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}${spanCls}`, label);
         const cc = itemColor(it);
         if (cc) chip.style.background = cc;
         const ec = itemEdgeColor(it);
@@ -2257,6 +2294,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fDiary.value = diaryFor(item) || '';
     sheetEls.repeatHint.hidden = !r.repeat;
     $('#f-time-end').value = timeEndOn(r, item.key) || '';
+    $('#f-date-end').value = r.endDate || '';
     $('#f-place').value = r.place || '';
     $('#f-meeting').value = r.meetUrl || '';
     setOpt('#opt-push', Boolean(r.pushGoogle || r.gcalId));
@@ -2274,6 +2312,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fDiary.value = '';
     sheetEls.repeatHint.hidden = true;
     $('#f-time-end').value = timeEnd || '';
+    $('#f-date-end').value = '';
     $('#f-place').value = '';
     $('#f-meeting').value = '';
     setOpt('#opt-push', false);
@@ -2435,6 +2474,9 @@ $('#sheet-form').addEventListener('submit', (e) => {
   let time = sheetEls.fTime.value || null;
   let timeEnd = $('#f-time-end').value || null;
   if (time && timeEnd && timeEnd < time) [time, timeEnd] = [timeEnd, time]; // 逆なら入れ替え
+  const repeatVal = sheetEls.fRepeat.value || null;
+  let endDate = $('#f-date-end').value || null; // 複数日予定の終了日
+  if (endDate && (endDate <= dateKey || repeatVal)) endDate = null; // 開始日以前・繰り返しは複数日にしない
   const place = $('#f-place').value.trim() || null;
   const whoSel = [...document.querySelectorAll('#f-who-chips .who-chip.is-on')].map((b) => b.dataset.name);
   const whoFree = $('#f-who').value.split(/[、,]/).map((s) => s.trim()).filter(Boolean);
@@ -2457,7 +2499,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
 
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate });
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
       ui.editing.ref.attendees = attendees.length ? attendees : null;
@@ -2468,7 +2510,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
     const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
-      : { ...base, date: dateKey };
+      : { ...base, date: dateKey, endDate };
     db.events.push(ev);
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
@@ -2503,7 +2545,7 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
   }
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate }) {
   const r = item.ref;
   r.title = title;
   r.color = color;
@@ -2512,6 +2554,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
     r.place = place;
     r.who = who && who.length ? who : null;
     r.meetUrl = meetUrl;
+    if (!repeat && endDate && endDate > dateKey) r.endDate = endDate; else delete r.endDate; // 複数日予定の終了日
   } else {
     r.minutes = minutes;
   }
