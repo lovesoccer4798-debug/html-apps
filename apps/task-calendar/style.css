@@ -948,6 +948,9 @@ input, select, textarea { font: inherit; color: inherit; }
   color: var(--tc-ink);
 }
 .sleep-card input[type="time"]:focus { outline: none; border-color: var(--tc-accent); }
+.sleep-field { display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 6px; }
+.sleep-field .sleep-day { grid-column: 1 / -1; font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--tc-ink3); }
+.sleep-field .sleep-flabel { color: var(--tc-ink2); }
 .sleep-dur { margin-left: auto; font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }
 
 /* ---------- v6: マイカレンダー ---------- */

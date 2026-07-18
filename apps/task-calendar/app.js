@@ -1347,6 +1347,26 @@ $('#picker-today').addEventListener('click', () => {
 });
 $('#picker-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closePicker(); });
 
+// 時刻・所要時間の入力を5分刻みに丸める（端末のピッカーがstep属性を無視しても確実に5分単位に）
+// キャプチャ段階で値を丸めるので、各入力のchangeハンドラは丸め後の値を受け取る
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (!t || t.tagName !== 'INPUT') return;
+  if (t.type === 'time' && t.value) {
+    const [h, m] = t.value.split(':').map(Number);
+    let mm = Math.round(m / 5) * 5;
+    let hh = h;
+    if (mm === 60) { mm = 0; hh = (h + 1) % 24; }
+    const nv = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    if (nv !== t.value) t.value = nv;
+  } else if (t.type === 'number' && t.step === '5' && t.value !== '') {
+    let v = Math.round(Number(t.value) / 5) * 5;
+    if (t.min !== '' && v < Number(t.min)) v = Number(t.min);
+    if (t.max !== '' && v > Number(t.max)) v = Number(t.max);
+    if (String(v) !== t.value) t.value = String(v);
+  }
+}, true);
+
 /* ----- 睡眠記録（朝活サポート: この日の起床とその前夜の就寝） ----- */
 
 function toMin(t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3)); }
@@ -1358,10 +1378,8 @@ function buildSleepCard(key) {
   const rec = db.sleep[key] || {};
   const card = el('div', 'sleep-card');
   card.innerHTML = ICONS.clock;
-  const bedLabel = el('span', '', '就寝');
   const bed = document.createElement('input');
   bed.type = 'time'; bed.step = 300; bed.value = rec.bed || '';
-  const wakeLabel = el('span', '', '起床');
   const wake = document.createElement('input');
   wake.type = 'time'; wake.step = 300; wake.value = rec.wake || '';
   const dur = el('span', 'sleep-dur');
@@ -1374,9 +1392,20 @@ function buildSleepCard(key) {
   bed.addEventListener('change', sync);
   wake.addEventListener('change', sync);
   if (rec.bed && rec.wake) dur.textContent = fmtDur(sleepDurMin(rec));
-  // 記録方法の設定で並び順を変える（夜に就寝→翌朝 / 朝に起床→夜に就寝）
-  if (db.settings.sleepMode === 'morning') card.append(wakeLabel, wake, bedLabel, bed, dur);
-  else card.append(bedLabel, bed, wakeLabel, wake, dur);
+  // 各時刻の上に「その時刻がいつの日か」を小さく表示（日付の矛盾を感じにくく）
+  const field = (dayText, labelText, input) => {
+    const f = el('div', 'sleep-field');
+    f.append(el('span', 'sleep-day', dayText), el('span', 'sleep-flabel', labelText), input);
+    return f;
+  };
+  // 記録方法の設定で並び順を変える（夜に就寝→翌朝起床 / 朝に起床→夜に就寝）
+  if (db.settings.sleepMode === 'morning') {
+    // 起床→就寝: どちらも同じ日（今日）
+    card.append(field('今日', '起床', wake), field('今日', '就寝', bed), dur);
+  } else {
+    // 就寝→起床: 就寝は前夜（昨日）、起床は今日
+    card.append(field('昨日', '就寝', bed), field('今日', '起床', wake), dur);
+  }
   return card;
 }
 
