@@ -24,6 +24,15 @@
 
 ## 作業ログ
 
+### 2026-07-19（v1.28.0 = スケジュール調整第1弾・サイドバー・ヘルプ）
+
+- スケジュール調整: ui.schedMode/schedSlots(max3)/schedDur(30/60/90)。renderGridに操作バー（sched-bar）＋colクリックでschedAddSlot（30分スナップ・itemsForとの重なりは拒否）・tg-schedブロック表示（タップで解除）。schedText()でSCHED_TPL_DEFAULT（settings.schedTemplateで編集可・{{候補}}置換）→schedCopy()（clipboard＋execCommandフォールバック）。ビュー離脱で自動解除
+- サイドバー: `#menu-open`（三本線・appbar-left）→ side-scrim/sidebar（スケジュール調整・使い方・バックアップDL・設定）。CSSはtranslateXドロワー
+- ヘルプ: `#help-scrim` に主要機能の説明8項目
+- 設定: 「スケジュール調整の定型文」textarea＋リセット
+- 第2弾（次回・無料でFirebase実装可）: リンク発行→相手が選択→削除/重複と同期→Meet自動発行。Firestoreに候補docs＋予約画面＋ルール更新が必要な大工事のため分割
+- 新機能18＋回帰44＋既存smoke 全PASS。アセットv43。スクショ確認（サイドバー・schedバー）
+
 ### 2026-07-19（v1.27.0 = Google常時連携（Worker中継・自動更新））
 
 - notion-worker.jsを統合Worker化: `/gcal/exchange`（code→token交換）/`/gcal/refresh`（refresh→access更新）ルート追加。env GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET（Workerはトークンを保存しない・中継のみ）。既存Notionルートは互換

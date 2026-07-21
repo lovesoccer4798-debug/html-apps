@@ -122,6 +122,9 @@ const ui = {
   justToggledId: null,
   justAddedId: null,
   sheetType: 'task',
+  schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
+  schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
+  schedDur: 60,             // 候補1枠の長さ（分）
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
@@ -984,6 +987,7 @@ function renderCal() {
     if (gcalConnected()) chips.append(mkChip('gcal', 'Googleカレンダー', f === 'all' || f.includes('gcal'), (ACCENTS.blue || ACCENTS.green)[dark ? 'dark' : 'light']));
     body.append(chips);
   }
+  if (ui.view !== 'grid' && ui.schedMode) { ui.schedMode = false; ui.schedSlots = []; } // 時間割を離れたら調整モード終了
   if (ui.view === 'day') renderDay(body);
   if (ui.view === 'grid') renderGrid(body);
   if (ui.view === 'week') renderWeek(body);
@@ -1024,6 +1028,31 @@ function renderGrid(body) {
     seg.append(b);
   }
   body.append(seg);
+
+  // スケジュール調整モードの操作バー
+  if (ui.schedMode) {
+    const bar = el('div', 'sched-bar');
+    bar.append(el('p', 'sched-hint', `空いている時間をタップして選択（${ui.schedSlots.length}/3）。もう一度タップで解除。`));
+    const row = el('div', 'sched-row');
+    const durSeg = el('div', 'seg');
+    [[30, '30分'], [60, '60分'], [90, '90分']].forEach(([v, label]) => {
+      const b = el('button', `seg-btn${ui.schedDur === v ? ' is-active' : ''}`, label);
+      b.type = 'button';
+      b.addEventListener('click', () => { ui.schedDur = v; renderAll(); });
+      durSeg.append(b);
+    });
+    row.append(durSeg);
+    const copyBtn = el('button', 'cta sched-copy', '定型文をコピー');
+    copyBtn.type = 'button';
+    copyBtn.disabled = !ui.schedSlots.length;
+    copyBtn.addEventListener('click', schedCopy);
+    const exitBtn = el('button', 'cta ghost sched-exit', '終了');
+    exitBtn.type = 'button';
+    exitBtn.addEventListener('click', () => { ui.schedMode = false; ui.schedSlots = []; renderAll(); });
+    row.append(copyBtn, exitBtn);
+    bar.append(row);
+    body.append(bar);
+  }
 
   const start = gridStart();
   const days = Array.from({ length: ui.gridDays }, (_, i) => addDays(start, i));
@@ -1079,11 +1108,23 @@ function renderGrid(body) {
       col.append(ln);
     }
     // 空きスロットのタップ → 時間枠（下書き）を出してつまみで調整 → 予定として追加
+    // スケジュール調整モード中は、タップで「空き候補」を置く（最大3つ・もう一度タップで解除）
     col.addEventListener('click', (e) => {
-      if (e.target.closest('.tg-item') || e.target.closest('.tg-draft')) return;
+      if (e.target.closest('.tg-item') || e.target.closest('.tg-draft') || e.target.closest('.tg-sched')) return;
       const rect = col.getBoundingClientRect();
+      if (ui.schedMode) { schedAddSlot(key, e.clientY - rect.top); return; }
       tgAddDraft(col, key, e.clientY - rect.top);
     });
+    // スケジュール候補の表示
+    for (const s of ui.schedSlots.filter((x) => x.key === key)) {
+      const sb = el('button', 'tg-sched');
+      sb.type = 'button';
+      sb.style.top = `${(s.startMin / 60) * TG_HOUR_H + 1}px`;
+      sb.style.height = `${Math.max(20, (s.durMin / 60) * TG_HOUR_H - 2)}px`;
+      sb.append(el('span', 'tg-sched-t mono', `${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`));
+      sb.addEventListener('click', (e) => { e.stopPropagation(); ui.schedSlots = ui.schedSlots.filter((x) => x !== s); renderAll(); });
+      col.append(sb);
+    }
     for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
       const [hh, mm] = it.time.split(':').map(Number);
       // 長さ: 予定は終了時刻まで、タスクは所要時間、どちらもなければ1時間ぶん
@@ -1120,6 +1161,83 @@ function renderGrid(body) {
     requestAnimationFrame(() => window.scrollTo(0, keep));
   }
 }
+
+/* ----- スケジュール調整（空き枠を選んで定型文で共有） ----- */
+
+const SCHED_TPL_DEFAULT = `以下の日程でご都合いかがでしょうか？
+
+{{候補}}
+
+ご都合が難しければ、他の日程もお送りします！`;
+
+function schedAddSlot(key, y) {
+  if (ui.schedSlots.length >= 3) { flashToast('候補は3つまでです（タップで解除できます）'); return; }
+  let startMin = Math.round((y / TG_HOUR_H) * 60 / 30) * 30; // 30分にスナップ
+  startMin = Math.max(0, Math.min(24 * 60 - ui.schedDur, startMin));
+  // 既存の予定・タスクと重なる枠は「空き」ではないので置けない（正直に伝える）
+  const busy = itemsFor(key).filter(passFilter).some((it) => {
+    if (!it.time) return false;
+    const s = tgStrToMin(it.time);
+    const e2 = it.timeEnd ? tgStrToMin(it.timeEnd) : s + (it.minutes || 60);
+    return startMin < e2 && s < startMin + ui.schedDur;
+  });
+  if (busy) { flashToast('その時間には予定があります（空いている枠を選んでね）'); return; }
+  ui.schedSlots.push({ key, startMin, durMin: ui.schedDur });
+  renderAll();
+}
+
+function schedText() {
+  const slots = [...ui.schedSlots].sort((a, b) => a.key.localeCompare(b.key) || a.startMin - b.startMin);
+  const lines = slots.map((s) => {
+    const d = fromKey(s.key);
+    return `・${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`;
+  });
+  const tpl = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
+  return tpl.includes('{{候補}}') ? tpl.replace('{{候補}}', lines.join('\n')) : `${tpl}\n\n${lines.join('\n')}`;
+}
+
+async function schedCopy() {
+  const text = schedText();
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) { // クリップボードAPIが使えない環境向けフォールバック
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.append(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  }
+  flashToast('コピーしました。LINEやメールに貼って送ってね');
+}
+
+/* ----- サイドバー（メニュー） ----- */
+
+function openSidebar() { $('#side-scrim').hidden = false; requestAnimationFrame(() => $('#side-scrim').classList.add('is-open')); }
+function closeSidebar() {
+  $('#side-scrim').classList.remove('is-open');
+  setTimeout(() => { $('#side-scrim').hidden = true; }, 180);
+}
+$('#menu-open').addEventListener('click', openSidebar);
+$('#side-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSidebar(); });
+$('#side-sched').addEventListener('click', () => {
+  closeSidebar();
+  ui.screen = 'cal'; ui.view = 'grid';
+  if (ui.gridDays === 1) ui.gridDays = 3; // 空きが見渡せるように
+  ui.schedMode = true; ui.schedSlots = [];
+  renderAll();
+});
+$('#side-help').addEventListener('click', () => { closeSidebar(); $('#help-scrim').hidden = false; });
+$('#help-close').addEventListener('click', () => { $('#help-scrim').hidden = true; });
+$('#help-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#side-backup').addEventListener('click', () => { closeSidebar(); downloadBackup(); flashToast('バックアップを書き出しました（ファイル）'); });
+$('#side-settings').addEventListener('click', () => { closeSidebar(); setScreen('settings'); });
+
+// 定型文の設定
+$('#sched-template').addEventListener('input', (e) => { db.settings.schedTemplate = e.target.value; persistLocal(); });
+$('#sched-template-reset').addEventListener('click', () => {
+  delete db.settings.schedTemplate;
+  $('#sched-template').value = SCHED_TPL_DEFAULT;
+  persistLocal();
+  flashToast('定型文を初期状態に戻しました');
+});
 
 /* ----- 時間割: タップで時間枠（下書き）→ つまみで開始・終了を調整 → 「予定」として追加 ----- */
 
@@ -2161,6 +2279,8 @@ function renderSettings() {
   if (me) me.checked = !!db.settings.monthEdge;
   const ie = $('#invert-events-toggle');
   if (ie) ie.checked = !!db.settings.invertEvents;
+  const st = $('#sched-template');
+  if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
   const sh = $('#sticky-toggle');
   if (sh) sh.checked = db.settings.stickyHeader !== false;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {

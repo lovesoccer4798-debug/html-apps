@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=42">
-<link rel="stylesheet" href="style.css?v=42">
+<link rel="stylesheet" href="tokens.css?v=43">
+<link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
 
@@ -25,7 +25,10 @@
     <header class="appbar">
       <div class="cal-stick">
       <div class="appbar-top">
-        <span class="eyebrow mono" id="cal-eyebrow"></span>
+        <div class="appbar-left">
+          <button class="iconbtn" id="menu-open" aria-label="メニュー"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
+          <span class="eyebrow mono" id="cal-eyebrow"></span>
+        </div>
         <div class="appbar-actions">
           <button class="iconbtn" id="search-open" aria-label="検索"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
           <button class="iconbtn" id="theme-toggle" aria-label="テーマ切替"></button>
@@ -220,6 +223,13 @@
         <button type="button" class="cta ghost" id="backup-import">バックアップから復元する</button>
         <input type="file" id="backup-file" accept="application/json,.json">
         <p class="hint">全データ（タスク・予定・記録・設定）を1つのファイルとして端末に保存できます。容量は押したときにファイルが1個できるだけで、アプリやクラウドの容量は使いません。復元すると<strong>今のデータはファイルの内容に置き換わります</strong>（復元前に自動で現在分も書き出されるので安心）。クラウド同期ONなら、ふだんはログインだけで自動バックアップされています。</p>
+      </div>
+
+      <p class="section-label">スケジュール調整の定型文</p>
+      <div class="card">
+        <textarea id="sched-template" rows="6" maxlength="1000"></textarea>
+        <p class="hint">メニュー →「スケジュール調整」で空き時間をコピーするときの文面です。<strong>{{候補}}</strong> の部分が選んだ日時（例：・7/21（火）10:00〜11:00）に置き換わります。自分の言い回しに自由に編集OK。</p>
+        <button type="button" class="cta ghost" id="sched-template-reset">定型文を初期状態に戻す</button>
       </div>
 
       <p class="section-label">データ</p>
@@ -483,6 +493,36 @@
 </div>
 <input type="file" id="vb-file" accept="image/*" hidden>
 
+<!-- サイドバー（メニュー） -->
+<div class="side-scrim" id="side-scrim" hidden>
+  <nav class="sidebar" id="sidebar" aria-label="メニュー">
+    <p class="side-title">メニュー</p>
+    <button type="button" class="side-item" id="side-sched"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg><span>スケジュール調整<small>空き時間を選んで定型文で共有</small></span></button>
+    <button type="button" class="side-item" id="side-help"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span>使い方（ヘルプ）<small>主な機能のかんたん説明</small></span></button>
+    <button type="button" class="side-item" id="side-backup"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg><span>バックアップを書き出す<small>全データを1ファイルで保存</small></span></button>
+    <button type="button" class="side-item" id="side-settings"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg><span>設定<small>テーマ・連携・表示など</small></span></button>
+  </nav>
+</div>
+
+<!-- 使い方（ヘルプ） -->
+<div class="sheet-scrim" id="help-scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="help-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 class="sheet-title">使い方</h2>
+    <div class="help-body">
+      <p><b>ビュー切替</b> — 日・週・時間・月・年をタブで。横スワイプで日付移動、上部は固定（設定でOFF可）</p>
+      <p><b>追加</b> — 右下の「＋」からタスク／予定。予定は終了日を入れると旅行など連日の帯に</p>
+      <p><b>タイマー</b> — タスクの▶で集中タイマー。完了すると実際の時間で開始・終了を自動記録</p>
+      <p><b>ルーティン</b> — 習慣の束（タスク型）と出勤・休みなど（予定型）。平日/土日祝/曜日選択OK。削除時は過去の記録を残せる</p>
+      <p><b>パッケージ</b> — お気に入りの1日を保存して別の日にコピー（ルーティン画面内）</p>
+      <p><b>スケジュール調整</b> — メニューから。時間割で空き枠を3つまで選んで、定型文をコピーしてLINEなどで共有</p>
+      <p><b>連携</b> — Googleカレンダー（常時連携可）・Notion・クラウド同期は設定から</p>
+      <p><b>バックアップ</b> — 設定→バックアップで書き出し／復元。同期ONなら自動でクラウドにも保存</p>
+    </div>
+  </div>
+</div>
+
 <!-- 記念日の追加・編集 -->
 <div class="sheet-scrim" id="anniv-scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="anniv-sheet-title">
@@ -620,7 +660,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=42"></script>
-<script src="app.js?v=42"></script>
+<script src="firebase-config.js?v=43"></script>
+<script src="app.js?v=43"></script>
 </body>
 </html>
