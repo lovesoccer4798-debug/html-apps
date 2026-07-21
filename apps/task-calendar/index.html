@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=38">
-<link rel="stylesheet" href="style.css?v=38">
+<link rel="stylesheet" href="tokens.css?v=39">
+<link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
 
@@ -390,9 +390,13 @@
     <button type="button" class="sheet-close" id="r-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     <h2 class="sheet-title" id="r-sheet-title">新しいルーティン</h2>
     <form id="r-form" autocomplete="off">
+      <div class="type-seg" id="r-type-seg">
+        <button type="button" data-rtype="task" class="is-active">タスク（習慣）</button>
+        <button type="button" data-rtype="event">予定（出勤・休みなど）</button>
+      </div>
       <label class="f-label" for="r-title">タイトル</label>
       <input type="text" id="r-title" maxlength="60" placeholder="例：ダイエット計画">
-      <label class="f-label" for="r-goal">ゴール（なんのため？）</label>
+      <label class="f-label" for="r-goal" id="r-goal-label">ゴール（なんのため？）</label>
       <input type="text" id="r-goal" maxlength="120" placeholder="例：夏までに-3kg">
       <div class="f-row">
         <div class="f-col">
@@ -421,10 +425,10 @@
       </div>
       <p class="hint">プロジェクト的に期間を区切りたいとき（例：8/1〜8/31）に設定。空欄なら期限なしでずっと続きます。</p>
       <button type="button" class="opt-row" id="opt-r-month"><span class="opt-txt">「月」カレンダーにも表示する<span class="opt-sub">オフでも一覧・日/週などには残ります（毎日の予定で窮屈なとき）</span></span><span class="opt-toggle"></span></button>
-      <label class="f-label">習慣タスク（チェックさえ入れば合格 — 時間は目安）</label>
+      <label class="f-label" id="r-items-label">習慣タスク（チェックさえ入れば合格 — 時間は目安）</label>
       <div id="r-items"></div>
       <button type="button" class="cta ghost" id="r-add-item">＋ 習慣タスクを追加</button>
-      <p class="hint">タスクの行を消すと、その実績も消えます。</p>
+      <p class="hint">「曜日で」を選ぶと、月〜日から入れたい曜日を選べます（例：出勤＝月〜金）。</p>
       <button type="submit" class="cta" id="r-save">保存</button>
     </form>
   </div>
@@ -604,7 +608,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=38"></script>
-<script src="app.js?v=38"></script>
+<script src="firebase-config.js?v=39"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>

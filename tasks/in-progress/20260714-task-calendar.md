@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.24.0 = ルーティン予定型・曜日選択・月のルーティンチップ）
+
+- C: routine.type（task/event）。routineArr/routineItems追加。passFilter/itemColor/showInMonthを`routineId`だけで判定（event対応）。routine sheetに`#r-type-seg`（setRType）＋submitで種類ごとにdb.tasks/db.eventsへ生成。renderRoutinesはeventで週ドット省略＋`.r-type-chip`、item一覧はroutineItems・repeatLabelOf
+- 曜日: occursOnに`weekdays`分岐。routineItemRowに曜日チップ（月始まり）・rep='曜日で'で表示。submitでweekdays保存（未選択はdaily）。repeatLabelOfで「月火水木金」表示
+- E: `db.settings.monthHideRoutines`＋showInMonthで判定。renderMonthのmo-style-segに`.mo-rt-chip`（月だけ即時トグル・一覧は不変）
+- deleteRoutine/undoをtask/event両対応に。新機能12＋回帰44＋既存smds PASS。アセットv39
+- ※D（削除/停止/変更で当日以前を残す＋「過去を消す？」選択）は次の集中実装。データ削除に関わるので慎重に。既存の削除ダイアログ(#rdel keep/all)が土台
+
 ### 2026-07-18（v1.23.0 = 「月」カレンダー表示ON/OFF（個別・ルーティン））
 
 - showInMonth(it): it.ref.hideMonth または（routine task の場合）routine.hideMonth で月グリッドから除外。renderMonthのitemsに`.filter(showInMonth)`
