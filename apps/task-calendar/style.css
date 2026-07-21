@@ -354,7 +354,8 @@ input, select, textarea { font: inherit; color: inherit; }
   color: var(--tc-ink3);
   margin-bottom: 6px;
 }
-.mo-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.mo-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.mo-grid.schedule { gap: 2px; } /* 予定表は余白を詰めてTimeTree風に */
 .mo-cell {
   aspect-ratio: 1;
   border-radius: var(--tc-r-cell);
@@ -917,7 +918,9 @@ input, select, textarea { font: inherit; color: inherit; }
 /* ---------- v6: 予定表セル均等化・土日祝色・睡眠記録 ---------- */
 
 .mo-grid .mo-cell { min-width: 0; }
-.mo-grid.schedule .mo-cell { height: 96px; min-height: 0; overflow: hidden; }
+.mo-grid.schedule .mo-cell { height: 96px; min-height: 0; overflow: visible; padding-left: 0; padding-right: 0; }
+.mo-grid.schedule .mo-cell .dnum { padding: 0 3px; } /* 帯はセル幅いっぱい、日付だけ内側に */
+.mo-grid.schedule .mo-chip-more { margin: 0 3px; }
 
 .mo-head span:nth-child(6) { color: var(--tc-sat); }
 .mo-head span:nth-child(7) { color: var(--tc-sun); }
@@ -1572,3 +1575,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .mo-chip-span.is-span-start:not(.is-span-end) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .mo-chip-span.is-span-end:not(.is-span-start) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .mo-chip-span.is-span-mid { border-radius: 0; }
+
+/* ---------- v36: 月グリッドを詰める・日付入力の左寄せ ---------- */
+/* iOSの日付入力は値が中央寄せになり右側が空いて見えるので左寄せに */
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.pkg-make input[type="date"], .pkg-make-sub input[type="date"] { text-align: left; }

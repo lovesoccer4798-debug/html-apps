@@ -1550,15 +1550,29 @@ function renderMonth(body) {
     cell.append(dnum);
     if (schedule) { // TimeTree風: 日付の下に色つきラベル（最大4件）
       for (const it of items.slice(0, 4)) {
-        // 複数日予定は、開始日以外はタイトルを出さず「帯」だけにして横に繋がって見えるように
-        const isMidOrEnd = it.span && !it.span.isStart && day.getDay() !== 1; // 週の月曜は続きでも名前を出す
+        const dow = day.getDay();
+        const isMon = dow === 1;
+        const isSun = dow === 0;
+        // 複数日予定は、開始日と各週の月曜だけ名前を出し、中日は帯だけにして横に繋がって見えるように
+        const isMidOrEnd = it.span && !it.span.isStart && !isMon;
         const label = isMidOrEnd ? '' : it.title;
-        const spanCls = it.span ? ` mo-chip-span${it.span.isStart ? ' is-span-start' : ''}${it.span.isEnd ? ' is-span-end' : ''}${!it.span.isStart && !it.span.isEnd ? ' is-span-mid' : ''}` : '';
-        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}${spanCls}`, label);
+        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}${it.span ? ' mo-chip-span' : ''}`, label);
         const cc = itemColor(it);
         if (cc) chip.style.background = cc;
         const ec = itemEdgeColor(it);
         if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
+        if (it.span) { // 隙間なく連日つながって見えるよう、セルのすき間ぶんだけ左右に伸ばす（週の端は伸ばさず角丸に）
+          const roundL = it.span.isStart || isMon;
+          const roundR = it.span.isEnd || isSun;
+          const extL = !it.span.isStart && !isMon ? 2 : 0; // 前日と接続（セルのすき間ぶん）
+          const extR = !it.span.isEnd && !isSun ? 2 : 0; // 翌日と接続
+          chip.style.width = `calc(100% + ${extL + extR}px)`;
+          chip.style.marginLeft = `-${extL}px`;
+          chip.style.borderTopLeftRadius = roundL ? '' : '0';
+          chip.style.borderBottomLeftRadius = roundL ? '' : '0';
+          chip.style.borderTopRightRadius = roundR ? '' : '0';
+          chip.style.borderBottomRightRadius = roundR ? '' : '0';
+        }
         cell.append(chip);
       }
       if (items.length > 4) cell.append(el('span', 'mo-chip-more', `+${items.length - 4}`));
