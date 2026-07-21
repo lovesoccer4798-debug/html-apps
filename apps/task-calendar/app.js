@@ -107,6 +107,7 @@ function save() {
   scheduleCloudPush(); // ログイン中ならクラウドへも（デバウンス）
   scheduleSharedPush(); // 共有カレンダーの変更も（デバウンス・差分があるときだけ書く）
   scheduleNotionPush(); // Notion連携ONなら今日の分を（デバウンス）
+  scheduleMeetSync(); // 予約リンクの候補から、埋まった枠を外す（デバウンス）
 }
 
 /* ========== ui state (not persisted) ========== */
@@ -1051,6 +1052,21 @@ function renderGrid(body) {
     exitBtn.addEventListener('click', () => { ui.schedMode = false; ui.schedSlots = []; renderAll(); });
     row.append(copyBtn, exitBtn);
     bar.append(row);
+    const row2 = el('div', 'sched-row');
+    if (gcalCanWrite()) { // Meet自動発行（Google連携中のみ）
+      const mc = el('button', `mo-rt-chip${ui.schedMeet ? ' is-on' : ''}`);
+      mc.type = 'button';
+      mc.append(el('span', 'ccdot'), '確定時にMeet発行');
+      mc.addEventListener('click', () => { ui.schedMeet = !ui.schedMeet; renderAll(); });
+      row2.append(mc);
+    }
+    const linkBtn = el('button', 'cta ghost sched-exit', 'リンクを発行');
+    linkBtn.type = 'button';
+    linkBtn.disabled = !ui.schedSlots.length;
+    linkBtn.addEventListener('click', schedIssueLink);
+    row2.append(linkBtn);
+    bar.append(row2);
+    bar.append(el('p', 'sched-hint2', 'リンク発行: 相手がリンクから日時を選ぶと、あなたのカレンダーに自動で予定が入ります（要ログイン）。'));
     body.append(bar);
   }
 
@@ -1207,6 +1223,147 @@ async function schedCopy() {
   }
   flashToast('コピーしました。LINEやメールに貼って送ってね');
 }
+
+/* ----- スケジュール調整 第2弾: リンク予約（Firestore・無料枠） -----
+   自分: リンク発行 → 相手: リンクから日時を選ぶ → 自分のカレンダーに自動で予定＋（設定時）Meet発行。
+   自分が先に予定を入れた枠は候補から自動で消える（save後に同期）。 */
+
+function meetDocRef(code) { return window.firebase.firestore().collection('meet').doc(code); }
+function slotBusy(s) {
+  return itemsFor(s.key).some((it) => {
+    if (!it.time) return false;
+    const a = tgStrToMin(it.time);
+    const b2 = it.timeEnd ? tgStrToMin(it.timeEnd) : a + (it.minutes || 60);
+    return s.startMin < b2 && a < s.startMin + s.durMin;
+  });
+}
+
+async function schedIssueLink() {
+  if (!ui.schedSlots.length) return;
+  if (!fbReady || !fbUser) { flashToast('リンク発行にはログインが必要です（設定→アカウントと同期）'); return; }
+  const code = Math.random().toString(36).slice(2, 10);
+  const offerDoc = {
+    v: 1,
+    ownerUid: fbUser.uid,
+    owner: (db.settings.userName || '').trim() || null,
+    slots: ui.schedSlots.map((s) => ({ ...s })),
+    meet: Boolean(ui.schedMeet && gcalCanWrite()),
+    status: 'open',
+    picked: null,
+    meetLink: null,
+    updatedAt: Date.now(),
+  };
+  try {
+    await meetDocRef(code).set(offerDoc);
+    db.settings.meetOffers = db.settings.meetOffers || [];
+    db.settings.meetOffers.push({ code, done: false });
+    persistLocal();
+    meetWatch(code);
+    const url = `${location.origin}${location.pathname}?meet=${code}`;
+    const text = `${schedText()}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${url}`;
+    try { await navigator.clipboard.writeText(text); } catch (e) { /* 手動コピーでも可 */ }
+    flashToast('リンクを発行して、定型文ごとコピーしました');
+  } catch (err) {
+    flashToast('リンク発行に失敗しました（Firestoreルールの設定を確認してね）');
+  }
+}
+
+// 相手が選んだら: 自分のカレンダーに予定を入れ、必要ならMeetを発行してリンクを共有
+const meetWatched = {};
+function meetWatch(code) {
+  if (!fbReady || meetWatched[code]) return;
+  meetWatched[code] = true;
+  meetDocRef(code).onSnapshot(async (snap) => {
+    const d = snap.data();
+    if (!d || d.status !== 'picked' || !d.picked) return;
+    const offer = (db.settings.meetOffers || []).find((o) => o.code === code);
+    if (!offer || offer.done) return;
+    offer.done = true;
+    const s = d.picked;
+    const ev = { id: newId('e'), title: '打ち合わせ', date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin), calendarId: null, pushGoogle: d.meet, createdAt: Date.now() };
+    db.events.push(ev);
+    save(); renderAll();
+    const dd = fromKey(s.key);
+    flashToast(`相手が日時を選びました: ${dd.getMonth() + 1}/${dd.getDate()} ${tgMinToStr(s.startMin)}（予定に入れました）`);
+    try {
+      if (d.meet && gcalCanWrite()) {
+        await gcalSyncEvent(ev, s.key, true); // Meet付きでGoogleにも登録（ev.hangoutLinkが入る）
+        persistLocal();
+        await meetDocRef(code).update({ status: 'confirmed', meetLink: ev.hangoutLink || null, updatedAt: Date.now() });
+      } else {
+        await meetDocRef(code).update({ status: 'confirmed', updatedAt: Date.now() });
+      }
+    } catch (e) { /* 確定自体は済んでいる */ }
+  });
+}
+
+// 自分側で予定が入った枠を候補から外す（save後にデバウンス同期）
+let meetSyncTimer = null;
+function scheduleMeetSync() {
+  if (!fbReady || !fbUser || !(db.settings.meetOffers || []).some((o) => !o.done)) return;
+  clearTimeout(meetSyncTimer);
+  meetSyncTimer = setTimeout(async () => {
+    for (const o of (db.settings.meetOffers || [])) {
+      if (o.done) continue;
+      try {
+        const snap = await meetDocRef(o.code).get();
+        const d = snap.data();
+        if (!d || d.status !== 'open') continue;
+        const free = d.slots.filter((s) => !slotBusy(s));
+        if (free.length !== d.slots.length) await meetDocRef(o.code).update({ slots: free, updatedAt: Date.now() });
+      } catch (e) { /* 次回saveで再試行 */ }
+    }
+  }, 3000);
+}
+// ログイン完了後、未確定の発行ぶんを見張る
+setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter((o) => !o.done).forEach((o) => meetWatch(o.code)); }, 5000);
+
+// ─ 相手側: ?meet=コード で開いたら予約画面を出す ─
+(() => {
+  const code = new URLSearchParams(location.search).get('meet');
+  if (!code) return;
+  const scrim = el('div', 'meet-scrim');
+  const card = el('div', 'meet-card');
+  card.append(el('p', 'meet-title', '日時をえらぶ'));
+  const bodyEl = el('div', 'meet-body');
+  bodyEl.append(el('p', 'hint', '読み込み中…'));
+  card.append(bodyEl);
+  scrim.append(card);
+  document.body.append(scrim);
+  const fmt = (s) => { const d = fromKey(s.key); return `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`; };
+  const start = () => {
+    if (!fbReady) { setTimeout(start, 300); return; }
+    meetDocRef(code).onSnapshot((snap) => {
+      const d = snap.data();
+      bodyEl.textContent = '';
+      if (!d) { bodyEl.append(el('p', 'hint', 'この予約リンクは見つかりませんでした（取り消された可能性があります）。')); return; }
+      if (d.status === 'open') {
+        bodyEl.append(el('p', 'meet-sub', `${d.owner ? `${d.owner}さん` : '相手'}の空いている日時です。都合の良いものを選んでください。`));
+        if (!d.slots.length) { bodyEl.append(el('p', 'hint', '選べる日時がなくなりました。相手に連絡して、新しい候補をもらってください。')); return; }
+        for (const s of d.slots) {
+          const btn = el('button', 'cta meet-slot', fmt(s));
+          btn.type = 'button';
+          btn.addEventListener('click', async () => {
+            try { await meetDocRef(code).update({ status: 'picked', picked: s, pickedAt: Date.now() }); } catch (e) { bodyEl.append(el('p', 'hint', '送信できませんでした。もう一度お試しください。')); }
+          });
+          bodyEl.append(btn);
+        }
+      } else {
+        const s = d.picked;
+        bodyEl.append(el('p', 'meet-sub', 'この日時で確定しました。'));
+        if (s) bodyEl.append(el('p', 'meet-done mono', fmt(s)));
+        if (d.meetLink) {
+          const a = document.createElement('a');
+          a.href = d.meetLink; a.target = '_blank'; a.rel = 'noopener'; a.className = 'cta meet-slot'; a.textContent = '会議リンクを開く（Google Meet）';
+          bodyEl.append(a);
+        } else if (d.meet && d.status === 'picked') {
+          bodyEl.append(el('p', 'hint', '会議リンクを準備中です。少し待ってからもう一度開いてください。'));
+        }
+      }
+    }, () => { bodyEl.textContent = ''; bodyEl.append(el('p', 'hint', '読み込めませんでした（通信環境を確認してください）。')); });
+  };
+  setTimeout(start, 0); // スクリプト全体の読み込み後に開始（fbReady定義前の参照を避ける）
+})();
 
 /* ----- サイドバー（メニュー） ----- */
 

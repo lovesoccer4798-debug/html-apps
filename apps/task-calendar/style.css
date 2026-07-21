@@ -1682,3 +1682,20 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   padding: 10px 12px; resize: vertical; min-height: 110px;
 }
 #sched-template:focus { outline: none; border-color: var(--tc-accent); }
+
+/* ---------- v44: 予約リンク（スケジュール調整 第2弾） ---------- */
+.sched-hint2 { font-size: 11px; color: var(--tc-ink3); margin-top: 6px; }
+.sched-row + .sched-row { margin-top: 8px; }
+.meet-scrim {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--tc-bg);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 20px 24px;
+  overflow-y: auto;
+}
+.meet-card { width: min(440px, 100%); background: var(--tc-surface); border-radius: var(--tc-r-card); box-shadow: var(--tc-shadow); padding: 20px 18px; }
+.meet-title { font-size: 19px; font-weight: 700; margin-bottom: 10px; }
+.meet-sub { font-size: 13.5px; color: var(--tc-ink2); margin-bottom: 12px; line-height: 1.7; }
+.meet-body { display: flex; flex-direction: column; gap: 8px; }
+.meet-slot { margin-top: 0; text-align: center; text-decoration: none; display: block; }
+.meet-done { font-size: 16px; font-weight: 700; color: var(--tc-accent); margin-bottom: 6px; }
