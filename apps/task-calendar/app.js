@@ -239,6 +239,15 @@ function itemEdgeColor(it) {
   if (db.settings.monthEdge) return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
   return null;
 }
+// 「月」カレンダーに表示するか（個別の予定・タスク、またはそのルーティンの設定で隠せる。一覧・他ビューには残る）
+function showInMonth(it) {
+  if (it.ref && it.ref.hideMonth) return false;
+  if (it.kind === 'task' && it.ref.routineId) {
+    const r = db.routines.find((x) => x.id === it.ref.routineId);
+    if (r && r.hideMonth) return false;
+  }
+  return true;
+}
 function memoFor(it) {
   const r = it.ref;
   if (r.repeat) return (r.memoDates || {})[it.key] ?? r.memo ?? null;
@@ -1544,7 +1553,7 @@ function renderMonth(body) {
   for (let i = 0; i < 42; i += 1) {
     const day = addDays(gridStart, i);
     const key = toKey(day);
-    const items = itemsFor(key).filter(passFilter);
+    const items = itemsFor(key).filter(passFilter).filter(showInMonth); // 「月」に表示ONのものだけ
     const isOther = day.getMonth() !== c.getMonth();
     const cell = el('button', [
       'mo-cell',
@@ -2344,6 +2353,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-meeting').value = r.meetUrl || '';
     setOpt('#opt-push', Boolean(r.pushGoogle || r.gcalId));
     setOpt('#opt-meet', false);
+    setOpt('#opt-month', !r.hideMonth);
     $('#f-invite').value = (r.attendees || []).join('、');
     $('#f-invite-note').value = r.inviteNote || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
@@ -2362,6 +2372,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-meeting').value = '';
     setOpt('#opt-push', false);
     setOpt('#opt-meet', false);
+    setOpt('#opt-month', true);
     $('#f-invite').value = '';
     $('#f-invite-note').value = '';
     buildWhoChips([]);
@@ -2489,6 +2500,7 @@ $('#opt-push').addEventListener('click', () => {
   setOpt('#opt-push', !getOpt('#opt-push'));
   if (!getOpt('#opt-push')) setOpt('#opt-meet', false); // 登録オフならMeetもオフ
 });
+$('#opt-month').addEventListener('click', () => setOpt('#opt-month', !getOpt('#opt-month')));
 $('#opt-meet').addEventListener('click', () => {
   const on = !getOpt('#opt-meet');
   setOpt('#opt-meet', on);
@@ -2537,6 +2549,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
   const inviteNote = $('#f-invite-note').value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
+  const hideMonth = !getOpt('#opt-month'); // 「月」カレンダーに表示しない
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
   if (sharedBlocked(calendarId)) return; // 閲覧専用の共有カレンダーには追加できない
@@ -2545,6 +2558,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
     applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate });
+    if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
       ui.editing.ref.attendees = attendees.length ? attendees : null;
@@ -2552,7 +2566,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -2560,11 +2574,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -3108,9 +3122,11 @@ function openRoutineSheet(r) {
     }
   }
   if (!items.children.length) items.append(routineItemRow());
+  setOpt('#opt-r-month', !(r && r.hideMonth));
   $('#routine-scrim').hidden = false;
   $('#r-title').focus();
 }
+$('#opt-r-month').addEventListener('click', () => setOpt('#opt-r-month', !getOpt('#opt-r-month')));
 $('#r-add-item').addEventListener('click', () => $('#r-items').append(routineItemRow()));
 $('#routine-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) $('#routine-scrim').hidden = true; });
 
@@ -3131,12 +3147,14 @@ $('#r-form').addEventListener('submit', (e) => {
   let periodEnd = $('#r-end').value || null;
   if (periodStart && periodEnd && periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
 
+  const hideMonth = !getOpt('#opt-r-month');
   let r = routineEditing;
   if (!r) {
-    r = { id: newId('r'), title, goal, color, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, createdAt: Date.now() };
+    r = { id: newId('r'), title, goal, color, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.routines.push(r);
   } else {
     r.title = title; r.goal = goal; r.color = color; r.targetPerWeek = target; r.periodStart = periodStart; r.periodEnd = periodEnd;
+    if (hideMonth) r.hideMonth = true; else delete r.hideMonth;
   }
 
   // アイテム行と実タスクを同期（行が消えた=タスク削除、taskIdなし=新規）

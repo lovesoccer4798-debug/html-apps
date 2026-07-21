@@ -1599,3 +1599,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .sleep-dur { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; line-height: 1.25; }
 .sleep-total-v { font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }
 .sleep-breakdown { font-size: 9.5px; color: var(--tc-ink3); font-weight: 500; }
+
+/* ---------- v38: 「月」に表示ON/OFFトグルの補足 ---------- */
+.opt-sub { display: block; font-size: 11px; color: var(--tc-ink3); font-weight: 400; margin-top: 2px; }

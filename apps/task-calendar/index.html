@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=37">
-<link rel="stylesheet" href="style.css?v=37">
+<link rel="stylesheet" href="tokens.css?v=38">
+<link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
 
@@ -323,6 +323,7 @@
           </select>
         </div>
       </div>
+      <button type="button" class="opt-row" id="opt-month"><span class="opt-txt">「月」カレンダーにも表示する<span class="opt-sub">オフでも一覧・日/週などには残ります</span></span><span class="opt-toggle"></span></button>
       <div id="event-only-fields" hidden>
         <div class="f-row">
           <div class="f-col">
@@ -419,6 +420,7 @@
         </div>
       </div>
       <p class="hint">プロジェクト的に期間を区切りたいとき（例：8/1〜8/31）に設定。空欄なら期限なしでずっと続きます。</p>
+      <button type="button" class="opt-row" id="opt-r-month"><span class="opt-txt">「月」カレンダーにも表示する<span class="opt-sub">オフでも一覧・日/週などには残ります（毎日の予定で窮屈なとき）</span></span><span class="opt-toggle"></span></button>
       <label class="f-label">習慣タスク（チェックさえ入れば合格 — 時間は目安）</label>
       <div id="r-items"></div>
       <button type="button" class="cta ghost" id="r-add-item">＋ 習慣タスクを追加</button>
@@ -602,7 +604,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=37"></script>
-<script src="app.js?v=37"></script>
+<script src="firebase-config.js?v=38"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>

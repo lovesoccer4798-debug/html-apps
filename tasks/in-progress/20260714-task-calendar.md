@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.23.0 = 「月」カレンダー表示ON/OFF（個別・ルーティン））
+
+- showInMonth(it): it.ref.hideMonth または（routine task の場合）routine.hideMonth で月グリッドから除外。renderMonthのitemsに`.filter(showInMonth)`
+- 個別: シートに`#opt-month`（opt-row・common）。openSheet/submit/applyEditでhideMonth読み書き（click handlerも追加）
+- ルーティン: routine sheetに`#opt-r-month`。openRoutineSheet/submitでr.hideMonth。フィルタチップ挙動は不変（全ビュー隠し）と併存
+- 一覧・日/週/時間/年には残る（passFilterのみ、showInMonthは月だけ）。新機能8＋回帰44＋既存smoke PASS。アセットv38
+- 未実装（次）: C=ルーティンを「予定」型に / D=削除/停止/変更時に当日より前の過去データを残す＋「過去を残す？」選択。routineはtype追加＋event生成、DはrepeatEnd等でcutoff＋confirm
+
 ### 2026-07-18（v1.22.0 = お昼寝・合計睡眠・対象外月を薄く・タイマー実績反映）
 
 - お昼寝: sleepカードにnap（分・step5）入力。rec.nap保存。sleepTotalMin=夜(bed/wake)＋nap。dur表示は合計＋内訳（夜X＋昼寝Y）。振り返りの平均睡眠・記録一覧もsleepTotalMinに
