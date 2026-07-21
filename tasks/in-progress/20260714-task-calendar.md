@@ -24,6 +24,20 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.22.0 = お昼寝・合計睡眠・対象外月を薄く・タイマー実績反映）
+
+- お昼寝: sleepカードにnap（分・step5）入力。rec.nap保存。sleepTotalMin=夜(bed/wake)＋nap。dur表示は合計＋内訳（夜X＋昼寝Y）。振り返りの平均睡眠・記録一覧もsleepTotalMinに
+- 対象外月を薄く: `.mo-cell.is-other .mo-chip/.mdot/.mo-chip-more{opacity:.35}`
+- タイマー実績反映: autoFillTimerTime刷新。db.runningにstartedAt追加。end=round5(now)、start=round5(startedAt)、dur=end-start。既存時刻も上書き（ガード削除）、超過ぶんも反映。minutesも日別(minutesDates)に。minutesOn追加しitemsForで使用、applyEditもminutes日別化
+- 新機能10＋回帰44＋既存smoke 全PASS。アセットv37
+- ※Git: PR #41は seamless(d114a05)前の a07745b でマージ。seamless(v36)＋今回(v37)は未mainのため新PRにまとめる
+
+### 2026-07-18（v1.21.1 = 連日帯を隙間なく・月の余白詰め・日付入力の左寄せ）
+
+- 月の帯を隙間なく: schedule cellを`overflow:visible`＋`padding-x:0`、grid gapを予定表2px/通常4pxに縮小。span chipはJSでinline幅・マージン制御（週端は伸ばさず角丸、中間は左右2px伸ばして接続）。is-span-*クラスは廃止しインラインstyleに
+- 日付入力の左寄せ: `input[type=date]::-webkit-date-and-time-value{text-align:left}`（iOSで中央寄せ→右が空いて見えた件）
+- 横スクロール発生なし（週端で伸ばさない処理）を確認。回帰44＋v36:13 全PASS。アセットv36
+
 ### 2026-07-18（v1.21.0 = 日をまたぐ予定・TimeTree風の連日帯）
 
 - 予定に`endDate`（複数日・繰り返しなし）。eventCoversDay/eventSpan追加。itemsForで開始〜終了の各日に展開しspan情報付与（中日は時刻を出さず、複数日は終日予定のように上へソート）
