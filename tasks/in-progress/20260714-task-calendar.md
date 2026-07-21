@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-19（v1.27.0 = Google常時連携（Worker中継・自動更新））
+
+- notion-worker.jsを統合Worker化: `/gcal/exchange`（code→token交換）/`/gcal/refresh`（refresh→access更新）ルート追加。env GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET（Workerはトークンを保存しない・中継のみ）。既存Notionルートは互換
+- app: gcalWorkerCfg()=Notion設定のurl/secretを流用（アプリ側の追加設定ゼロ）。gcalConnect()はWorkerありでcodeフロー（access_type=offline&prompt=consent）、なしで従来implicit。`?code=`ハンドラで交換→{token,exp,refresh}保存。gcalRefreshIfNeeded()（多重呼び出しは1本化）をgcalEnsureMonth/gcalWrite/401リトライにフック。gcalCanWriteはrefresh保有でもtrue
+- 設定カード: 「常時連携中（自動更新）」表示＋未移行時は「常時連携に切り替える（再連携1回）」ボタン＋手順hint
+- オーナー操作: ①Workerコード貼り替え ②GOOGLE_CLIENT_ID/SECRET登録（console.cloud.google.com/apis/credentials）③アプリで再連携1回
+- 新機能9（モックWorkerでcode交換・自動refresh・API再試行）＋回帰44＋Notion10 全PASS。アセットv42
+
 ### 2026-07-19（v1.26.0 = 3色追加・予定の色反転・バックアップ）
 
 - ACCENTSにred/yellow/indigo追加（全9色・全ピッカーはACCENTS駆動なので自動反映）
