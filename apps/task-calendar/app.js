@@ -9,6 +9,13 @@ const WD_JA = ['日', '月', '火', '水', '木', '金', '土'];
 const WD_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const MONTH_EN = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' };
+function repeatLabelOf(t) {
+  if (t && t.repeat === 'weekdays') {
+    const days = (t.weekdays || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)); // 月始まり
+    return days.length ? days.map((d) => WD_JA[d]).join('') : '毎日';
+  }
+  return (t && REPEAT_LABEL[t.repeat]) || '毎日';
+}
 const MAX_MONTH_DOTS = 2;      // handoff: ドットは最大2個+
 const UNDO_TOAST_MS = 6000;
 const SWIPE_OPEN_PX = 144;     // 編集72px+削除72px
@@ -56,7 +63,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -167,6 +174,7 @@ function occursOn(t, key) {
   const d = fromKey(key);
   const s = fromKey(t.startDate);
   if (t.repeat === 'daily') return true;
+  if (t.repeat === 'weekdays') return (t.weekdays || []).includes(d.getDay()); // 選んだ曜日だけ（出勤/休みなど）
   if (t.repeat === 'weekly') return d.getDay() === s.getDay();
   if (t.repeat === 'monthly') return d.getDate() === s.getDate(); // 31日など存在しない月は自然にスキップ
   if (t.repeat === 'yearly') return d.getDate() === s.getDate() && d.getMonth() === s.getMonth();
@@ -191,7 +199,7 @@ function passFilter(it) {
   const f = db.settings.calendarFilter;
   if (!f || f === 'all') return true;
   if (it.kind === 'gcal') return f.includes('gcal');
-  if (it.kind === 'task' && it.ref.routineId) return f.includes('routine');
+  if (it.ref.routineId) return f.includes('routine'); // タスク・予定どちらのルーティンも「ルーティン」フィルタ
   return f.includes(it.ref.calendarId || 'c-default');
 }
 function toggleFilter(id) {
@@ -212,7 +220,7 @@ function itemColor(it) {
   const pick = (id) => (ACCENTS[id] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
   if (it.kind === 'gcal') return pick('blue');
   if (it.ref.color) return pick(it.ref.color);
-  if (it.kind === 'task' && it.ref.routineId) {
+  if (it.ref.routineId) {
     const r = db.routines.find((x) => x.id === it.ref.routineId);
     if (r) return pick(r.color);
   }
@@ -238,6 +246,16 @@ function itemEdgeColor(it) {
   }
   if (db.settings.monthEdge) return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
   return null;
+}
+// 「月」カレンダーに表示するか（個別の予定・タスク、またはそのルーティンの設定で隠せる。一覧・他ビューには残る）
+function showInMonth(it) {
+  if (it.ref && it.ref.hideMonth) return false;
+  if (it.ref && it.ref.routineId) {
+    const r = db.routines.find((x) => x.id === it.ref.routineId);
+    if (r && r.hideMonth) return false;
+    if (db.settings.monthHideRoutines) return false; // 「月」でルーティンをまとめて隠す（クイック切替）
+  }
+  return true;
 }
 function memoFor(it) {
   const r = it.ref;
@@ -1532,6 +1550,16 @@ function renderMonth(body) {
     styleSeg.append(b);
   });
   styleRow.append(styleSeg);
+  // ルーティンを「月」だけサッと表示/非表示（設定に潜らず1タップ）
+  if (db.routines.length) {
+    const rc = el('button', `mo-rt-chip${db.settings.monthHideRoutines ? '' : ' is-on'}`);
+    rc.type = 'button';
+    const dot = el('span', 'ccdot');
+    if (!db.settings.monthHideRoutines) dot.style.background = (ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
+    rc.append(dot, 'ルーティン');
+    rc.addEventListener('click', () => { db.settings.monthHideRoutines = !db.settings.monthHideRoutines; save(); renderAll(); });
+    styleRow.append(rc);
+  }
   body.append(styleRow);
 
   const head = el('div', 'mo-head');
@@ -1544,7 +1572,7 @@ function renderMonth(body) {
   for (let i = 0; i < 42; i += 1) {
     const day = addDays(gridStart, i);
     const key = toKey(day);
-    const items = itemsFor(key).filter(passFilter);
+    const items = itemsFor(key).filter(passFilter).filter(showInMonth); // 「月」に表示ONのものだけ
     const isOther = day.getMonth() !== c.getMonth();
     const cell = el('button', [
       'mo-cell',
@@ -2344,6 +2372,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-meeting').value = r.meetUrl || '';
     setOpt('#opt-push', Boolean(r.pushGoogle || r.gcalId));
     setOpt('#opt-meet', false);
+    setOpt('#opt-month', !r.hideMonth);
     $('#f-invite').value = (r.attendees || []).join('、');
     $('#f-invite-note').value = r.inviteNote || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
@@ -2362,6 +2391,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-meeting').value = '';
     setOpt('#opt-push', false);
     setOpt('#opt-meet', false);
+    setOpt('#opt-month', true);
     $('#f-invite').value = '';
     $('#f-invite-note').value = '';
     buildWhoChips([]);
@@ -2489,6 +2519,7 @@ $('#opt-push').addEventListener('click', () => {
   setOpt('#opt-push', !getOpt('#opt-push'));
   if (!getOpt('#opt-push')) setOpt('#opt-meet', false); // 登録オフならMeetもオフ
 });
+$('#opt-month').addEventListener('click', () => setOpt('#opt-month', !getOpt('#opt-month')));
 $('#opt-meet').addEventListener('click', () => {
   const on = !getOpt('#opt-meet');
   setOpt('#opt-meet', on);
@@ -2537,6 +2568,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
   const inviteNote = $('#f-invite-note').value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
+  const hideMonth = !getOpt('#opt-month'); // 「月」カレンダーに表示しない
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
   if (sharedBlocked(calendarId)) return; // 閲覧専用の共有カレンダーには追加できない
@@ -2545,6 +2577,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
     applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate });
+    if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
       ui.editing.ref.attendees = attendees.length ? attendees : null;
@@ -2552,7 +2585,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -2560,11 +2593,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -2881,6 +2914,9 @@ document.addEventListener('keydown', (e) => {
 const R_DEFAULT_TARGET = 3; // 週3日でOK（仕様§7）
 
 function routineTasks(r) { return db.tasks.filter((t) => t.routineId === r.id); }
+// ルーティンに属する項目（タスク型はdb.tasks、予定型はdb.events）
+function routineItems(r) { return [...db.tasks.filter((t) => t.routineId === r.id), ...db.events.filter((e) => e.routineId === r.id)]; }
+function routineArr(r) { return (r.type === 'event') ? db.events : db.tasks; }
 function routineDoneDay(r, key) {
   return db.tasks.some((t) => t.routineId === r.id && taskDoneOn(t, key) && (t.repeat ? true : t.date === key));
 }
@@ -2955,38 +2991,42 @@ function renderRoutines() {
       head.append(p);
     }
 
-    const w = routineWeek(r, weekStart);
-    const weekRow = el('div', 'r-week');
-    const dots = el('span', 'r-dots');
-    w.days.forEach((done, i) => {
-      const key = toKey(addDays(weekStart, i));
-      const d = el('span', `rdot${done ? ' done' : ''}${key === tKey ? ' today' : ''}`);
-      if (done) d.style.background = accent;
-      dots.append(d);
-    });
-    weekRow.append(dots);
-    weekRow.append(el('span', 'r-count', `${w.done}/${r.targetPerWeek || R_DEFAULT_TARGET}日`));
-    if (w.pass) weekRow.append(el('span', 'pass-chip', '今週合格'));
-    const streakEl = el('span', 'r-streak');
-    streakEl.append('連続 ');
-    streakEl.append(el('b', '', String(routineStreakWeeks(r))));
-    streakEl.append('週');
-    weekRow.append(streakEl);
-    head.append(weekRow);
+    if (r.type === 'event') { // 予定ルーティンは達成トラッキングなし
+      head.append(el('span', 'r-type-chip', '予定'));
+    } else {
+      const w = routineWeek(r, weekStart);
+      const weekRow = el('div', 'r-week');
+      const dots = el('span', 'r-dots');
+      w.days.forEach((done, i) => {
+        const key = toKey(addDays(weekStart, i));
+        const d = el('span', `rdot${done ? ' done' : ''}${key === tKey ? ' today' : ''}`);
+        if (done) d.style.background = accent;
+        dots.append(d);
+      });
+      weekRow.append(dots);
+      weekRow.append(el('span', 'r-count', `${w.done}/${r.targetPerWeek || R_DEFAULT_TARGET}日`));
+      if (w.pass) weekRow.append(el('span', 'pass-chip', '今週合格'));
+      const streakEl = el('span', 'r-streak');
+      streakEl.append('連続 ');
+      streakEl.append(el('b', '', String(routineStreakWeeks(r))));
+      streakEl.append('週');
+      weekRow.append(streakEl);
+      head.append(weekRow);
+    }
     card.append(head);
 
     const list = el('ul', 'r-item-list');
-    for (const t of routineTasks(r)) {
+    for (const t of routineItems(r)) {
       const li = el('li');
-      li.append(el('span', 'chip', REPEAT_LABEL[t.repeat] || '毎日'));
+      li.append(el('span', 'chip', repeatLabelOf(t)));
       li.append(el('span', 'r-item-title', t.title));
       if (t.time) li.append(el('span', 'r-item-time', t.time));
       if (t.minutes) li.append(el('span', 'r-item-time', `${t.minutes}分`));
       list.append(li);
     }
-    if (routineTasks(r).length === 0) {
+    if (routineItems(r).length === 0) {
       const li = el('li');
-      li.append(el('span', 'r-item-title', 'タスクがまだありません（編集から追加）'));
+      li.append(el('span', 'r-item-title', `${r.type === 'event' ? '予定' : 'タスク'}がまだありません（編集から追加）`));
       list.append(li);
     }
     card.append(list);
@@ -3053,12 +3093,13 @@ function renderRoutines() {
 let routineEditing = null; // 編集中のルーティン（nullなら新規）
 let rdelTarget = null;
 
+const WD_MON_FIRST = [1, 2, 3, 4, 5, 6, 0]; // 月〜日
 function routineItemRow(data = {}) {
   const row = el('div', 'r-item-row');
   const title = document.createElement('input');
   title.type = 'text'; title.maxLength = 80; title.placeholder = '例：ウォーキング'; title.value = data.title || '';
   const rep = document.createElement('select');
-  [['daily', '毎日'], ['weekly', '毎週'], ['monthly', '毎月']].forEach(([v, l]) => {
+  [['daily', '毎日'], ['weekdays', '曜日で'], ['weekly', '毎週'], ['monthly', '毎月']].forEach(([v, l]) => {
     const o = document.createElement('option'); o.value = v; o.textContent = l; rep.append(o);
   });
   rep.value = data.repeat || 'daily';
@@ -3069,9 +3110,22 @@ function routineItemRow(data = {}) {
   const rm = el('button', 'del-btn');
   rm.type = 'button'; rm.setAttribute('aria-label', 'この行を削除'); rm.innerHTML = ICONS.trash;
   rm.addEventListener('click', () => row.remove());
-  row.append(title, rep, time, min, rm);
-  if (data.taskId) row.dataset.taskId = data.taskId;
-  row._fields = { title, rep, time, min };
+  // 曜日チップ（「曜日で」を選んだときだけ表示。出勤=月〜金 など）
+  const wd = el('div', 'r-wd');
+  const chosen = new Set(data.weekdays || []);
+  const wdBtns = WD_MON_FIRST.map((dow) => {
+    const b = el('button', `r-wd-chip${chosen.has(dow) ? ' is-on' : ''}`, WD_JA[dow]);
+    b.type = 'button'; b.dataset.dow = String(dow);
+    b.addEventListener('click', () => b.classList.toggle('is-on'));
+    wd.append(b);
+    return b;
+  });
+  const syncWd = () => { wd.style.display = rep.value === 'weekdays' ? 'flex' : 'none'; };
+  rep.addEventListener('change', syncWd);
+  syncWd();
+  row.append(title, rep, time, min, rm, wd);
+  if (data.itemId) row.dataset.itemId = data.itemId;
+  row._fields = { title, rep, time, min, getWeekdays: () => wdBtns.filter((b) => b.classList.contains('is-on')).map((b) => Number(b.dataset.dow)) };
   return row;
 }
 
@@ -3103,16 +3157,36 @@ function openRoutineSheet(r) {
   const items = $('#r-items');
   items.textContent = '';
   if (r) {
-    for (const t of routineTasks(r)) {
-      items.append(routineItemRow({ taskId: t.id, title: t.title, repeat: t.repeat, time: t.time, minutes: t.minutes }));
+    for (const t of routineItems(r)) {
+      items.append(routineItemRow({ itemId: t.id, title: t.title, repeat: t.repeat, weekdays: t.weekdays, time: t.time, minutes: t.minutes }));
     }
   }
   if (!items.children.length) items.append(routineItemRow());
+  setOpt('#opt-r-month', !(r && r.hideMonth));
+  setRType(r && r.type === 'event' ? 'event' : 'task');
   $('#routine-scrim').hidden = false;
   $('#r-title').focus();
 }
+$('#opt-r-month').addEventListener('click', () => setOpt('#opt-r-month', !getOpt('#opt-r-month')));
 $('#r-add-item').addEventListener('click', () => $('#r-items').append(routineItemRow()));
 $('#routine-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) $('#routine-scrim').hidden = true; });
+
+// ルーティンの種類（タスク＝習慣 / 予定＝出勤・休みなど）
+let rSheetType = 'task';
+function setRType(t) {
+  rSheetType = t === 'event' ? 'event' : 'task';
+  const isEvent = rSheetType === 'event';
+  document.querySelectorAll('#r-type-seg button').forEach((b) => b.classList.toggle('is-active', b.dataset.rtype === rSheetType));
+  const goalLabel = $('#r-goal-label');
+  if (goalLabel) goalLabel.textContent = isEvent ? 'メモ（任意）' : 'ゴール（なんのため？）';
+  const itemsLabel = $('#r-items-label');
+  if (itemsLabel) itemsLabel.textContent = isEvent ? '予定（曜日ごとに設定できます）' : '習慣タスク（チェックさえ入れば合格 — 時間は目安）';
+  const addBtn = $('#r-add-item');
+  if (addBtn) addBtn.textContent = isEvent ? '＋ 予定を追加' : '＋ 習慣タスクを追加';
+  const targetCol = $('#r-target') ? $('#r-target').closest('.f-col') : null;
+  if (targetCol) targetCol.style.display = isEvent ? 'none' : ''; // 週の目標は習慣のみ
+}
+document.querySelectorAll('#r-type-seg button').forEach((b) => b.addEventListener('click', () => setRType(b.dataset.rtype)));
 
 $('#r-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -3131,15 +3205,19 @@ $('#r-form').addEventListener('submit', (e) => {
   let periodEnd = $('#r-end').value || null;
   if (periodStart && periodEnd && periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
 
+  const hideMonth = !getOpt('#opt-r-month');
+  const rtype = rSheetType === 'event' ? 'event' : 'task';
   let r = routineEditing;
   if (!r) {
-    r = { id: newId('r'), title, goal, color, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, createdAt: Date.now() };
+    r = { id: newId('r'), title, goal, color, type: rtype, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.routines.push(r);
   } else {
-    r.title = title; r.goal = goal; r.color = color; r.targetPerWeek = target; r.periodStart = periodStart; r.periodEnd = periodEnd;
+    r.title = title; r.goal = goal; r.color = color; r.type = rtype; r.targetPerWeek = target; r.periodStart = periodStart; r.periodEnd = periodEnd;
+    if (hideMonth) r.hideMonth = true; else delete r.hideMonth;
   }
 
-  // アイテム行と実タスクを同期（行が消えた=タスク削除、taskIdなし=新規）
+  // アイテム行と実データ（タスク or 予定）を同期（行が消えた=削除、idなし=新規）
+  const arr = rtype === 'event' ? db.events : db.tasks;
   const keptIds = new Set();
   for (const row of $('#r-items').children) {
     const f = row._fields;
@@ -3148,17 +3226,24 @@ $('#r-form').addEventListener('submit', (e) => {
     const minRaw = parseInt(f.min.value, 10);
     const minutes = Number.isInteger(minRaw) && minRaw >= 1 && minRaw <= 600 ? minRaw : null;
     const time = f.time.value || null;
-    const repeat = f.rep.value;
-    if (row.dataset.taskId) {
-      const t = db.tasks.find((x) => x.id === row.dataset.taskId);
-      if (t) { t.title = t2; t.time = time; t.minutes = minutes; t.repeat = repeat; keptIds.add(t.id); }
+    let repeat = f.rep.value;
+    let weekdays = repeat === 'weekdays' ? f.getWeekdays() : null;
+    if (repeat === 'weekdays' && (!weekdays || !weekdays.length)) { repeat = 'daily'; weekdays = null; } // 曜日未選択なら毎日扱い
+    const existing = row.dataset.itemId ? arr.find((x) => x.id === row.dataset.itemId) : null;
+    if (existing) {
+      existing.title = t2; existing.time = time; existing.repeat = repeat;
+      if (weekdays) existing.weekdays = weekdays; else delete existing.weekdays;
+      if (rtype === 'event') delete existing.minutes; else existing.minutes = minutes;
+      keptIds.add(existing.id);
     } else {
-      const t = { id: newId('t'), routineId: r.id, title: t2, time, minutes, repeat, startDate: r.startDate || todayKey(), doneDates: {}, exDates: [], memo: null, memoDates: {}, createdAt: Date.now() };
-      db.tasks.push(t);
-      keptIds.add(t.id);
+      const base = { id: newId(rtype === 'event' ? 'e' : 't'), routineId: r.id, title: t2, time, repeat, weekdays: weekdays || undefined, startDate: r.startDate || todayKey(), exDates: [], createdAt: Date.now() };
+      if (rtype === 'event') { arr.push(base); } else { arr.push({ ...base, minutes, doneDates: {}, memo: null, memoDates: {} }); }
+      keptIds.add(base.id);
     }
   }
+  // このルーティンに属する項目のうち、行から消えたものを削除（両方の配列から念のため）
   db.tasks = db.tasks.filter((t) => t.routineId !== r.id || keptIds.has(t.id));
+  db.events = db.events.filter((e) => e.routineId !== r.id || keptIds.has(e.id));
 
   save();
   $('#routine-scrim').hidden = true;
@@ -3170,15 +3255,19 @@ $('#r-form').addEventListener('submit', (e) => {
 
 function deleteRoutine(r, keepTasks) {
   const rIndex = db.routines.indexOf(r);
-  const affected = routineTasks(r);
+  const affTasks = db.tasks.filter((t) => t.routineId === r.id);
+  const affEvents = db.events.filter((e) => e.routineId === r.id);
   db.routines.splice(rIndex, 1);
-  if (keepTasks) affected.forEach((t) => { delete t.routineId; }); // ふつうの繰り返しタスクとして残す
-  else db.tasks = db.tasks.filter((t) => t.routineId !== r.id);
+  if (keepTasks) [...affTasks, ...affEvents].forEach((x) => { delete x.routineId; }); // ふつうの繰り返しとして残す
+  else {
+    db.tasks = db.tasks.filter((t) => t.routineId !== r.id);
+    db.events = db.events.filter((e) => e.routineId !== r.id);
+  }
   save(); renderAll();
   showUndoToast(`「${r.title}」を削除しました`, () => {
     db.routines.splice(Math.min(rIndex, db.routines.length), 0, r);
-    if (keepTasks) affected.forEach((t) => { t.routineId = r.id; });
-    else db.tasks.push(...affected);
+    if (keepTasks) [...affTasks, ...affEvents].forEach((x) => { x.routineId = r.id; });
+    else { db.tasks.push(...affTasks); db.events.push(...affEvents); }
     save(); renderAll();
   });
 }

@@ -1599,3 +1599,21 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .sleep-dur { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; line-height: 1.25; }
 .sleep-total-v { font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }
 .sleep-breakdown { font-size: 9.5px; color: var(--tc-ink3); font-weight: 500; }
+
+/* ---------- v38: 「月」に表示ON/OFFトグルの補足 ---------- */
+.opt-sub { display: block; font-size: 11px; color: var(--tc-ink3); font-weight: 400; margin-top: 2px; }
+
+/* ---------- v39: ルーティンの種類(予定)・曜日選択・月のルーティン表示チップ ---------- */
+.mo-style-seg { justify-content: space-between; align-items: center; gap: 8px; }
+.mo-rt-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 6px 12px; border-radius: var(--tc-r-pill);
+  background: var(--tc-surface2); color: var(--tc-ink3); border: 1.5px solid transparent;
+}
+.mo-rt-chip.is-on { background: var(--tc-accent-soft); color: var(--tc-accent); font-weight: 700; }
+/* ルーティンの曜日チップ */
+.r-item-row { flex-wrap: wrap; }
+.r-wd { display: flex; gap: 4px; flex-basis: 100%; margin-top: 2px; }
+.r-wd-chip { flex: 1; padding: 6px 0; border-radius: 8px; background: var(--tc-surface2); border: 1.5px solid var(--tc-line); font-size: 12px; color: var(--tc-ink2); }
+.r-wd-chip.is-on { background: var(--tc-accent-soft); border-color: var(--tc-accent); color: var(--tc-accent); font-weight: 700; }
+.r-type-chip { display: inline-block; font-size: 11px; font-weight: 700; color: var(--tc-accent); background: var(--tc-accent-soft); border-radius: var(--tc-r-pill); padding: 2px 10px; margin-top: 4px; }
