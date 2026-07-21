@@ -1445,6 +1445,17 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .daylog-input:focus { outline: none; }
 .daylog-input::placeholder { color: var(--tc-ink4); }
+.daylog-preview {
+  font-size: 14px; color: var(--tc-ink); line-height: 1.7;
+  white-space: pre-wrap; word-break: break-word;
+}
+.daylog-acts { display: flex; gap: 8px; margin-top: 10px; }
+.daylog-acts .cta { flex: 1; }
+.daylog-edit { margin-top: 10px; width: 100%; }
+.daylog-empty {
+  width: 100%; text-align: left; padding: 10px 0; border: none; background: transparent;
+  font: inherit; font-size: 14px; color: var(--tc-ink4);
+}
 
 /* ---------- v32: パッケージ・タスク一覧 ---------- */
 /* ボトムナビ6項目に対応（アイコン背景をやや細く） */

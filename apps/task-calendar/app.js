@@ -132,6 +132,7 @@ const ui = {
   confirmTarget: null,      // recurring occurrence pending delete
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
   insightsOffset: 0,        // 振り返りの期間オフセット（0=今・-1=1つ前…横スライドで過去へ）
+  dayLogEditKey: null,      // あのね。ノートを編集中の日付キー（null=プレビュー表示）
   routineTab: 'routines',   // ルーティンタブ内: 'routines' | 'vision'
   vbFileTarget: null,       // 写真ピッカーの投入先
   vbSlotTarget: null,       // 差し替え/削除の対象アイテム
@@ -1651,22 +1652,56 @@ function renderDay(body) {
   body.append(buildDayLogCard(key));
 }
 
+// まとめ日記の名前（設定で変更可・空欄なら既定）
+function dayLogName() { return (db.settings.dayLogName || '').trim() || 'あのね。ノート'; }
+
 // 「あのね。ノート」: その日まるごとの感想を書くまとめ日記（日ビュー最下部）
+// プレビュー（全文表示）→「編集」で入力、という流れにして、長文でも切れずに読み返せるようにする
 function buildDayLogCard(key) {
   const card = el('div', 'daylog-card');
-  card.append(el('p', 'daylog-title', 'あのね。ノート'));
-  const ta = document.createElement('textarea');
-  ta.className = 'daylog-input';
-  ta.rows = 3;
-  ta.maxLength = 2000;
-  ta.placeholder = '今日はどんな一日だった？　まるっと書き残しておこう。';
-  ta.value = db.dayLogs[key] || '';
-  ta.addEventListener('input', () => {
-    const v = ta.value.trim();
-    if (v) db.dayLogs[key] = ta.value; else delete db.dayLogs[key];
-    save();
-  });
-  card.append(ta);
+  card.append(el('p', 'daylog-title', dayLogName()));
+  const text = db.dayLogs[key] || '';
+  if (ui.dayLogEditKey === key) {
+    const ta = document.createElement('textarea');
+    ta.className = 'daylog-input';
+    ta.rows = 6;
+    ta.maxLength = 2000;
+    ta.placeholder = '今日はどんな一日だった？　まるっと書き残しておこう。';
+    ta.value = text;
+    const original = text; // キャンセル時はここへ戻す
+    // 入力中も自動保存（別の日へ移動しても消えないように）
+    ta.addEventListener('input', () => {
+      const v = ta.value.trim();
+      if (v) db.dayLogs[key] = ta.value; else delete db.dayLogs[key];
+      save();
+    });
+    card.append(ta);
+    const acts = el('div', 'daylog-acts');
+    const saveB = el('button', 'cta', '保存');
+    saveB.type = 'button';
+    saveB.addEventListener('click', () => { ui.dayLogEditKey = null; renderAll(); });
+    const cancelB = el('button', 'cta ghost', 'キャンセル');
+    cancelB.type = 'button';
+    cancelB.addEventListener('click', () => {
+      if (original) db.dayLogs[key] = original; else delete db.dayLogs[key];
+      ui.dayLogEditKey = null;
+      save(); renderAll();
+    });
+    acts.append(saveB, cancelB);
+    card.append(acts);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+  } else if (text) {
+    card.append(el('div', 'daylog-preview', text)); // 全文表示（改行そのまま・省略しない）
+    const editB = el('button', 'cta ghost daylog-edit', '編集');
+    editB.type = 'button';
+    editB.addEventListener('click', () => { ui.dayLogEditKey = key; renderAll(); });
+    card.append(editB);
+  } else {
+    const empty = el('button', 'daylog-empty', '今日のことを書く');
+    empty.type = 'button';
+    empty.addEventListener('click', () => { ui.dayLogEditKey = key; renderAll(); });
+    card.append(empty);
+  }
   return card;
 }
 
@@ -2559,6 +2594,8 @@ function renderSettings() {
   if (un) un.value = db.settings.userName || '';
   const sn = $('#sender-name');
   if (sn) sn.value = db.settings.senderName || '';
+  const dln = $('#daylog-name');
+  if (dln) dln.value = db.settings.dayLogName || '';
   const tn = $('#timer-notify');
   if (tn) tn.checked = !!db.settings.timerNotify;
   const me = $('#month-edge-toggle');
@@ -2641,6 +2678,7 @@ document.querySelectorAll('#style-seg button').forEach((b) => {
 });
 $('#user-name').addEventListener('change', (e) => { db.settings.userName = e.target.value.trim(); save(); });
 $('#sender-name').addEventListener('change', (e) => { db.settings.senderName = e.target.value.trim(); save(); });
+$('#daylog-name').addEventListener('change', (e) => { db.settings.dayLogName = e.target.value.trim(); save(); });
 $('#timer-notify').addEventListener('change', async (e) => {
   if (e.target.checked && 'Notification' in window && Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch (err) { /* 拒否でもトグルは有効（音・バイブは動く） */ }
@@ -5368,7 +5406,7 @@ function notionDayPayload(key) {
   const diaries = [];
   const memos = [];
   const log = db.dayLogs[key];
-  if (log) diaries.push(`【あのね。ノート】${log}`);
+  if (log) diaries.push(`【${dayLogName()}】${log}`);
   const note = db.notes[key];
   if (note) diaries.push(`【ひとこと】${note}`);
   for (const it of itemsFor(key)) {
