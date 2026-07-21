@@ -131,6 +131,7 @@ const ui = {
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
+  insightsOffset: 0,        // 振り返りの期間オフセット（0=今・-1=1つ前…横スライドで過去へ）
   routineTab: 'routines',   // ルーティンタブ内: 'routines' | 'vision'
   vbFileTarget: null,       // 写真ピッカーの投入先
   vbSlotTarget: null,       // 差し替え/削除の対象アイテム
@@ -733,7 +734,7 @@ $('#bottomnav').addEventListener('click', (e) => {
   const nav = btn.dataset.nav;
   if (nav === 'today') { ui.view = 'day'; ui.cursor = new Date(); setScreen('cal'); }
   if (nav === 'calendar') { ui.view = 'month'; ui.selectedKey = ui.selectedKey || todayKey(); setScreen('cal'); }
-  if (nav === 'insights') setScreen('insights');
+  if (nav === 'insights') { ui.insightsOffset = 0; setScreen('insights'); }
   if (nav === 'anniv') setScreen('anniv');
   if (nav === 'tasks') setScreen('tasklist');
   if (nav === 'routines') setScreen('routines');
@@ -2226,16 +2227,32 @@ function buildSleepCard(key) {
 
 /* ----- insights（振り返り） ----- */
 
-function periodDays(period) {
+function periodStart(period, offset = 0) {
   const now = new Date();
-  let start;
+  if (period === 'week') return addDays(startOfWeekMon(now), offset * 7);
+  if (period === 'month') return new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  return new Date(now.getFullYear() + offset, 0, 1);
+}
+function periodDays(period, offset = 0) {
+  const start = periodStart(period, offset);
   let count;
-  if (period === 'week') { start = startOfWeekMon(now); count = 7; }
-  else if (period === 'month') { start = new Date(now.getFullYear(), now.getMonth(), 1); count = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); }
-  else { start = new Date(now.getFullYear(), 0, 1); count = Math.round((new Date(now.getFullYear() + 1, 0, 1) - start) / 86400000); }
+  if (period === 'week') count = 7;
+  else if (period === 'month') count = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+  else count = Math.round((new Date(start.getFullYear() + 1, 0, 1) - start) / 86400000);
   const keys = [];
   for (let i = 0; i < count; i += 1) keys.push(toKey(addDays(start, i)));
   return keys;
+}
+// 期間の見出しラベル（0=今週/今月/今年、それ以外は具体的な期間）
+function periodRangeLabel(period, offset = 0) {
+  const start = periodStart(period, offset);
+  if (period === 'week') {
+    if (offset === 0) return '今週';
+    const e2 = addDays(start, 6);
+    return `${start.getMonth() + 1}/${start.getDate()}〜${e2.getMonth() + 1}/${e2.getDate()}`;
+  }
+  if (period === 'month') return offset === 0 ? '今月' : `${start.getFullYear()}年${start.getMonth() + 1}月`;
+  return offset === 0 ? '今年' : `${start.getFullYear()}年`;
 }
 
 function renderInsights() {
@@ -2244,35 +2261,56 @@ function renderInsights() {
   const tKey = todayKey();
   const period = ui.insightsPeriod;
 
-  // 期間セグメント（週／月／年）
+  // 期間セグメント（週／月／年）。種類を変えたらオフセットは今に戻す
   const seg = el('div', 'seg period-seg');
   [['week', '週'], ['month', '月'], ['year', '年']].forEach(([v, label]) => {
     const b = el('button', `seg-btn${period === v ? ' is-active' : ''}`, label);
     b.type = 'button';
-    b.addEventListener('click', () => { ui.insightsPeriod = v; renderAll(); });
+    b.addEventListener('click', () => { ui.insightsPeriod = v; ui.insightsOffset = 0; renderAll(); });
     seg.append(b);
   });
   body.append(seg);
 
-  const keys = periodDays(period);
+  const offset = ui.insightsOffset;
+  // 期間ナビ（‹ 前へ ・ ラベル ・ 次へ ›）。今より先へは進めない
+  const nav = el('div', 'period-nav');
+  const prev = el('button', 'period-arrow', '‹');
+  prev.type = 'button';
+  prev.setAttribute('aria-label', '前の期間');
+  prev.addEventListener('click', () => { ui.insightsOffset -= 1; renderAll(); });
+  const next = el('button', 'period-arrow', '›');
+  next.type = 'button';
+  next.setAttribute('aria-label', '次の期間');
+  next.disabled = offset >= 0;
+  next.addEventListener('click', () => { if (ui.insightsOffset < 0) { ui.insightsOffset += 1; renderAll(); } });
+  nav.append(prev, el('span', 'period-navlabel', periodRangeLabel(period, offset)), next);
+  body.append(nav);
+
+  const keys = periodDays(period, offset);
   const perDay = keys.map((key) => ({ key, ...tasksStatsFor(key) }));
   const total = perDay.reduce((s, d) => s + d.total, 0);
   const done = perDay.reduce((s, d) => s + d.done, 0);
   const rate = total ? Math.round((done / total) * 100) : null;
-  const periodLabel = { week: '今週', month: '今月', year: '今年' }[period];
+  const periodLabel = periodRangeLabel(period, offset);
+  const isNow = offset === 0;
 
   const stats = el('div', 'stats-row');
   const c1 = el('div', 'stat-card deep');
   c1.innerHTML = `<div class="stat-num">${rate === null ? '--' : `${rate}<small>%</small>`}</div><div class="stat-label">${periodLabel}の完了率（${done}/${total}）</div>`;
   const c2 = el('div', 'stat-card');
-  c2.innerHTML = `<div class="stat-num">${streakDays()}<small>日</small></div><div class="stat-label">連続達成</div>`;
+  if (isNow) {
+    c2.innerHTML = `<div class="stat-num">${streakDays()}<small>日</small></div><div class="stat-label">連続達成</div>`;
+  } else {
+    const activeDays = perDay.filter((d) => d.done > 0).length;
+    c2.innerHTML = `<div class="stat-num">${activeDays}<small>日</small></div><div class="stat-label">達成した日</div>`;
+  }
   const c3 = el('div', 'stat-card');
   c3.innerHTML = `<div class="stat-num">${done}<small>件</small></div><div class="stat-label">${periodLabel}の完了数</div>`;
   stats.append(c1, c2, c3);
   body.append(stats);
 
   // 期間のふりかえりメモ（週・月・年ごとに書き溜めて、あとから見返せる）
-  renderPeriodNote(body, period, periodLabel);
+  renderPeriodNote(body, period, periodLabel, offset);
 
   // 完了の棒グラフ（週=曜日別／月=週別／年=月別）
   let cols;
@@ -2287,7 +2325,7 @@ function renderInsights() {
       if (d.key === tKey) cols[w].now = true;
     });
   } else {
-    cols = Array.from({ length: 12 }, (_, m) => ({ label: String(m + 1), done: 0, now: m === new Date().getMonth() }));
+    cols = Array.from({ length: 12 }, (_, m) => ({ label: String(m + 1), done: 0, now: isNow && m === new Date().getMonth() }));
     perDay.forEach((d) => { cols[Number(d.key.slice(5, 7)) - 1].done += d.done; });
   }
   const chart = el('div', 'card chart-card');
@@ -2337,8 +2375,8 @@ function renderInsights() {
   }
   body.append(doneCard);
 
-  // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様）
-  const mem = [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
+  // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様・今の期間のときだけ）
+  const mem = isNow && [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
     .map(([days, label]) => ({ key: toKey(addDays(new Date(), -days)), label }))
     .find((m2) => db.notes[m2.key]);
   if (mem) {
@@ -2377,8 +2415,8 @@ function renderInsights() {
     body.append(sCard);
   }
 
-  // ルーティン別の達成
-  if (db.routines.length > 0) {
+  // ルーティン別の達成（今週の状況なので、今の期間のときだけ）
+  if (isNow && db.routines.length > 0) {
     const rCard = el('div', 'card chart-card');
     rCard.append(el('p', 'section-label', 'ルーティン'));
     for (const r of db.routines) {
@@ -2397,21 +2435,6 @@ function renderInsights() {
     }
     body.append(rCard);
   }
-
-  // 今日のひとこと
-  const note = el('div', 'card note-card');
-  note.append(el('p', 'section-label', '今日のひとこと'));
-  const ta = document.createElement('textarea');
-  ta.placeholder = '今日できたこと・気づきをひとこと。';
-  ta.value = db.notes[tKey] || '';
-  let noteTimer = null;
-  ta.addEventListener('input', () => {
-    db.notes[tKey] = ta.value;
-    clearTimeout(noteTimer);
-    noteTimer = setTimeout(save, 300);
-  });
-  note.append(ta);
-  body.append(note);
 }
 
 /* ----- settings ----- */
@@ -5287,11 +5310,11 @@ function renderColorRuleCard() {
 
 /* ========== v14: 期間のふりかえりメモ（週・月・年ごとに書き溜め→見返し） ========== */
 
-function periodNoteKey(period) {
-  const now = new Date();
-  if (period === 'week') return `w:${toKey(startOfWeekMon(now))}`;
-  if (period === 'month') return `m:${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  return `y:${now.getFullYear()}`;
+function periodNoteKey(period, offset = 0) {
+  const start = periodStart(period, offset);
+  if (period === 'week') return `w:${toKey(start)}`;
+  if (period === 'month') return `m:${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+  return `y:${start.getFullYear()}`;
 }
 function periodNoteLabel(key) {
   const [t, rest] = key.split(':');
@@ -5299,8 +5322,8 @@ function periodNoteLabel(key) {
   if (t === 'm') { const [y, m] = rest.split('-'); return `${y}年${Number(m)}月`; }
   return `${rest}年`;
 }
-function renderPeriodNote(container, period, periodLabel) {
-  const key = periodNoteKey(period);
+function renderPeriodNote(container, period, periodLabel, offset = 0) {
+  const key = periodNoteKey(period, offset);
   const card = el('div', 'card chart-card');
   card.append(el('p', 'section-label', `${periodLabel}のふりかえりメモ`));
   const ta = document.createElement('textarea');

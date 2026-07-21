@@ -727,7 +727,15 @@ input, select, textarea { font: inherit; color: inherit; }
 
 /* ---------- v3: 振り返りの期間切替 ---------- */
 
-.period-seg { margin: 0 0 14px; }
+.period-seg { margin: 0 0 10px; }
+.period-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0 0 14px; }
+.period-arrow {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid var(--tc-line); background: var(--tc-surface); color: var(--tc-ink);
+  font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.period-arrow:disabled { opacity: 0.32; }
+.period-navlabel { font-size: 14px; font-weight: 700; color: var(--tc-ink); min-width: 130px; text-align: center; }
 .done-row .dr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .done-row .dr-main .dr-title { flex: none; }
 .dr-memo { font-size: 12px; color: var(--tc-ink3); text-decoration: none; overflow-wrap: anywhere; }
