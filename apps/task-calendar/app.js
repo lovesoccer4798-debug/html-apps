@@ -177,6 +177,7 @@ function taskDoneAt(t, key) { return t.repeat ? (t.doneDates || {})[key] || null
 // 時刻は「日ごと（timeDates）＞マスタ（time）」。繰り返しは日別に独立、単発はそのまま
 function timeOn(r, key) { return (r.repeat ? (r.timeDates || {})[key] : null) ?? r.time ?? ''; }
 function timeEndOn(r, key) { return (r.repeat ? (r.timeEndDates || {})[key] : null) ?? r.timeEnd ?? null; }
+function minutesOn(r, key) { return (r.repeat ? (r.minutesDates || {})[key] : null) ?? r.minutes ?? null; } // タイマー時間も日別に独立可
 const MAX_CALENDARS = 8; // 仕様§7: 色の見分けとチップ視認性の上限
 
 function allFilterIds() {
@@ -267,7 +268,7 @@ function itemsFor(key) {
   const items = [];
   for (const t of db.tasks) {
     if (!occursOn(t, key)) continue;
-    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: t.minutes || null, repeat: t.repeat || null, done: taskDoneOn(t, key) });
+    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: minutesOn(t, key), repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
     const multi = eventCoversDay(e, key);
@@ -482,17 +483,26 @@ function makeSwipe(item, { onEdit, onDelete }) {
 
 /* ========== item operations ========== */
 
-// タイマーで実行したタスクを完了した時、開始時刻が未入力なら時刻を自動記録
-// 終了＝完了時刻を5分単位に切り上げ、開始＝終了−タイマーの長さ（繰り返しは日別に独立）
-function autoFillTimerTime(t, key, totalMs) {
-  if (!totalMs || timeOn(t, key)) return; // 既に時刻があるものは触らない
-  const now = new Date();
-  let endMin = now.getHours() * 60 + Math.ceil(now.getMinutes() / 5) * 5;
-  if (endMin > 1439) endMin = 1439;
-  const startMin = Math.max(0, endMin - Math.round(totalMs / 60000));
+// タイマーで実行したタスクを完了した時、実際に動かした時間に忠実に時刻を記録
+// 終了＝完了した実時刻、開始＝タイマーを始めた実時刻（どちらも最寄りの5分に丸め）、
+// タイマー時間＝その差（超過ぶんも自然に反映）。既に時刻が入っていても上書きする（繰り返しは日別に独立）
+function autoFillTimerTime(t, key, r) {
+  if (!r) return;
+  const now = Date.now();
+  const startedAt = r.startedAt || (r.endAt ? r.endAt - r.totalMs : now - (r.totalMs || 0));
+  const round5 = (ms) => {
+    const d = new Date(ms);
+    const m = d.getHours() * 60 + Math.round(d.getMinutes() / 5) * 5;
+    return Math.max(0, Math.min(1439, m));
+  };
+  const endMin = round5(now);
+  let startMin = round5(startedAt);
+  if (startMin >= endMin) startMin = Math.max(0, endMin - 5); // 最低5分は確保
+  const dur = endMin - startMin;
   const perDay = Boolean(t.repeat);
   setPerDayField(t, 'time', 'timeDates', key, tgMinToStr(startMin), perDay);
   setPerDayField(t, 'timeEnd', 'timeEndDates', key, tgMinToStr(endMin), perDay);
+  setPerDayField(t, 'minutes', 'minutesDates', key, dur, perDay); // タイマー時間も実績に
 }
 
 function toggleItem(it) {
@@ -508,7 +518,7 @@ function toggleItem(it) {
   }
   // タイマー実行中／実行済みのタスクを完了にしたら時刻を自動記録
   if (taskDoneOn(t, it.key) && db.running && db.running.taskId === t.id && db.running.dateKey === it.key) {
-    autoFillTimerTime(t, it.key, db.running.totalMs);
+    autoFillTimerTime(t, it.key, db.running);
   }
   ui.justToggledId = taskDoneOn(t, it.key) ? it.id : null;
   save();
@@ -1736,6 +1746,7 @@ document.addEventListener('change', (e) => {
 
 function toMin(t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3)); }
 function sleepDurMin(rec) { return (toMin(rec.wake) - toMin(rec.bed) + 1440) % 1440; }
+function sleepTotalMin(rec) { return ((rec.bed && rec.wake) ? sleepDurMin(rec) : 0) + (rec.nap || 0); } // 夜＋お昼寝の合計
 function fmtDur(min) { return `${Math.floor(min / 60)}時間${String(Math.round(min % 60)).padStart(2, '0')}分`; }
 function fmtClock(min) { const m2 = ((Math.round(min) % 1440) + 1440) % 1440; return `${String(Math.floor(m2 / 60)).padStart(2, '0')}:${String(m2 % 60).padStart(2, '0')}`; }
 
@@ -1747,29 +1758,49 @@ function buildSleepCard(key) {
   bed.type = 'time'; bed.step = 300; bed.value = rec.bed || '';
   const wake = document.createElement('input');
   wake.type = 'time'; wake.step = 300; wake.value = rec.wake || '';
+  const nap = document.createElement('input'); // お昼寝は「何分」で入力（時刻ではない）
+  nap.type = 'number'; nap.min = 0; nap.max = 1440; nap.step = 5; nap.className = 'sleep-nap-input mono'; nap.placeholder = '分'; nap.value = rec.nap || '';
   const dur = el('span', 'sleep-dur');
+  const napMin = () => { const v = parseInt(nap.value, 10); return Number.isInteger(v) && v > 0 ? Math.min(1440, Math.round(v / 5) * 5) : 0; };
+  const renderDur = () => {
+    dur.textContent = '';
+    const night = (bed.value && wake.value) ? sleepDurMin({ bed: bed.value, wake: wake.value }) : 0;
+    const nm = napMin();
+    const total = night + nm;
+    if (!total) return;
+    dur.append(el('span', 'sleep-total-v', fmtDur(total)));
+    if (night && nm) dur.append(el('span', 'sleep-breakdown', `夜${fmtDur(night)}＋昼寝${fmtDur(nm)}`));
+    else if (nm && !night) dur.append(el('span', 'sleep-breakdown', '昼寝のみ'));
+  };
   const sync = () => {
-    const r = { bed: bed.value || null, wake: wake.value || null };
-    if (r.bed || r.wake) db.sleep[key] = r; else delete db.sleep[key];
-    dur.textContent = r.bed && r.wake ? fmtDur(sleepDurMin(r)) : '';
+    const nm = napMin();
+    const r = { bed: bed.value || null, wake: wake.value || null, nap: nm || null };
+    if (r.bed || r.wake || r.nap) db.sleep[key] = r; else delete db.sleep[key];
+    renderDur();
     save();
   };
   bed.addEventListener('change', sync);
   wake.addEventListener('change', sync);
-  if (rec.bed && rec.wake) dur.textContent = fmtDur(sleepDurMin(rec));
+  nap.addEventListener('change', sync);
+  renderDur();
   // 各時刻の上に「その時刻がいつの日か」を小さく表示（日付の矛盾を感じにくく）
   const field = (dayText, labelText, input) => {
     const f = el('div', 'sleep-field');
     f.append(el('span', 'sleep-day', dayText), el('span', 'sleep-flabel', labelText), input);
     return f;
   };
+  const napField = () => {
+    const f = el('div', 'sleep-field sleep-field-nap');
+    const row = el('span', 'sleep-nap-row');
+    row.append(nap, el('span', 'sleep-nap-unit', '分'));
+    f.append(el('span', 'sleep-day', '今日'), el('span', 'sleep-flabel', 'お昼寝'), row);
+    return f;
+  };
   // 記録方法の設定で並び順を変える（夜に就寝→翌朝起床 / 朝に起床→夜に就寝）
   if (db.settings.sleepMode === 'morning') {
-    // 起床→就寝: どちらも同じ日（今日）
-    card.append(field('今日', '起床', wake), field('今日', '就寝', bed), dur);
+    card.append(field('今日', '起床', wake), field('今日', '就寝', bed), napField(), dur);
   } else {
-    // 就寝→起床: 就寝は前夜（昨日）、起床は今日
-    card.append(field('昨日', '就寝', bed), field('今日', '起床', wake), dur);
+    card.append(field('昨日', '就寝', bed), field('今日', '起床', wake), napField(), dur);
   }
   return card;
 }
@@ -1904,7 +1935,7 @@ function renderInsights() {
   if (sleepRecs.length) {
     const bedAvg = sleepRecs.reduce((a, r) => a + (toMin(r.bed) < 720 ? toMin(r.bed) + 1440 : toMin(r.bed)), 0) / sleepRecs.length;
     const wakeAvg = sleepRecs.reduce((a, r) => a + toMin(r.wake), 0) / sleepRecs.length;
-    const durAvg = sleepRecs.reduce((a, r) => a + sleepDurMin(r), 0) / sleepRecs.length;
+    const durAvg = sleepRecs.reduce((a, r) => a + sleepTotalMin(r), 0) / sleepRecs.length;
     const sCard = el('div', 'card chart-card');
     sCard.append(el('p', 'section-label', `睡眠（${sleepRecs.length}日分）`));
     const row = el('div', 'stats-row');
@@ -1919,8 +1950,8 @@ function renderInsights() {
       const d = fromKey(k);
       const li = el('div', 'sleep-row');
       li.append(el('span', `sl-date mono${dayColorClass(d)}`, `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）`));
-      li.append(el('span', 'sl-times mono', `就寝 ${rec.bed} ・ 起床 ${rec.wake}`));
-      li.append(el('span', 'sl-dur mono', fmtDur(sleepDurMin(rec))));
+      li.append(el('span', 'sl-times mono', `就寝 ${rec.bed} ・ 起床 ${rec.wake}${rec.nap ? ` ・ 昼寝 ${fmtDur(rec.nap)}` : ''}`));
+      li.append(el('span', 'sl-dur mono', fmtDur(sleepTotalMin(rec))));
       list.append(li);
     }
     sCard.append(list);
@@ -2569,15 +2600,14 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
     r.who = who && who.length ? who : null;
     r.meetUrl = meetUrl;
     if (!repeat && endDate && endDate > dateKey) r.endDate = endDate; else delete r.endDate; // 複数日予定の終了日
-  } else {
-    r.minutes = minutes;
   }
-  // メモ・日記・時刻: 繰り返し中は「この日」の分として独立保存、単発は本体に
+  // メモ・日記・時刻・タイマー時間: 繰り返し中は「この日」の分として独立保存、単発は本体に
   const perDay = Boolean(r.repeat) && Boolean(repeat);
   setPerDayField(r, 'memo', 'memoDates', item.key, memo, perDay);
   setPerDayField(r, 'diary', 'diaryDates', item.key, diary, perDay);
   setPerDayField(r, 'time', 'timeDates', item.key, time || null, perDay);
   setPerDayField(r, 'timeEnd', 'timeEndDates', item.key, time ? timeEnd : null, perDay);
+  if (item.kind !== 'event') setPerDayField(r, 'minutes', 'minutesDates', item.key, minutes, perDay);
   // 繰り返しの切替（タスク・予定共通）
   const wasRepeat = Boolean(r.repeat);
   const nowRepeat = Boolean(repeat);
@@ -2656,6 +2686,7 @@ function startTimer(it) {
     title: it.title,
     time: it.time || null,
     totalMs: it.minutes * 60 * 1000,
+    startedAt: Date.now(), // タイマーを始めた実時刻（完了時の逆算に使う）
     endAt: Date.now() + it.minutes * 60 * 1000,
     remainingMs: null,
     paused: false,
@@ -2737,7 +2768,7 @@ function completeRunning() {
   if (t && !taskDoneOn(t, r.dateKey)) {
     if (t.repeat) { t.doneDates = t.doneDates || {}; t.doneDates[r.dateKey] = Date.now(); }
     else { t.done = true; t.doneAt = Date.now(); }
-    autoFillTimerTime(t, r.dateKey, r.totalMs); // 開始/終了時刻を自動記録
+    autoFillTimerTime(t, r.dateKey, r); // 開始/終了時刻を実績で自動記録
   }
   db.running = null;
   save();

@@ -1580,3 +1580,22 @@ input, select, textarea { font: inherit; color: inherit; }
 /* iOSの日付入力は値が中央寄せになり右側が空いて見えるので左寄せに */
 input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pkg-make input[type="date"], .pkg-make-sub input[type="date"] { text-align: left; }
+
+/* ---------- v37: お昼寝・合計睡眠・対象外月の予定を薄く・タイマー実績 ---------- */
+/* 対象月ではない日の予定・タスクを薄くして、当月を目立たせる */
+.mo-cell.is-other .mo-chip,
+.mo-cell.is-other .mdot,
+.mo-cell.is-other .mo-chip-more { opacity: .35; }
+
+/* お昼寝（分）入力 */
+.sleep-field-nap .sleep-nap-row { display: inline-flex; align-items: center; gap: 3px; }
+.sleep-nap-input {
+  width: 54px; font: inherit; font-size: 12.5px; text-align: right;
+  background: var(--tc-bg); border: 1.5px solid var(--tc-line); border-radius: 8px; padding: 3px 5px; color: var(--tc-ink);
+}
+.sleep-nap-input:focus { outline: none; border-color: var(--tc-accent); }
+.sleep-nap-unit { font-size: 11px; color: var(--tc-ink3); }
+/* 合計睡眠（夜＋昼寝）の表示 */
+.sleep-dur { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; line-height: 1.25; }
+.sleep-total-v { font-family: var(--tc-mono); font-size: 12px; color: var(--tc-accent); font-weight: 700; }
+.sleep-breakdown { font-size: 9.5px; color: var(--tc-ink3); font-weight: 500; }
