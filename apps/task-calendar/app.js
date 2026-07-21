@@ -8,7 +8,7 @@ const BASE_TITLE = document.title;
 const WD_JA = ['日', '月', '火', '水', '木', '金', '土'];
 const WD_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const MONTH_EN = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
-const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' };
+const REPEAT_LABEL = { daily: '毎日', weekday: '平日', weekend: '土日祝', weekly: '毎週', monthly: '毎月', yearly: '毎年' };
 function repeatLabelOf(t) {
   if (t && t.repeat === 'weekdays') {
     const days = (t.weekdays || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)); // 月始まり
@@ -171,9 +171,12 @@ function occursOn(t, key) {
   }
   if (!t.repeat) return t.date === key;
   if (key < t.startDate || (t.exDates || []).includes(key)) return false;
+  if (t.repeatEnd && key > t.repeatEnd) return false; // 「今日以降を止める」ときの終了カットオフ（過去は残す）
   const d = fromKey(key);
   const s = fromKey(t.startDate);
   if (t.repeat === 'daily') return true;
+  if (t.repeat === 'weekday') return d.getDay() >= 1 && d.getDay() <= 5 && !isJpHoliday(d); // 平日（土日祝を除く・祝日は自動）
+  if (t.repeat === 'weekend') return d.getDay() === 0 || d.getDay() === 6 || isJpHoliday(d); // 土日祝（祝日は自動反映）
   if (t.repeat === 'weekdays') return (t.weekdays || []).includes(d.getDay()); // 選んだ曜日だけ（出勤/休みなど）
   if (t.repeat === 'weekly') return d.getDay() === s.getDay();
   if (t.repeat === 'monthly') return d.getDate() === s.getDate(); // 31日など存在しない月は自然にスキップ
@@ -3099,7 +3102,7 @@ function routineItemRow(data = {}) {
   const title = document.createElement('input');
   title.type = 'text'; title.maxLength = 80; title.placeholder = '例：ウォーキング'; title.value = data.title || '';
   const rep = document.createElement('select');
-  [['daily', '毎日'], ['weekdays', '曜日で'], ['weekly', '毎週'], ['monthly', '毎月']].forEach(([v, l]) => {
+  [['daily', '毎日'], ['weekday', '平日'], ['weekend', '土日祝'], ['weekdays', '曜日で'], ['weekly', '毎週'], ['monthly', '毎月']].forEach(([v, l]) => {
     const o = document.createElement('option'); o.value = v; o.textContent = l; rep.append(o);
   });
   rep.value = data.repeat || 'daily';
@@ -3241,9 +3244,14 @@ $('#r-form').addEventListener('submit', (e) => {
       keptIds.add(base.id);
     }
   }
-  // このルーティンに属する項目のうち、行から消えたものを削除（両方の配列から念のため）
-  db.tasks = db.tasks.filter((t) => t.routineId !== r.id || keptIds.has(t.id));
-  db.events = db.events.filter((e) => e.routineId !== r.id || keptIds.has(e.id));
+  // 行から消えた項目は「過去の記録を残す」ため、削除ではなく昨日でカット（過去がなければ削除）
+  const cutoff = toKey(addDays(new Date(), -1));
+  const handleRemoved = (x) => {
+    if (x.startDate && x.startDate > cutoff) return false; // 過去がない（今日以降開始）→ 削除
+    delete x.routineId; if (x.repeat) x.repeatEnd = cutoff; return true; // 過去あり → 残して未来だけ止める
+  };
+  db.tasks = db.tasks.filter((t) => t.routineId !== r.id || keptIds.has(t.id) || handleRemoved(t));
+  db.events = db.events.filter((e) => e.routineId !== r.id || keptIds.has(e.id) || handleRemoved(e));
 
   save();
   $('#routine-scrim').hidden = true;
@@ -3253,26 +3261,46 @@ $('#r-form').addEventListener('submit', (e) => {
 
 /* ----- 削除 ----- */
 
-function deleteRoutine(r, keepTasks) {
+// mode: 'keepPast'（今日以降だけやめる・過去の記録は残す） / 'all'（過去も含めぜんぶ消す）
+function deleteRoutine(r, mode) {
   const rIndex = db.routines.indexOf(r);
   const affTasks = db.tasks.filter((t) => t.routineId === r.id);
   const affEvents = db.events.filter((e) => e.routineId === r.id);
+  const affected = [...affTasks, ...affEvents];
+  const snapshot = affected.map((x) => ({ ref: x, routineId: x.routineId, repeatEnd: x.repeatEnd })); // Undo用
   db.routines.splice(rIndex, 1);
-  if (keepTasks) [...affTasks, ...affEvents].forEach((x) => { delete x.routineId; }); // ふつうの繰り返しとして残す
-  else {
+  if (mode === 'keepPast') {
+    const cutoff = toKey(addDays(new Date(), -1)); // 昨日まで残す（当日より前）
+    affected.forEach((x) => {
+      delete x.routineId; // ルーティンから切り離す
+      if (x.repeat) x.repeatEnd = cutoff; // 未来を止める（過去の occurrences・doneDates は残る）
+      else if (x.date && x.date >= todayKey()) { // 単発で今日以降のものは消す対象に
+        if (x.doneDates !== undefined || x.minutes !== undefined) db.tasks = db.tasks.filter((t) => t !== x);
+        else db.events = db.events.filter((e) => e !== x);
+      }
+    });
+  } else { // all
     db.tasks = db.tasks.filter((t) => t.routineId !== r.id);
     db.events = db.events.filter((e) => e.routineId !== r.id);
   }
   save(); renderAll();
-  showUndoToast(`「${r.title}」を削除しました`, () => {
+  const msg = mode === 'keepPast' ? `「${r.title}」を今日以降やめました（過去の記録は残っています）` : `「${r.title}」を削除しました`;
+  showUndoToast(msg, () => {
     db.routines.splice(Math.min(rIndex, db.routines.length), 0, r);
-    if (keepTasks) [...affTasks, ...affEvents].forEach((x) => { x.routineId = r.id; });
-    else { db.tasks.push(...affTasks); db.events.push(...affEvents); }
+    snapshot.forEach((s) => {
+      s.ref.routineId = s.routineId;
+      if (s.repeatEnd) s.ref.repeatEnd = s.repeatEnd; else delete s.ref.repeatEnd;
+    });
+    if (mode === 'all') { db.tasks.push(...affTasks); db.events.push(...affEvents); }
+    else { // keepPast の単発削除ぶんを戻す
+      affTasks.forEach((t) => { if (!db.tasks.includes(t)) db.tasks.push(t); });
+      affEvents.forEach((e) => { if (!db.events.includes(e)) db.events.push(e); });
+    }
     save(); renderAll();
   });
 }
-$('#rdel-keep').addEventListener('click', () => { $('#rdel-scrim').hidden = true; if (rdelTarget) deleteRoutine(rdelTarget, true); rdelTarget = null; });
-$('#rdel-all').addEventListener('click', () => { $('#rdel-scrim').hidden = true; if (rdelTarget) deleteRoutine(rdelTarget, false); rdelTarget = null; });
+$('#rdel-keep').addEventListener('click', () => { $('#rdel-scrim').hidden = true; if (rdelTarget) deleteRoutine(rdelTarget, 'keepPast'); rdelTarget = null; });
+$('#rdel-all').addEventListener('click', () => { $('#rdel-scrim').hidden = true; if (rdelTarget) deleteRoutine(rdelTarget, 'all'); rdelTarget = null; });
 $('#rdel-cancel').addEventListener('click', () => { $('#rdel-scrim').hidden = true; rdelTarget = null; });
 $('#rdel-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.hidden = true; rdelTarget = null; } });
 

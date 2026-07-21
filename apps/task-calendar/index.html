@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=39">
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="tokens.css?v=40">
+<link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
 
@@ -317,6 +317,8 @@
           <select id="f-repeat">
             <option value="">なし</option>
             <option value="daily">毎日</option>
+            <option value="weekday">平日（土日祝以外）</option>
+            <option value="weekend">土日祝</option>
             <option value="weekly">毎週</option>
             <option value="monthly">毎月</option>
             <option value="yearly">毎年</option>
@@ -550,9 +552,10 @@
     <div class="sheet-grip"></div>
     <h2 class="sheet-title">ルーティンの削除</h2>
     <p class="confirm-name" id="rdel-name"></p>
-    <button class="cta ghost" id="rdel-keep">タスクと実績は残して削除</button>
-    <button class="cta danger" id="rdel-all">実績ごとすべて削除</button>
+    <button class="cta" id="rdel-keep">今日以降だけやめる（過去の記録は残す）</button>
+    <button class="cta danger" id="rdel-all">ぜんぶ消す（過去の記録も消す）</button>
     <button class="cta plain" id="rdel-cancel">キャンセル</button>
+    <p class="hint" style="text-align:center;margin-top:8px">「今日以降だけやめる」を選ぶと、これまでの達成・記録はカレンダーに残ります（振り返り用）。</p>
   </div>
 </div>
 
@@ -608,7 +611,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=39"></script>
-<script src="app.js?v=39"></script>
+<script src="firebase-config.js?v=40"></script>
+<script src="app.js?v=40"></script>
 </body>
 </html>
