@@ -30,6 +30,9 @@ const ACCENTS = {
   purple: { name: 'パープル', light: '#7c6bd9', dark: '#9184e0', bright: '#afa3f0', ink: '#201a45' },
   orange: { name: 'オレンジ', light: '#d9822b', dark: '#e09a4a', bright: '#f0b36e', ink: '#3a2408' },
   pink:   { name: 'ピンク',   light: '#d95b8a', dark: '#e07aa3', bright: '#f09ec0', ink: '#40122a' },
+  red:    { name: 'レッド',   light: '#d6453f', dark: '#e0665f', bright: '#f08a86', ink: '#3f0d0b' },
+  yellow: { name: 'イエロー', light: '#b8901a', dark: '#d0aa38', bright: '#e8c96a', ink: '#3a2c05' },
+  indigo: { name: 'インディゴ', light: '#4a56c0', dark: '#6b76d8', bright: '#8f98e8', ink: '#12163f' },
 };
 
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
@@ -63,7 +66,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -86,7 +89,7 @@ function loadDb() {
   return defaultDb();
 }
 
-const db = loadDb();
+let db = loadDb(); // バックアップ復元でまるごと入れ替えることがあるため let
 if (!Array.isArray(db.calendars) || db.calendars.length === 0) {
   db.calendars = [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }];
 }
@@ -1597,9 +1600,13 @@ function renderMonth(body) {
         // 複数日予定は、開始日と各週の月曜だけ名前を出し、中日は帯だけにして横に繋がって見えるように
         const isMidOrEnd = it.span && !it.span.isStart && !isMon;
         const label = isMidOrEnd ? '' : it.title;
-        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}${it.span ? ' mo-chip-span' : ''}`, label);
+        const invert = db.settings.invertEvents && it.kind === 'event'; // 予定は色を反転（フチ＋薄塗り）でタスクと見分ける
+        const chip = el('span', `mo-chip${it.done ? ' is-done' : ''}${it.kind === 'event' && !it.ref.color ? ' is-event-chip' : ''}${it.span ? ' mo-chip-span' : ''}${invert ? ' mo-chip-invert' : ''}`, label);
         const cc = itemColor(it);
-        if (cc) chip.style.background = cc;
+        if (cc) {
+          if (invert) { chip.style.background = 'transparent'; chip.style.color = cc; chip.style.borderColor = cc; }
+          else chip.style.background = cc;
+        }
         const ec = itemEdgeColor(it);
         if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
         if (it.span) { // 隙間なく連日つながって見えるよう、セルのすき間ぶんだけ左右に伸ばす（週の端は伸ばさず角丸に）
@@ -2152,6 +2159,8 @@ function renderSettings() {
   if (tn) tn.checked = !!db.settings.timerNotify;
   const me = $('#month-edge-toggle');
   if (me) me.checked = !!db.settings.monthEdge;
+  const ie = $('#invert-events-toggle');
+  if (ie) ie.checked = !!db.settings.invertEvents;
   const sh = $('#sticky-toggle');
   if (sh) sh.checked = db.settings.stickyHeader !== false;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
@@ -2247,6 +2256,52 @@ $('#sticky-toggle').addEventListener('change', (e) => {
   db.settings.stickyHeader = e.target.checked;
   applyStickyHeader();
   save();
+});
+
+$('#invert-events-toggle').addEventListener('change', (e) => {
+  db.settings.invertEvents = e.target.checked;
+  save();
+  renderAll();
+});
+
+/* ----- バックアップ（書き出し／復元。手動・容量は端末のファイル1個だけ） ----- */
+
+function backupFilename() {
+  const d = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `task-calendar-backup-${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}.json`;
+}
+function downloadBackup() {
+  const blob = new Blob([JSON.stringify({ taskCalendarBackup: 2, savedAt: new Date().toISOString(), db }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = backupFilename();
+  document.body.append(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+$('#backup-export').addEventListener('click', () => {
+  downloadBackup();
+  flashToast('バックアップを書き出しました（ファイル）');
+});
+$('#backup-import').addEventListener('click', () => $('#backup-file').click());
+$('#backup-file').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const incoming = data.taskCalendarBackup ? data.db : (data.tasks && data.settings ? data : null); // 素のdbも受け付ける
+    if (!incoming || !Array.isArray(incoming.tasks)) { flashToast('バックアップファイルではないようです'); return; }
+    downloadBackup(); // 安全弁: 復元前に現在のデータも書き出しておく
+    db = { ...defaultDb(), ...incoming, settings: { ...defaultDb().settings, ...(incoming.settings || {}) } };
+    save();
+    applyTheme(); applyFont(); applySize(); applyStyle(); applyZoomLock(); applyStickyHeader();
+    renderAll();
+    flashToast('バックアップから復元しました');
+  } catch (err) {
+    flashToast('読み込めませんでした（JSONファイルを選んでね）');
+  }
 });
 
 /* ========== add / edit sheet ========== */

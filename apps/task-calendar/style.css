@@ -1617,3 +1617,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .r-wd-chip { flex: 1; padding: 6px 0; border-radius: 8px; background: var(--tc-surface2); border: 1.5px solid var(--tc-line); font-size: 12px; color: var(--tc-ink2); }
 .r-wd-chip.is-on { background: var(--tc-accent-soft); border-color: var(--tc-accent); color: var(--tc-accent); font-weight: 700; }
 .r-type-chip { display: inline-block; font-size: 11px; font-weight: 700; color: var(--tc-accent); background: var(--tc-accent-soft); border-radius: var(--tc-r-pill); padding: 2px 10px; margin-top: 4px; }
+
+/* ---------- v41: 予定の色反転・バックアップ ---------- */
+.mo-chip-invert { border: 1.5px solid; background: transparent; }
+#backup-body .cta { margin-top: 8px; }
+#backup-body input[type="file"] { display: none; }
