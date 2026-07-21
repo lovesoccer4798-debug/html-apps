@@ -1,23 +1,25 @@
-/* Task Calendar — Notion連携の中継（Cloudflare Worker）
+/* Task Calendar — 連携中継（Cloudflare Worker）: Notion ＋ Googleカレンダー常時連携
  *
- * なぜ必要か: Notion API（api.notion.com）はブラウザから直接呼べない（CORS非対応）。
- * この Worker がアプリと Notion の間に立ち、Notionトークンを安全に保持して中継する。
+ * なぜ必要か:
+ * - Notion API（api.notion.com）はブラウザから直接呼べない（CORS非対応）→ この Worker が中継
+ * - Googleカレンダーの「常時連携」には client_secret が必要で、ブラウザに置けない → この Worker が保持
  *
  * ─ デプロイ手順（無料・カード不要）─
- * 1. https://dash.cloudflare.com/ でアカウント作成 → Workers & Pages → Create → Worker
- * 2. このファイルの中身をまるごと貼り付けて Deploy
- * 3. Worker の Settings → Variables and Secrets に3つ登録:
- *      NOTION_TOKEN   … Notion の内部インテグレーションのトークン（secret_xxx）
- *      TC_SHARED_SECRET … アプリと合わせる合言葉（好きな長い文字列。アプリ設定にも同じ値を入れる）
- *      ALLOW_ORIGIN   … https://lovesoccer4798-debug.github.io （アプリの配信元）
- * 4. デプロイURL（https://xxx.workers.dev）をアプリの 設定 → Notion連携 に貼る
+ * 1. https://dash.cloudflare.com/ → Workers & Pages → 既存のWorkerを開く（新規でも可）
+ * 2. Edit code でこのファイルの中身をまるごと貼り替えて Deploy
+ * 3. Worker の Settings → Variables and Secrets（既存の3つに加えて、Google用に2つ追加）:
+ *      NOTION_TOKEN        … Notion のトークン（ntn_xxx）〔既存〕
+ *      TC_SHARED_SECRET    … アプリと合わせる合言葉〔既存〕
+ *      ALLOW_ORIGIN        … https://lovesoccer4798-debug.github.io 〔既存〕
+ *      GOOGLE_CLIENT_ID     … Google Cloud Console の OAuthクライアントID〔新規・Secret〕
+ *      GOOGLE_CLIENT_SECRET … 同クライアントの「クライアント シークレット」〔新規・Secret〕
+ *        （https://console.cloud.google.com/apis/credentials → 該当のOAuthクライアントを開くと表示）
+ * 4. アプリ側の設定は不要（Notion連携のWorker URL・合言葉をそのまま使います）。
+ *    アプリの 設定 → Googleカレンダー → 「再連携」を1回すると、以後は自動更新（常時連携）になります。
  *
- * ─ Notion側の準備 ─
- * - https://www.notion.so/my-integrations で内部インテグレーションを作成 → トークン取得
- * - 記録用のデータベースを作り、右上「…」→「接続」からそのインテグレーションを接続
- * - データベースに次のプロパティを用意（名前は完全一致で）:
+ * ─ Notion側の準備（初回のみ・設定済みならそのまま）─
+ * - https://www.notion.so/my-integrations でトークン取得、DBに接続、プロパティ:
  *      名前（Title）／日付（Date）／日記（Text）／メモ（Text）／できたこと（Number）／就寝（Text）／起床（Text）
- * - データベースIDをアプリ設定に貼る（DBを開いたURLの32桁の英数字）
  */
 
 const NOTION_VERSION = '2022-06-28';
@@ -39,6 +41,32 @@ export default {
     const token = (env.NOTION_TOKEN || '').trim();
     if ((request.headers.get('X-TC-Secret') || '').trim() !== secret) {
       return json({ error: 'unauthorized' }, 401, cors);
+    }
+
+    // ─ Googleカレンダー常時連携（トークン交換・自動更新）─
+    const path = new URL(request.url).pathname;
+    if (path.endsWith('/gcal/exchange') || path.endsWith('/gcal/refresh')) {
+      const cid = (env.GOOGLE_CLIENT_ID || '').trim();
+      const csec = (env.GOOGLE_CLIENT_SECRET || '').trim();
+      if (!cid || !csec) return json({ error: 'gcal-not-configured' }, 501, cors);
+      let body2;
+      try { body2 = await request.json(); } catch (e) { return json({ error: 'bad-json' }, 400, cors); }
+      const form = path.endsWith('/gcal/exchange')
+        ? { code: body2.code, client_id: cid, client_secret: csec, redirect_uri: body2.redirectUri, grant_type: 'authorization_code' }
+        : { refresh_token: body2.refreshToken, client_id: cid, client_secret: csec, grant_type: 'refresh_token' };
+      try {
+        const g = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(form),
+        });
+        const data = await g.json();
+        if (!g.ok) return json({ error: 'google-token', status: g.status, detail: data.error || '' }, 502, cors);
+        // access_token / refresh_token / expires_in をそのままアプリへ（Workerには保存しない）
+        return json({ access_token: data.access_token, refresh_token: data.refresh_token || null, expires_in: data.expires_in || 3600 }, 200, cors);
+      } catch (e) {
+        return json({ error: 'worker', detail: String(e) }, 500, cors);
+      }
     }
 
     let body;

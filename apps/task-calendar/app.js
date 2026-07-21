@@ -3888,19 +3888,52 @@ function gcalToken() {
 }
 // 連携済み（フィルタチップに「Googleカレンダー」を出す条件）
 function gcalConnected() { return Boolean(db.settings.gcal); }
+// 常時連携の中継Worker（Notion連携と同じURL・合言葉を使う。設定済みならゼロ設定で常時連携に）
+function gcalWorkerCfg() {
+  const n = db.settings.notion || {};
+  return n.url && n.secret ? { url: n.url.replace(/\/+$/, ''), secret: n.secret } : null;
+}
+// トークンが切れていたら、リフレッシュトークンで静かに更新（常時連携の心臓部）
+let gcalRefreshing = null; // 同時多発を1本にまとめる
+async function gcalRefreshIfNeeded() {
+  const g = db.settings.gcal;
+  if (!g) return null;
+  if (g.token && g.exp > Date.now()) return g.token;
+  const w = gcalWorkerCfg();
+  if (!g.refresh || !w) return null;
+  if (gcalRefreshing) return gcalRefreshing;
+  gcalRefreshing = (async () => {
+    try {
+      const res = await fetch(`${w.url}/gcal/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-TC-Secret': w.secret },
+        body: JSON.stringify({ refreshToken: g.refresh }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.access_token) return null;
+      g.token = data.access_token;
+      g.exp = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
+      persistLocal();
+      return g.token;
+    } catch (err) { return null; } finally { gcalRefreshing = null; }
+  })();
+  return gcalRefreshing;
+}
 function gcalConnect() {
   if (!window.TC_GCAL_CLIENT_ID) { flashToast('先にクライアントIDの設定が必要です（下の手順を見てね）'); return; }
+  const useCode = Boolean(gcalWorkerCfg()); // Worker があれば常時連携（codeフロー）、なければ従来（1時間）
   const params = new URLSearchParams({
     client_id: window.TC_GCAL_CLIENT_ID,
     redirect_uri: location.origin + location.pathname,
-    response_type: 'token',
+    response_type: useCode ? 'code' : 'token',
     scope: GCAL_SCOPE,
     include_granted_scopes: 'true',
     state: 'tc-gcal',
   });
+  if (useCode) { params.set('access_type', 'offline'); params.set('prompt', 'consent'); }
   location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
-// 認可画面から戻ってきた時: URLフラグメントのアクセストークンを回収してURLを掃除
+// 認可画面から戻ってきた時（従来: URLフラグメントのアクセストークン）
 (() => {
   if (!location.hash.includes('access_token')) return;
   const h = new URLSearchParams(location.hash.slice(1));
@@ -3914,6 +3947,32 @@ function gcalConnect() {
   history.replaceState(null, '', location.pathname + location.search);
   flashToast('Googleカレンダーと連携しました');
 })();
+// 認可画面から戻ってきた時（常時連携: ?code= をWorkerでトークンに交換）
+(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('state') !== 'tc-gcal' || !q.get('code')) return;
+  const code = q.get('code');
+  q.delete('code'); q.delete('state'); q.delete('scope'); q.delete('authuser'); q.delete('prompt');
+  history.replaceState(null, '', location.pathname + (q.toString() ? `?${q}` : ''));
+  const w = gcalWorkerCfg();
+  if (!w) return;
+  fetch(`${w.url}/gcal/exchange`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-TC-Secret': w.secret },
+    body: JSON.stringify({ code, redirectUri: location.origin + location.pathname }),
+  }).then((res) => res.json().then((data) => {
+    if (!res.ok || !data.access_token) { flashToast(`Google連携に失敗しました（${data.error || res.status}）`); return; }
+    db.settings.gcal = {
+      token: data.access_token,
+      exp: Date.now() + ((data.expires_in || 3600) - 60) * 1000,
+      refresh: data.refresh_token || (db.settings.gcal && db.settings.gcal.refresh) || null,
+      on: true,
+    };
+    persistLocal();
+    flashToast(db.settings.gcal.refresh ? 'Googleカレンダーと連携しました（常時連携・自動更新）' : 'Googleカレンダーと連携しました');
+    renderAll();
+  })).catch(() => flashToast('Google連携に失敗しました（Workerを確認してね）'));
+})();
 function gcalDisconnect() {
   delete db.settings.gcal;
   gcalEvents = {};
@@ -3925,7 +3984,7 @@ function gcalDisconnect() {
 async function gcalEnsureMonth(key) {
   const m = key.slice(0, 7); // 月単位でまとめて取得（通信回数を抑える）
   if (gcalFetched[m]) return;
-  const token = gcalToken();
+  const token = gcalToken() || await gcalRefreshIfNeeded(); // 切れていたら自動で更新（常時連携）
   if (!token) return;
   gcalFetched[m] = 'loading';
   try {
@@ -3941,10 +4000,12 @@ async function gcalEnsureMonth(key) {
     const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.status === 401 || res.status === 403) { // トークン切れ → 再連携待ち
+    if (res.status === 401 || res.status === 403) { // トークン切れ → 自動更新できれば静かに再取得
       db.settings.gcal.exp = 0;
       persistLocal();
       gcalFetched[m] = false;
+      const fresh = await gcalRefreshIfNeeded();
+      if (fresh) { gcalEnsureMonth(key); return; } // 常時連携: 更新後にもう一度
       if (ui.screen === 'settings') renderGcalCard();
       return;
     }
@@ -3985,10 +4046,10 @@ function gcalItemsFor(key) {
 
 /* ===== 双方向書き込み（アプリの予定→Google・Meet自動発行）===== */
 const TC_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
-function gcalCanWrite() { return Boolean(gcalToken()); }
+function gcalCanWrite() { return Boolean(gcalToken() || (db.settings.gcal && db.settings.gcal.refresh && gcalWorkerCfg())); }
 
 async function gcalWrite(method, path, body) {
-  const token = gcalToken();
+  const token = gcalToken() || await gcalRefreshIfNeeded(); // 切れていたら自動で更新（常時連携）
   if (!token) throw new Error('no-token');
   const res = await fetch(`https://www.googleapis.com/calendar/v3/${path}`, {
     method,
@@ -4086,15 +4147,23 @@ function renderGcalCard() {
     return;
   }
   const row = el('div', 'sync-row');
-  const expired = !gcalToken();
+  const always = Boolean(g.refresh && gcalWorkerCfg()); // 常時連携（自動更新）モード
+  const expired = !gcalToken() && !always;
   row.append(el('span', 'sync-email', 'Googleカレンダー'));
-  row.append(el('span', `sync-state${expired ? '' : ' ok'}`, expired ? '接続の期限切れ（再連携してね）' : '連携中（読み込みのみ）'));
+  row.append(el('span', `sync-state${expired ? '' : ' ok'}`, always ? '常時連携中（自動更新）' : expired ? '接続の期限切れ（再連携してね）' : '連携中'));
   wrap.append(row);
   if (expired) {
     const re = el('button', 'cta', '再連携する');
     re.type = 'button';
     re.addEventListener('click', gcalConnect);
     wrap.append(re);
+  }
+  if (!always && gcalWorkerCfg()) {
+    const up = el('button', 'cta ghost', '常時連携に切り替える（再連携1回）');
+    up.type = 'button';
+    up.addEventListener('click', gcalConnect);
+    wrap.append(up);
+    wrap.append(el('p', 'hint', 'Workerの更新（notion-worker.jsの貼り替え＋Googleのクライアントシークレット登録）が済んでいれば、1回の再連携で以後は自動更新になります。'));
   }
   const tg = el('label', 'sync-toggle');
   const cb = document.createElement('input');

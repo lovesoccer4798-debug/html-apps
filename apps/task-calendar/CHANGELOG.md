@@ -2,6 +2,14 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.27.0] - 2026-07-19
+
+### Added
+
+- Googleカレンダーの常時連携（自動更新）。これまで約1時間で接続が切れて再連携が必要でしたが、Notion連携と同じCloudflare Worker（無料）を通じて自動でトークンを更新し、再連携がほぼ不要になります
+- 使い方: ①Workerのコードを notion-worker.js の最新版に貼り替え ②Workerの環境変数に GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET を追加 ③アプリの設定 → Googleカレンダー → 「常時連携に切り替える（再連携1回）」。以後は切れる直前に自動更新
+- Workerが未設定でも従来どおり使えます（約1時間で再連携）。トークンはこれまで同様この端末のみに保存（Workerには保存されません）
+
 ## [1.26.0] - 2026-07-19
 
 ### Added
