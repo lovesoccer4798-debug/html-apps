@@ -1346,6 +1346,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .anniv-banner .icon { color: #f5b301; }
 .vis-row { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
 .vis-row:last-child { border-bottom: none; }
+.vis-group { font-size: 11px; font-weight: 700; color: var(--tc-ink3); margin: 12px 0 2px; letter-spacing: 0.02em; }
+.vis-group:first-child { margin-top: 0; }
 .vis-row input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
 
 /* ---------- v16: 睡眠一覧・ルーティン期間・gcal URI ---------- */

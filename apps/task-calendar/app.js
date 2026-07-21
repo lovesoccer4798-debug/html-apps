@@ -1602,7 +1602,7 @@ function renderDay(body) {
     body.append(banner);
   }
 
-  body.append(buildSleepCard(key));
+  if (!sectionHidden('sleep')) body.append(buildSleepCard(key));
 
   const items = itemsFor(key).filter(passFilter);
   const stats = tasksStatsFor(key);
@@ -1614,7 +1614,7 @@ function renderDay(body) {
 
   if (items.length === 0) {
     body.append(el('p', 'empty', 'まだ何もありません。右下の「＋」からタスクや予定を追加してみましょう。'));
-    body.append(buildDayLogCard(key));
+    if (!sectionHidden('daylog')) body.append(buildDayLogCard(key));
     return;
   }
   const tl = el('div', 'tl');
@@ -1649,7 +1649,7 @@ function renderDay(body) {
     tl.append(row);
   }
   body.append(tl);
-  body.append(buildDayLogCard(key));
+  if (!sectionHidden('daylog')) body.append(buildDayLogCard(key));
 }
 
 // まとめ日記の名前（設定で変更可・空欄なら既定）
@@ -5123,6 +5123,9 @@ function renderSharedCard() {
 
 const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
 const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['routines', 'ルーティン']];
+// 日ビューに出るカード（後から追加された機能ぶんも隠せるように）
+function hideSections() { return [['sleep', '睡眠の記録'], ['daylog', dayLogName()]]; }
+function sectionHidden(key) { return !!(db.settings.hidden || {})[`section:${key}`]; }
 
 function applyVisibility() {
   const h = db.settings.hidden || {};
@@ -5158,8 +5161,11 @@ function renderVisibilityCard() {
     row.append(cb, ` ${label}`);
     wrap.append(row);
   };
+  wrap.append(el('p', 'vis-group', 'ビュー・タブ'));
   HIDE_VIEWS.forEach(([v, label]) => mk(`view:${v}`, label));
   HIDE_NAVS.forEach(([n, label]) => mk(`nav:${n}`, label));
+  wrap.append(el('p', 'vis-group', '日ビューのカード'));
+  hideSections().forEach(([s, label]) => mk(`section:${s}`, label));
 }
 
 /* ========== v14: 記念日（あと◯日カウントダウン） ========== */
