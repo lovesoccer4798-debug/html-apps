@@ -126,6 +126,8 @@ const ui = {
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
   schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
   schedDur: 60,             // 候補1枠の長さ（分）
+  schedMeet: false,         // 確定時にMeet発行するか
+  schedEditCode: null,      // 変更中の予約リンクのコード（発行済みの再編集）
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
@@ -988,7 +990,7 @@ function renderCal() {
     if (gcalConnected()) chips.append(mkChip('gcal', 'Googleカレンダー', f === 'all' || f.includes('gcal'), (ACCENTS.blue || ACCENTS.green)[dark ? 'dark' : 'light']));
     body.append(chips);
   }
-  if (ui.view !== 'grid' && ui.schedMode) { ui.schedMode = false; ui.schedSlots = []; } // 時間割を離れたら調整モード終了
+  if (ui.view !== 'grid' && ui.schedMode) { ui.schedMode = false; ui.schedSlots = []; ui.schedEditCode = null; } // 時間割を離れたら調整モード終了
   if (ui.view === 'day') renderDay(body);
   if (ui.view === 'grid') renderGrid(body);
   if (ui.view === 'week') renderWeek(body);
@@ -1060,13 +1062,21 @@ function renderGrid(body) {
       mc.addEventListener('click', () => { ui.schedMeet = !ui.schedMeet; renderAll(); });
       row2.append(mc);
     }
-    const linkBtn = el('button', 'cta ghost sched-exit', 'リンクを発行');
+    const linkBtn = el('button', 'cta ghost sched-exit', ui.schedEditCode ? '変更を保存' : 'リンクを発行');
     linkBtn.type = 'button';
     linkBtn.disabled = !ui.schedSlots.length;
     linkBtn.addEventListener('click', schedIssueLink);
     row2.append(linkBtn);
+    if (ui.schedEditCode) {
+      const cancelEdit = el('button', 'cta ghost sched-exit', '変更をやめる');
+      cancelEdit.type = 'button';
+      cancelEdit.addEventListener('click', () => { ui.schedEditCode = null; ui.schedSlots = []; renderAll(); });
+      row2.append(cancelEdit);
+    }
     bar.append(row2);
     bar.append(el('p', 'sched-hint2', 'リンク発行: 相手がリンクから日時を選ぶと、あなたのカレンダーに自動で予定が入ります（要ログイン）。'));
+    const offerList = buildOfferList();
+    if (offerList) bar.append(offerList);
     body.append(bar);
   }
 
@@ -1202,8 +1212,8 @@ function schedAddSlot(key, y) {
   renderAll();
 }
 
-function schedText() {
-  const slots = [...ui.schedSlots].sort((a, b) => a.key.localeCompare(b.key) || a.startMin - b.startMin);
+function schedText(srcSlots) {
+  const slots = [...(srcSlots || ui.schedSlots)].sort((a, b) => a.key.localeCompare(b.key) || a.startMin - b.startMin);
   const lines = slots.map((s) => {
     const d = fromKey(s.key);
     return `・${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`;
@@ -1238,34 +1248,117 @@ function slotBusy(s) {
   });
 }
 
+function meetUrl(code) { return `${location.origin}${location.pathname}?meet=${code}`; }
+
 async function schedIssueLink() {
   if (!ui.schedSlots.length) return;
   if (!fbReady || !fbUser) { flashToast('リンク発行にはログインが必要です（設定→アカウントと同期）'); return; }
-  const code = Math.random().toString(36).slice(2, 10);
+  const editing = ui.schedEditCode ? (db.settings.meetOffers || []).find((o) => o.code === ui.schedEditCode) : null;
+  const code = editing ? editing.code : Math.random().toString(36).slice(2, 10);
+  const slots = ui.schedSlots.map((s) => ({ ...s }));
+  const meet = Boolean(ui.schedMeet && gcalCanWrite());
   const offerDoc = {
     v: 1,
     ownerUid: fbUser.uid,
     owner: (db.settings.userName || '').trim() || null,
-    slots: ui.schedSlots.map((s) => ({ ...s })),
-    meet: Boolean(ui.schedMeet && gcalCanWrite()),
+    slots,
+    meet,
     status: 'open',
     picked: null,
     meetLink: null,
     updatedAt: Date.now(),
   };
   try {
-    await meetDocRef(code).set(offerDoc);
+    await meetDocRef(code).set(offerDoc); // 変更時も丸ごと上書き（open に戻す）
     db.settings.meetOffers = db.settings.meetOffers || [];
-    db.settings.meetOffers.push({ code, done: false });
+    if (editing) {
+      removeMeetEvent(code); // 前に自動で入った予定があれば取り消して募集に戻す
+      Object.assign(editing, { done: false, slots, owner: offerDoc.owner, meet, status: 'open', picked: null, meetLink: null, createdAt: editing.createdAt || Date.now(), url: meetUrl(code) });
+    } else {
+      db.settings.meetOffers.push({ code, done: false, slots, owner: offerDoc.owner, meet, status: 'open', picked: null, meetLink: null, createdAt: Date.now(), url: meetUrl(code) });
+    }
+    ui.schedEditCode = null;
     persistLocal();
     meetWatch(code);
-    const url = `${location.origin}${location.pathname}?meet=${code}`;
-    const text = `${schedText()}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${url}`;
+    const text = `${schedText()}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${meetUrl(code)}`;
     try { await navigator.clipboard.writeText(text); } catch (e) { /* 手動コピーでも可 */ }
-    flashToast('リンクを発行して、定型文ごとコピーしました');
+    ui.schedSlots = [];
+    renderAll();
+    flashToast(editing ? '変更を保存して、定型文ごとコピーしました（相手に送り直してね）' : 'リンクを発行して、定型文ごとコピーしました');
   } catch (err) {
     flashToast('リンク発行に失敗しました（Firestoreルールの設定を確認してね）');
   }
+}
+
+// 予約リンクに紐づいて自動で入った予定を取り消す（Google側からも削除）
+function removeMeetEvent(code) {
+  const idx = (db.events || []).findIndex((e) => e.meetCode === code);
+  if (idx < 0) return;
+  const ev = db.events[idx];
+  if (ev.gcalId) gcalDeleteEvent(ev.gcalId);
+  db.events.splice(idx, 1);
+}
+
+// 発行済みリンクの一覧を作る（募集中・確定・Meetリンクのコピー・変更・取り消し）
+function schedStatusLabel(o) {
+  if (o.status === 'confirmed' || (o.status === 'picked' && o.done)) return '確定';
+  if (o.status === 'picked') return '確定処理中';
+  return '募集中';
+}
+function schedSlotLine(s) {
+  const d = fromKey(s.key);
+  return `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`;
+}
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e2) { /* noop */ } ta.remove();
+  }
+  if (msg) flashToast(msg);
+}
+async function schedCancelOffer(code) {
+  removeMeetEvent(code);
+  try { await meetDocRef(code).delete(); } catch (e) { /* ローカルからは消す */ }
+  db.settings.meetOffers = (db.settings.meetOffers || []).filter((o) => o.code !== code);
+  delete meetWatched[code];
+  if (ui.schedEditCode === code) { ui.schedEditCode = null; ui.schedSlots = []; }
+  persistLocal();
+  renderAll();
+  flashToast('予約リンクを取り消しました');
+}
+function schedEditOffer(o) {
+  ui.schedEditCode = o.code;
+  ui.schedSlots = (o.slots || []).map((s) => ({ ...s }));
+  if (o.slots && o.slots[0]) ui.schedDur = o.slots[0].durMin;
+  ui.schedMeet = Boolean(o.meet);
+  flashToast('候補を読み込みました。変更して「変更を保存」を押してね');
+  renderAll();
+}
+function buildOfferList() {
+  const offers = (db.settings.meetOffers || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (!offers.length) return null;
+  const box = el('div', 'sched-offers');
+  box.append(el('p', 'sched-offers-h', '発行済みのリンク'));
+  for (const o of offers) {
+    const card = el('div', `sched-offer${ui.schedEditCode === o.code ? ' is-editing' : ''}`);
+    const head = el('div', 'sched-offer-head');
+    const lab = schedStatusLabel(o);
+    head.append(el('span', `sched-badge sched-badge-${lab === '確定' ? 'done' : (lab === '募集中' ? 'open' : 'wait')}`, lab));
+    const picked = o.picked;
+    head.append(el('span', 'sched-offer-when', picked ? schedSlotLine(picked) : `候補${(o.slots || []).length}件`));
+    card.append(head);
+    if (!picked && (o.slots || []).length) card.append(el('p', 'sched-offer-slots', (o.slots).map(schedSlotLine).join(' / ')));
+    const acts = el('div', 'sched-offer-acts');
+    const mkBtn = (label, cls, fn) => { const b = el('button', `sched-mini${cls ? ` ${cls}` : ''}`, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
+    acts.append(mkBtn('リンクをコピー', '', () => copyText(o.url || meetUrl(o.code), 'リンクをコピーしました')));
+    acts.append(mkBtn('定型文をコピー', '', () => copyText(`${schedText(o.slots || [])}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${o.url || meetUrl(o.code)}`, '定型文をコピーしました。送り直してね')));
+    if (o.meetLink) acts.append(mkBtn('会議リンクをコピー', 'sched-mini-meet', () => copyText(o.meetLink, 'Google Meetのリンクをコピーしました')));
+    acts.append(mkBtn(ui.schedEditCode === o.code ? '変更中' : '変更', '', () => schedEditOffer(o)));
+    acts.append(mkBtn('取り消し', 'sched-mini-del', () => { if (confirm('この予約リンクを取り消しますか？（相手は選べなくなり、入っていた予定も消えます）')) schedCancelOffer(o.code); }));
+    card.append(acts);
+    box.append(card);
+  }
+  return box;
 }
 
 // 相手が選んだら: 自分のカレンダーに予定を入れ、必要ならMeetを発行してリンクを共有
@@ -1275,12 +1368,18 @@ function meetWatch(code) {
   meetWatched[code] = true;
   meetDocRef(code).onSnapshot(async (snap) => {
     const d = snap.data();
-    if (!d || d.status !== 'picked' || !d.picked) return;
     const offer = (db.settings.meetOffers || []).find((o) => o.code === code);
+    // ローカルの控えを最新化（一覧に反映）
+    if (offer && d) {
+      Object.assign(offer, { slots: d.slots || offer.slots, status: d.status, picked: d.picked || null, meetLink: d.meetLink || null });
+      persistLocal();
+      if (ui.schedMode) renderAll();
+    }
+    if (!d || d.status !== 'picked' || !d.picked) return;
     if (!offer || offer.done) return;
     offer.done = true;
     const s = d.picked;
-    const ev = { id: newId('e'), title: '打ち合わせ', date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin), calendarId: null, pushGoogle: d.meet, createdAt: Date.now() };
+    const ev = { id: newId('e'), title: '打ち合わせ', date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin), calendarId: null, pushGoogle: d.meet, meetCode: code, createdAt: Date.now() };
     db.events.push(ev);
     save(); renderAll();
     const dd = fromKey(s.key);
@@ -1359,6 +1458,10 @@ setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter
           const a = document.createElement('a');
           a.href = d.meetLink; a.target = '_blank'; a.rel = 'noopener'; a.className = 'cta meet-slot'; a.textContent = '会議リンクを開く（Google Meet）';
           bodyEl.append(a);
+          const cp = el('button', 'cta ghost meet-slot', '会議リンクをコピー');
+          cp.type = 'button';
+          cp.addEventListener('click', () => copyText(d.meetLink, 'Google Meetのリンクをコピーしました'));
+          bodyEl.append(cp);
         } else if (d.meet && d.status === 'picked') {
           bodyEl.append(el('p', 'hint', '会議リンクを準備中です。少し待ってからもう一度開いてください。'));
         }
