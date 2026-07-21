@@ -5343,13 +5343,16 @@ function notionReady() { const n = notionCfg(); return Boolean(n.url && n.secret
 function notionDayPayload(key) {
   const n = notionCfg();
   const diaries = [];
+  const memos = [];
   const log = db.dayLogs[key];
   if (log) diaries.push(`【あのね。ノート】${log}`);
   const note = db.notes[key];
   if (note) diaries.push(`【ひとこと】${note}`);
   for (const it of itemsFor(key)) {
-    const d = diaryFor(it);
-    if (d) diaries.push(`【${it.title}】${d}`);
+    const dv = diaryFor(it);
+    if (dv) diaries.push(`【${it.title}】${dv}`);
+    const mv = memoFor(it);
+    if (mv) memos.push(`【${it.title}】${mv}`);
   }
   const d = fromKey(key);
   const rec = db.sleep[key] || {};
@@ -5357,8 +5360,8 @@ function notionDayPayload(key) {
     dbId: n.dbId,
     date: key,
     title: `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`,
-    diary: diaries.join('\n') || null,
-    memo: note || null,
+    diary: diaries.join('\n') || null,       // あのね。ノート＋ひとこと＋各タスク/予定の日記（全文）
+    memo: memos.join('\n') || null,          // 各タスク/予定の「メモ」をまとめて反映
     doneCount: tasksStatsFor(key).done,
     bed: rec.bed || null,
     wake: rec.wake || null,
