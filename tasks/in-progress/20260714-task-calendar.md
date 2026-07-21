@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-19（v1.26.0 = 3色追加・予定の色反転・バックアップ）
+
+- ACCENTSにred/yellow/indigo追加（全9色・全ピッカーはACCENTS駆動なので自動反映）
+- 予定の色反転: `settings.invertEvents`。renderMonthのchipでkind===eventなら`transparent bg＋borderColor＋color`＋`.mo-chip-invert`。設定にトグル
+- バックアップ: `#backup-export`（Blob→aタグDL・taskCalendarBackup:2形式）/`#backup-import`（file input→JSON.parse→db入替→save＋apply*群）。復元前に自動で現在分をDL（安全弁）。`db`をconst→letに変更（復元で入替のため）
+- 回答: Googleログイン＆同期ON時はFirebaseに自動バックアップ済み。手動バックアップは容量消費なし（ON/OFF不要）。②常時連携（Worker中継）は次の集中ターン
+- 新機能11＋回帰44＋既存smoke 全PASS。アセットv41
+
 ### 2026-07-18（v1.25.0 = 平日/土日祝の繰り返し・D 過去を残す削除）
 
 - 平日/土日祝: occursOnに`weekday`（月〜金かつ!isJpHoliday）/`weekend`（土日 or isJpHoliday）分岐。REPEAT_LABELに追加。f-repeat・routineItemRowの選択肢に追加。祝日は既存isJpHolidayで自動反映

@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=40">
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="tokens.css?v=41">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 
@@ -141,6 +141,7 @@
       <p class="section-label">月の予定のフチ・色分け（自分の画面だけ）</p>
       <div class="card">
         <label class="sync-toggle"><input type="checkbox" id="month-edge-toggle"> 月の予定に「くっきりフチ」をつける</label>
+        <label class="sync-toggle"><input type="checkbox" id="invert-events-toggle"> 予定の色を反転（フチ＋薄塗り）してタスクと見分ける</label>
         <div id="colorrule-body"></div>
         <p class="hint">名前や意味（例：「村山さん」「遊び」）に色を割り当てると、その言葉を含む予定・タスクの月表示に、その色のフチがつきます。予定のタイトルや「誰と」に一致で判定。共有カレンダーでも<strong>この色分けは自分の画面だけ</strong>で、共有相手には影響しません。相手は相手で自由に色分けできます。</p>
       </div>
@@ -211,6 +212,14 @@
       <div class="card">
         <div id="notion-body"></div>
         <p class="hint">日記・ふりかえりメモ・できたこと・睡眠を、あなたのNotionデータベースへ1日1ページで自動保存できます（AIに自分を把握してもらうためのデータ蓄積にも）。使うには無料のCloudflare Worker中継が1つ必要です（apps/task-calendar/notion-worker.js に手順あり）。</p>
+      </div>
+
+      <p class="section-label">バックアップ</p>
+      <div class="card" id="backup-body">
+        <button type="button" class="cta ghost" id="backup-export">バックアップを書き出す（ファイル保存）</button>
+        <button type="button" class="cta ghost" id="backup-import">バックアップから復元する</button>
+        <input type="file" id="backup-file" accept="application/json,.json">
+        <p class="hint">全データ（タスク・予定・記録・設定）を1つのファイルとして端末に保存できます。容量は押したときにファイルが1個できるだけで、アプリやクラウドの容量は使いません。復元すると<strong>今のデータはファイルの内容に置き換わります</strong>（復元前に自動で現在分も書き出されるので安心）。クラウド同期ONなら、ふだんはログインだけで自動バックアップされています。</p>
       </div>
 
       <p class="section-label">データ</p>
@@ -611,7 +620,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=40"></script>
-<script src="app.js?v=40"></script>
+<script src="firebase-config.js?v=41"></script>
+<script src="app.js?v=41"></script>
 </body>
 </html>
