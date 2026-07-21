@@ -24,6 +24,12 @@
 
 ## 作業ログ
 
+### 2026-07-18（v1.25.0 = 平日/土日祝の繰り返し・D 過去を残す削除）
+
+- 平日/土日祝: occursOnに`weekday`（月〜金かつ!isJpHoliday）/`weekend`（土日 or isJpHoliday）分岐。REPEAT_LABELに追加。f-repeat・routineItemRowの選択肢に追加。祝日は既存isJpHolidayで自動反映
+- D（過去を残す）: occursOnに`repeatEnd`カットオフ（key>repeatEndで非表示、過去は残る）。deleteRoutine(r,mode) mode='keepPast'（各itemをrepeatEnd=昨日＋routineId外す・単発の今日以降は削除）/'all'（全削除）。undoスナップショット対応。#rdel-scrimの2ボタンを「今日以降だけやめる」「ぜんぶ消す」に。編集で行削除もhandleRemovedでcap（過去あり=残す/過去なし=削除）。一時停止は従来通り
+- 新機能16＋回帰44＋既存smoke 全PASS。アセットv40。スクショ確認（削除ダイアログ）
+
 ### 2026-07-18（v1.24.0 = ルーティン予定型・曜日選択・月のルーティンチップ）
 
 - C: routine.type（task/event）。routineArr/routineItems追加。passFilter/itemColor/showInMonthを`routineId`だけで判定（event対応）。routine sheetに`#r-type-seg`（setRType）＋submitで種類ごとにdb.tasks/db.eventsへ生成。renderRoutinesはeventで週ドット省略＋`.r-type-chip`、item一覧はroutineItems・repeatLabelOf
