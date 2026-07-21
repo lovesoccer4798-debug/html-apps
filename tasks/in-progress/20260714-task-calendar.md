@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-07-19（v1.29.0 = スケジュール調整第2弾・リンク予約）
+
+- Firestore `meet/{code}` doc（ownerUid/slots/meet/status/picked/meetLink）。schedIssueLink()で発行→定型文＋URLコピー。settings.meetOffers[]で自分の発行を記録し、onSnapshot（meetWatch・5秒間隔でwatch確保）でpickedを検知→db.eventsに「打ち合わせ」作成→meetならgcalSyncEvent(ev,key,true)→meetLinkをdocへ
+- 重複回避: save()にscheduleMeetSync（3秒デバウンス）→open offerのslotsからslotBusy()に該当する枠をupdateで除去
+- 相手側: `?meet=code`でmeet-scrimオーバーレイ（ログイン不要・onSnapshotでopen→選択/confirmed→確定表示＋meetLinkボタン）。TDZ回避でsetTimeout(start,0)
+- オーナー作業: Firestoreルールに meet コレクション許可を追加（PR本文にコピペ用）
+- 新規6＋回帰44＋v43:18 PASS。アセットv44
+
 ### 2026-07-19（v1.28.0 = スケジュール調整第1弾・サイドバー・ヘルプ）
 
 - スケジュール調整: ui.schedMode/schedSlots(max3)/schedDur(30/60/90)。renderGridに操作バー（sched-bar）＋colクリックでschedAddSlot（30分スナップ・itemsForとの重なりは拒否）・tg-schedブロック表示（タップで解除）。schedText()でSCHED_TPL_DEFAULT（settings.schedTemplateで編集可・{{候補}}置換）→schedCopy()（clipboard＋execCommandフォールバック）。ビュー離脱で自動解除
