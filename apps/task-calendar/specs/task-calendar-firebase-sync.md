@@ -54,6 +54,20 @@ service cloud.firestore {
       );
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
+    // スケジュール調整のリンク予約: 相手はログインなしで開くので read/pick を無認証に許可
+    match /meet/{code} {
+      allow get: if true; // リンク（コード）を知っている相手が候補を読む
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if
+        // オーナー本人はいつでも更新できる（確定・Meetリンク・空き枠の同期）
+        (request.auth != null && resource.data.ownerUid == request.auth.uid)
+        // 相手（未ログイン）は「open→picked」の一度きり。ownerUid/slots は変えられない
+        || (resource.data.status == 'open'
+            && request.resource.data.status == 'picked'
+            && request.resource.data.ownerUid == resource.data.ownerUid
+            && request.resource.data.slots == resource.data.slots);
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }
 ```

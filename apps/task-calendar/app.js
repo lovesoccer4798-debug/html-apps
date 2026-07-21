@@ -1331,8 +1331,11 @@ setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter
   scrim.append(card);
   document.body.append(scrim);
   const fmt = (s) => { const d = fromKey(s.key); return `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`; };
-  const start = () => {
-    if (!fbReady) { setTimeout(start, 300); return; }
+  const start = async () => {
+    // 相手はログインしていないので、こちらから明示的にFirebaseを起動する（fbReady待ちだと永久に読み込み中になる）
+    let ok = false;
+    try { ok = await ensureFirebase(); } catch (e) { ok = false; }
+    if (!ok) { bodyEl.textContent = ''; bodyEl.append(el('p', 'hint', '読み込めませんでした（通信環境を確認してください）。')); return; }
     meetDocRef(code).onSnapshot((snap) => {
       const d = snap.data();
       bodyEl.textContent = '';
