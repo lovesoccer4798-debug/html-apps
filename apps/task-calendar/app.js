@@ -417,6 +417,19 @@ function applyStyle() { // スタイル変更（まる/カクカク/くっきり
   if (!s || s === 'round') delete document.documentElement.dataset.style;
   else document.documentElement.dataset.style = s;
 }
+// 配色テーマ（着せ替え）。未指定＝デフォルト（今のデザイン）。トークンの値だけ差し替える
+const PALETTES = [
+  { id: '', name: 'デフォルト', sub: '今のデザイン', bg: '#edf1f5', surface: '#ffffff', accent: '#2f9e6e', line: '#dde4eb' },
+  { id: 'deepink', name: '深海インク', sub: 'Deep Ink', bg: '#eef1f0', surface: '#ffffff', accent: '#0e7c6b', line: '#dce4e2' },
+  { id: 'apricot', name: 'サンセット', sub: 'Warm Apricot', bg: '#fbf3ea', surface: '#ffffff', accent: '#e4703a', line: '#efe1d2' },
+  { id: 'neon', name: 'ネオン', sub: 'Neon Focus', bg: '#f2f4f8', surface: '#ffffff', accent: '#5b57f0', line: '#e2e6ef' },
+];
+function applyPalette() {
+  const p = db.settings.palette;
+  if (!p || p === 'default') delete document.documentElement.dataset.palette;
+  else document.documentElement.dataset.palette = p;
+  applyAccent(); // 既定アクセント時はテーマ側の色を活かす（上書きを外す）
+}
 function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手なズームを止める
   const vp = document.getElementById('tc-viewport');
   if (!vp) return;
@@ -2667,10 +2680,40 @@ function renderSettings() {
     });
     grid.append(sw);
   }
+  renderPaletteGrid();
   const repeats = db.tasks.filter((t) => t.repeat).length;
   let doneCount = 0;
   for (const t of db.tasks) doneCount += t.repeat ? Object.keys(t.doneDates || {}).length : (t.done ? 1 : 0);
   $('#data-summary').textContent = `タスク ${db.tasks.length}件（うち繰り返し ${repeats}）・予定 ${db.events.length}件・これまでの完了 ${doneCount}回`;
+}
+function renderPaletteGrid() {
+  const grid = $('#palette-grid');
+  if (!grid) return;
+  grid.textContent = '';
+  const cur = db.settings.palette || '';
+  for (const p of PALETTES) {
+    const card = el('button', `palette-card${cur === p.id ? ' is-active' : ''}`);
+    card.type = 'button';
+    const sw = el('span', 'palette-sw');
+    sw.style.background = p.bg;
+    sw.style.borderColor = p.line;
+    const surf = el('span', 'palette-sw-card');
+    surf.style.background = p.surface;
+    const dot = el('span', 'palette-sw-dot');
+    dot.style.background = p.accent;
+    surf.append(dot);
+    sw.append(surf);
+    card.append(sw);
+    const nm = el('span', 'palette-name', p.name);
+    card.append(nm);
+    card.append(el('span', 'palette-sub', p.sub));
+    if (cur === p.id) card.append(el('span', 'palette-check', '✓'));
+    card.addEventListener('click', () => {
+      db.settings.palette = p.id || undefined;
+      save(); applyPalette(); renderAll();
+    });
+    grid.append(card);
+  }
 }
 document.querySelectorAll('#theme-seg button').forEach((b) => {
   b.addEventListener('click', () => {
@@ -2818,7 +2861,7 @@ $('#backup-file').addEventListener('change', async (e) => {
     downloadBackup(); // 安全弁: 復元前に現在のデータも書き出しておく
     db = { ...defaultDb(), ...incoming, settings: { ...defaultDb().settings, ...(incoming.settings || {}) } };
     save();
-    applyTheme(); applyFont(); applySize(); applyStyle(); applyZoomLock(); applyStickyHeader();
+    applyTheme(); applyFont(); applySize(); applyStyle(); applyPalette(); applyZoomLock(); applyStickyHeader();
     renderAll();
     flashToast('バックアップから復元しました');
   } catch (err) {
@@ -5659,6 +5702,7 @@ applyTheme();
 applyFont();
 applySize();
 applyStyle();
+applyPalette();
 applyZoomLock();
 applyStickyHeader();
 // 実行中タイマーの復元（リロード・再起動後）

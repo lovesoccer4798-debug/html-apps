@@ -460,6 +460,23 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .theme-seg button.is-active { background: var(--tc-surface); color: var(--tc-ink); font-weight: 700; box-shadow: var(--tc-shadow); }
 
+/* テーマ（配色）ピッカー */
+.palette-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.palette-card {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 10px; border-radius: 14px; border: 1.5px solid var(--tc-line); background: var(--tc-surface); text-align: left;
+}
+.palette-card.is-active { border-color: var(--tc-accent); box-shadow: 0 0 0 1px var(--tc-accent) inset; }
+.palette-sw {
+  width: 100%; height: 46px; border-radius: 10px; border: 1px solid var(--tc-line);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 6px; overflow: hidden;
+}
+.palette-sw-card { width: 62%; height: 26px; border-radius: 7px; box-shadow: 0 1px 3px rgba(0,0,0,.12); display: flex; align-items: center; justify-content: flex-end; padding-right: 7px; }
+.palette-sw-dot { width: 12px; height: 12px; border-radius: 50%; }
+.palette-name { font-size: 13px; font-weight: 700; color: var(--tc-ink); }
+.palette-sub { font-size: 11px; color: var(--tc-ink3); }
+.palette-check { position: absolute; top: 8px; right: 10px; color: var(--tc-accent); font-weight: 700; font-size: 14px; }
+
 .accent-grid { display: flex; gap: 12px; flex-wrap: wrap; }
 .accent-swatch {
   width: 40px; height: 40px;

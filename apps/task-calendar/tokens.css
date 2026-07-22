@@ -106,3 +106,99 @@
   --tc-shadow: 0 2px 6px rgba(40, 50, 65, .14);
 }
 :root[data-theme="dark"][data-style="crisp"], :root[data-style="crisp"] { }
+
+/* ========================================================================
+   テーマ（配色）— 設定で選べる着せ替え。data-palette 未指定＝上のデフォルト（今のデザイン）を維持。
+   トークンの「値だけ」を差し替える方式なので、レイアウト・機能には一切影響しない。
+   共通の派生トークン（surface2 / ink3.. / 実行中カード等）はアクセント・地色から自動生成する。
+   ======================================================================== */
+
+/* A｜深海インク Deep Ink — ライト */
+:root[data-palette="deepink"] {
+  --tc-bg: #eef1f0; --tc-surface: #ffffff; --tc-line: #dce4e2;
+  --tc-ink: #1c2b2a; --tc-ink2: #5e726f;
+  --tc-accent: #0e7c6b;
+  --tc-shadow: 0 1px 3px rgba(20, 40, 38, .08);
+  --tc-r-card: 16px; --tc-r-run: 20px; --tc-r-cell: 12px; --tc-r-sheet: 28px; --tc-r-pill: 999px;
+}
+:root[data-palette="deepink"][data-theme="dark"] {
+  --tc-bg: #101917; --tc-surface: #182322; --tc-line: #24312f;
+  --tc-ink: #e6edeb; --tc-ink2: #8ca09c;
+  --tc-accent: #2dbba3;
+  --tc-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="deepink"]:not([data-theme="light"]) {
+    --tc-bg: #101917; --tc-surface: #182322; --tc-line: #24312f;
+    --tc-ink: #e6edeb; --tc-ink2: #8ca09c;
+    --tc-accent: #2dbba3;
+    --tc-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+  }
+}
+
+/* B｜サンセット・アプリコット Warm Apricot — ライト */
+:root[data-palette="apricot"] {
+  --tc-bg: #fbf3ea; --tc-surface: #ffffff; --tc-line: #efe1d2;
+  --tc-ink: #3a2a20; --tc-ink2: #8a6f5c;
+  --tc-accent: #e4703a;
+  --tc-shadow: 0 2px 8px rgba(120, 80, 40, .10);
+  --tc-r-card: 20px; --tc-r-run: 24px; --tc-r-cell: 14px; --tc-r-sheet: 30px; --tc-r-pill: 999px;
+}
+:root[data-palette="apricot"][data-theme="dark"] {
+  --tc-bg: #241812; --tc-surface: #30211a; --tc-line: #3d2c22;
+  --tc-ink: #f4e7dc; --tc-ink2: #b79b87;
+  --tc-accent: #ff8a55;
+  --tc-shadow: 0 6px 22px rgba(0, 0, 0, .45);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="apricot"]:not([data-theme="light"]) {
+    --tc-bg: #241812; --tc-surface: #30211a; --tc-line: #3d2c22;
+    --tc-ink: #f4e7dc; --tc-ink2: #b79b87;
+    --tc-accent: #ff8a55;
+    --tc-shadow: 0 6px 22px rgba(0, 0, 0, .45);
+  }
+}
+
+/* C｜ミッドナイト・フォーカス Neon Focus — ライト */
+:root[data-palette="neon"] {
+  --tc-bg: #f2f4f8; --tc-surface: #ffffff; --tc-line: #e2e6ef;
+  --tc-ink: #12151c; --tc-ink2: #5a6478;
+  --tc-accent: #5b57f0;
+  --tc-shadow: 0 2px 10px rgba(30, 30, 60, .10);
+  --tc-r-card: 12px; --tc-r-run: 14px; --tc-r-cell: 8px; --tc-r-sheet: 18px; --tc-r-pill: 8px;
+}
+:root[data-palette="neon"][data-theme="dark"] {
+  --tc-bg: #0b0d14; --tc-surface: #141826; --tc-line: #1e2333;
+  --tc-ink: #edeffa; --tc-ink2: #7c86a6;
+  --tc-accent: #8a87ff;
+  --tc-shadow: 0 6px 24px rgba(80, 70, 240, .28);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="neon"]:not([data-theme="light"]) {
+    --tc-bg: #0b0d14; --tc-surface: #141826; --tc-line: #1e2333;
+    --tc-ink: #edeffa; --tc-ink2: #7c86a6;
+    --tc-accent: #8a87ff;
+    --tc-shadow: 0 6px 24px rgba(80, 70, 240, .28);
+  }
+}
+
+/* いずれかの配色テーマ選択時に共通で使う派生トークン（アクセント・地色から自動生成）。
+   デフォルト（data-palette未指定）には一切影響しない。最後に置いて確実に適用する。 */
+:root[data-palette] {
+  --tc-surface2: color-mix(in srgb, var(--tc-ink) 9%, var(--tc-surface));
+  --tc-ink3: color-mix(in srgb, var(--tc-ink) 55%, var(--tc-bg));
+  --tc-ink4: color-mix(in srgb, var(--tc-ink) 34%, var(--tc-bg));
+  --tc-check-border: color-mix(in srgb, var(--tc-ink) 26%, var(--tc-bg));
+  --tc-accent-bright: color-mix(in srgb, var(--tc-accent) 72%, white);
+  --tc-accent-ink: #ffffff;
+  /* 実行中カード（深緑コンテナ）をアクセント基調に着せ替え */
+  --tc-deep: color-mix(in srgb, var(--tc-accent) 24%, #0f1512);
+  --tc-deep-track: color-mix(in srgb, var(--tc-accent) 46%, #0f1512);
+  --tc-deep-sub: color-mix(in srgb, var(--tc-accent) 58%, white);
+  --tc-deep-ink: #f4f8f6;
+}
+/* ダーク時はアクセントが明るいので、上に載る文字は濃色にして可読性を確保（既定デザインと同じ考え方） */
+:root[data-palette][data-theme="dark"] { --tc-accent-ink: #10141a; }
+@media (prefers-color-scheme: dark) {
+  :root[data-palette]:not([data-theme="light"]) { --tc-accent-ink: #10141a; }
+}
