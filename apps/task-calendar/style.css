@@ -1805,3 +1805,57 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .meet-body { display: flex; flex-direction: column; gap: 8px; }
 .meet-slot { margin-top: 0; text-align: center; text-decoration: none; display: block; }
 .meet-done { font-size: 16px; font-weight: 700; color: var(--tc-accent); margin-bottom: 6px; }
+
+/* ========================================================================
+   フル刷新系テーマパックの装飾レイヤー（6a/6b/6c）
+   すべて :root[data-palette="…"] にスコープ。デフォルト/リスキンには非干渉。
+   レイアウト・座標には触れず、質感（走査線・影・すりガラス・星）だけを重ねる。
+   ======================================================================== */
+
+/* 6a Night Terminal — 走査線オーバーレイ＋アクセントのグロー＋枠線カード */
+:root[data-palette="night"] body::before {
+  content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 229, 255, .03) 0, rgba(0, 229, 255, .03) 1px, transparent 1px, transparent 3px);
+}
+:root[data-palette="night"] .card,
+:root[data-palette="night"] .item,
+:root[data-palette="night"] .daylog-card,
+:root[data-palette="night"] .sched-offer { border: 1px solid var(--tc-line); }
+:root[data-palette="night"] .cta:not(.ghost),
+:root[data-palette="night"] .fab { box-shadow: 0 0 12px rgba(0, 229, 255, .35); }
+:root[data-palette="night"] .eyebrow,
+:root[data-palette="night"] .mono { letter-spacing: .04em; }
+
+/* 6b Bounce Pop — インク太線＋ぼかし無しオフセット影（回転はスワイプ干渉を避けて不採用） */
+:root[data-palette="bounce"] .card,
+:root[data-palette="bounce"] .item,
+:root[data-palette="bounce"] .daylog-card,
+:root[data-palette="bounce"] .sched-offer,
+:root[data-palette="bounce"] .palette-card { border: 2px solid var(--tc-ink); }
+:root[data-palette="bounce"] .cta:not(.ghost),
+:root[data-palette="bounce"] .fab { border: 2px solid var(--tc-ink); }
+
+/* 6c Aurora Orbit — オーロラのグラデ地＋控えめな星＋フロストガラス面 */
+:root[data-palette="aurora"] body::before {
+  content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background: linear-gradient(160deg, #0b0f2b, #171b3d);
+}
+:root[data-palette="aurora"] body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+  background-image:
+    radial-gradient(1.5px 1.5px at 18% 22%, #fff, transparent),
+    radial-gradient(1px 1px at 68% 58%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 42% 78%, #fff, transparent),
+    radial-gradient(1px 1px at 85% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 30% 46%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 78% 84%, #fff, transparent);
+}
+:root[data-palette="aurora"] body { background: transparent; }
+:root[data-palette="aurora"] .card,
+:root[data-palette="aurora"] .item,
+:root[data-palette="aurora"] .daylog-card,
+:root[data-palette="aurora"] .sched-offer,
+:root[data-palette="aurora"] .sheet,
+:root[data-palette="aurora"] .palette-card {
+  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+}

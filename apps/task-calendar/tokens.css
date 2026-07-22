@@ -202,3 +202,43 @@
 @media (prefers-color-scheme: dark) {
   :root[data-palette]:not([data-theme="light"]) { --tc-accent-ink: #10141a; }
 }
+
+/* ========================================================================
+   フル刷新系テーマパック（6a/6b/6c）— 世界観を固定した着せ替え。
+   トークンに加え、style.css 側で走査線／すりガラス／星などの装飾レイヤーを薄く重ねる。
+   ライト/ダーク設定に依存せず固定の見た目にする（後段に置いて確実に適用）。
+   ======================================================================== */
+
+/* 6a｜Night Terminal — シアン発光1色＋極細ライン＋モノスペースのHUD路線（固定ダーク） */
+:root[data-palette="night"] {
+  --tc-bg: #0a0c10; --tc-surface: #0d1016; --tc-line: #1e2530;
+  --tc-ink: #dceff3; --tc-ink2: #3e7783; --tc-ink3: #3e7783; --tc-ink4: #2a4a53;
+  --tc-surface2: #10151c; --tc-check-border: #1e2530;
+  --tc-accent: #00e5ff; --tc-accent-bright: #7df3ff; --tc-accent-ink: #04222a;
+  --tc-deep: #071b20; --tc-deep-track: #123b44; --tc-deep-sub: #6fd8e6; --tc-deep-ink: #dbfbff;
+  --tc-shadow: none; --tc-scrim: rgba(2, 4, 7, .72);
+  --tc-r-card: 4px; --tc-r-run: 5px; --tc-r-cell: 3px; --tc-r-sheet: 10px; --tc-r-pill: 3px;
+  --tc-font: "Osaka-Mono", "Noto Sans Mono CJK JP", "MS Gothic", "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* 6b｜Bounce Pop — クリーム地＋インク太線＋オフセット影のリソグラフ印刷路線（固定ライト） */
+:root[data-palette="bounce"] {
+  --tc-bg: #fff7ec; --tc-surface: #ffffff; --tc-line: #171310;
+  --tc-ink: #171310; --tc-ink2: #6b5f52; --tc-ink3: #8a7d6d; --tc-ink4: #a89c8b;
+  --tc-surface2: #ffe9c9; --tc-check-border: #171310;
+  --tc-accent: #ff5c5c; --tc-accent-bright: #ff8f5c; --tc-accent-ink: #ffffff;
+  --tc-deep: #171310; --tc-deep-track: #3a332c; --tc-deep-sub: #ffd23f; --tc-deep-ink: #fff7ec;
+  --tc-shadow: 4px 4px 0 #171310; --tc-scrim: rgba(23, 19, 16, .45);
+  --tc-r-card: 14px; --tc-r-run: 16px; --tc-r-cell: 10px; --tc-r-sheet: 22px; --tc-r-pill: 999px;
+}
+
+/* 6c｜Aurora Orbit — フロストガラス面＋控えめな星＋オーロラ・アクセントの没入路線（固定ダーク） */
+:root[data-palette="aurora"] {
+  --tc-bg: #0b0f2b; --tc-surface: rgba(38, 42, 82, .88); --tc-line: rgba(255, 255, 255, .14);
+  --tc-ink: #e8e9f7; --tc-ink2: #8a8fc0; --tc-ink3: #6f75a8; --tc-ink4: #565c8c;
+  --tc-surface2: rgba(255, 255, 255, .11); --tc-check-border: rgba(255, 255, 255, .3);
+  --tc-accent: #8e7cff; --tc-accent-bright: #37e6c7; --tc-accent-ink: #12123a;
+  --tc-deep: #171b3d; --tc-deep-track: #2b2f5a; --tc-deep-sub: #9aa0e0; --tc-deep-ink: #eef0ff;
+  --tc-shadow: 0 20px 50px rgba(20, 10, 60, .4); --tc-scrim: rgba(6, 8, 24, .6);
+  --tc-r-card: 16px; --tc-r-run: 20px; --tc-r-cell: 12px; --tc-r-sheet: 28px; --tc-r-pill: 999px;
+}

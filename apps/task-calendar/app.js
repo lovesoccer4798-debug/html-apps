@@ -423,6 +423,9 @@ const PALETTES = [
   { id: 'deepink', name: '深海インク', sub: 'Deep Ink', bg: '#eef1f0', surface: '#ffffff', accent: '#0e7c6b', line: '#dce4e2' },
   { id: 'apricot', name: 'サンセット', sub: 'Warm Apricot', bg: '#fbf3ea', surface: '#ffffff', accent: '#e4703a', line: '#efe1d2' },
   { id: 'neon', name: 'ネオン', sub: 'Neon Focus', bg: '#f2f4f8', surface: '#ffffff', accent: '#5b57f0', line: '#e2e6ef' },
+  { id: 'night', name: 'ナイトターミナル', sub: 'Night Terminal', bg: '#0a0c10', surface: '#0d1016', accent: '#00e5ff', line: '#1e2530' },
+  { id: 'bounce', name: 'バウンスポップ', sub: 'Bounce Pop', bg: '#fff7ec', surface: '#ffffff', accent: '#ff5c5c', line: '#171310' },
+  { id: 'aurora', name: 'オーロラオービット', sub: 'Aurora Orbit', bg: '#101540', surface: '#252a52', accent: '#8e7cff', line: 'rgba(255,255,255,.25)' },
 ];
 function applyPalette() {
   const p = db.settings.palette;
