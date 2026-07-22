@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=44">
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="tokens.css?v=51">
+<link rel="stylesheet" href="style.css?v=51">
 </head>
 <body>
 
@@ -211,6 +211,13 @@
         <p class="hint">ユーザー名はこのアプリでのあなたの呼び名です。招待メールの差出人名は、空欄ならユーザー名が使われます。※メールの件名や送信元アドレスはGoogleアカウント側の設定に従うため、アプリからは変更できません。</p>
       </div>
 
+      <p class="section-label">日々の記録</p>
+      <div class="card">
+        <label class="f-label" for="daylog-name">まとめ日記の名前</label>
+        <input type="text" id="daylog-name" maxlength="20" placeholder="あのね。ノート">
+        <p class="hint">日ビューのいちばん下にある「まとめ日記」の見出し名を自由に変えられます（空欄のときは「あのね。ノート」）。</p>
+      </div>
+
       <p class="section-label">Notion連携</p>
       <div class="card">
         <div id="notion-body"></div>
@@ -382,6 +389,12 @@
       <div class="r-colors" id="f-colors"></div>
       <label class="f-label" for="f-cal" id="f-cal-label">カレンダー</label>
       <select id="f-cal"></select>
+      <label class="f-label">詳細（サブ項目・任意）</label>
+      <div id="f-subs" class="f-subs"></div>
+      <div class="f-subadd">
+        <input type="text" id="f-sub-input" maxlength="80" placeholder="例：本の名前・持ち物・手順など">
+        <button type="button" class="cta ghost" id="f-sub-add">追加</button>
+      </div>
       <label class="f-label" for="f-memo">メモ（任意）</label>
       <textarea id="f-memo" rows="2" maxlength="500" placeholder="ひとこと・気づき・持ち物など"></textarea>
       <label class="f-label" for="f-diary">日記（任意）</label>
@@ -660,7 +673,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=44"></script>
-<script src="app.js?v=44"></script>
+<script src="firebase-config.js?v=51"></script>
+<script src="app.js?v=51"></script>
 </body>
 </html>

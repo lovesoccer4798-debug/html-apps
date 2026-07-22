@@ -84,8 +84,8 @@ export default {
       '名前': { title: [{ text: { content: title || date } }] },
       '日付': { date: { start: date } },
     };
-    if (diary != null) props['日記'] = { rich_text: [{ text: { content: String(diary).slice(0, 1900) } }] };
-    if (memo != null) props['メモ'] = { rich_text: [{ text: { content: String(memo).slice(0, 1900) } }] };
+    if (diary != null) props['日記'] = { rich_text: richText(diary) };
+    if (memo != null) props['メモ'] = { rich_text: richText(memo) };
     if (typeof doneCount === 'number') props['できたこと'] = { number: doneCount };
     if (bed != null) props['就寝'] = { rich_text: [{ text: { content: String(bed) } }] };
     if (wake != null) props['起床'] = { rich_text: [{ text: { content: String(wake) } }] };
@@ -119,4 +119,13 @@ export default {
 
 function json(obj, status, cors) {
   return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+}
+
+// 長い本文を Notion の上限（1オブジェクト2000字）に収まる複数チャンクに分割して全文を保持する。
+// 途中で切れず、Notion 側では連結されて表示される（保険で最大50チャンク＝約9.5万字まで）。
+function richText(str) {
+  const s = String(str);
+  const chunks = [];
+  for (let i = 0; i < s.length && chunks.length < 50; i += 1900) chunks.push({ text: { content: s.slice(i, i + 1900) } });
+  return chunks.length ? chunks : [{ text: { content: '' } }];
 }

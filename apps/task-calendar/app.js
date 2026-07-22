@@ -126,9 +126,14 @@ const ui = {
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
   schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
   schedDur: 60,             // 候補1枠の長さ（分）
+  schedMeet: false,         // 確定時にMeet発行するか
+  schedEditCode: null,      // 変更中の予約リンクのコード（発行済みの再編集）
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
+  insightsOffset: 0,        // 振り返りの期間オフセット（0=今・-1=1つ前…横スライドで過去へ）
+  dayLogEditKey: null,      // あのね。ノートを編集中の日付キー（null=プレビュー表示）
+  sheetSubs: [],            // 編集シートで編集中の詳細（サブ項目）[{id,title,done}]
   routineTab: 'routines',   // ルーティンタブ内: 'routines' | 'vision'
   vbFileTarget: null,       // 写真ピッカーの投入先
   vbSlotTarget: null,       // 差し替え/削除の対象アイテム
@@ -667,6 +672,20 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     }
     main.append(meta);
   }
+  // 詳細（サブ項目）: 大タスクの中身をチェックリストで表示。タップで完了を切り替え
+  if (!compact && (it.ref.subs || []).length) {
+    const subsEl = el('div', 'item-subs');
+    for (const s of it.ref.subs) {
+      const row = el('button', `item-sub${s.done ? ' is-done' : ''}`);
+      row.type = 'button';
+      const box = el('span', 'item-sub-box');
+      if (s.done) box.innerHTML = ICONS.check;
+      row.append(box, el('span', 'item-sub-title', s.title));
+      row.addEventListener('click', (e) => { e.stopPropagation(); s.done = !s.done; save(); renderAll(); });
+      subsEl.append(row);
+    }
+    main.append(subsEl);
+  }
   card.append(main);
 
   const ownColor = itemColor(it);
@@ -731,7 +750,7 @@ $('#bottomnav').addEventListener('click', (e) => {
   const nav = btn.dataset.nav;
   if (nav === 'today') { ui.view = 'day'; ui.cursor = new Date(); setScreen('cal'); }
   if (nav === 'calendar') { ui.view = 'month'; ui.selectedKey = ui.selectedKey || todayKey(); setScreen('cal'); }
-  if (nav === 'insights') setScreen('insights');
+  if (nav === 'insights') { ui.insightsOffset = 0; setScreen('insights'); }
   if (nav === 'anniv') setScreen('anniv');
   if (nav === 'tasks') setScreen('tasklist');
   if (nav === 'routines') setScreen('routines');
@@ -988,7 +1007,7 @@ function renderCal() {
     if (gcalConnected()) chips.append(mkChip('gcal', 'Googleカレンダー', f === 'all' || f.includes('gcal'), (ACCENTS.blue || ACCENTS.green)[dark ? 'dark' : 'light']));
     body.append(chips);
   }
-  if (ui.view !== 'grid' && ui.schedMode) { ui.schedMode = false; ui.schedSlots = []; } // 時間割を離れたら調整モード終了
+  if (ui.view !== 'grid' && ui.schedMode) { ui.schedMode = false; ui.schedSlots = []; ui.schedEditCode = null; } // 時間割を離れたら調整モード終了
   if (ui.view === 'day') renderDay(body);
   if (ui.view === 'grid') renderGrid(body);
   if (ui.view === 'week') renderWeek(body);
@@ -1060,13 +1079,21 @@ function renderGrid(body) {
       mc.addEventListener('click', () => { ui.schedMeet = !ui.schedMeet; renderAll(); });
       row2.append(mc);
     }
-    const linkBtn = el('button', 'cta ghost sched-exit', 'リンクを発行');
+    const linkBtn = el('button', 'cta ghost sched-exit', ui.schedEditCode ? '変更を保存' : 'リンクを発行');
     linkBtn.type = 'button';
     linkBtn.disabled = !ui.schedSlots.length;
     linkBtn.addEventListener('click', schedIssueLink);
     row2.append(linkBtn);
+    if (ui.schedEditCode) {
+      const cancelEdit = el('button', 'cta ghost sched-exit', '変更をやめる');
+      cancelEdit.type = 'button';
+      cancelEdit.addEventListener('click', () => { ui.schedEditCode = null; ui.schedSlots = []; renderAll(); });
+      row2.append(cancelEdit);
+    }
     bar.append(row2);
     bar.append(el('p', 'sched-hint2', 'リンク発行: 相手がリンクから日時を選ぶと、あなたのカレンダーに自動で予定が入ります（要ログイン）。'));
+    const offerList = buildOfferList();
+    if (offerList) bar.append(offerList);
     body.append(bar);
   }
 
@@ -1202,8 +1229,8 @@ function schedAddSlot(key, y) {
   renderAll();
 }
 
-function schedText() {
-  const slots = [...ui.schedSlots].sort((a, b) => a.key.localeCompare(b.key) || a.startMin - b.startMin);
+function schedText(srcSlots) {
+  const slots = [...(srcSlots || ui.schedSlots)].sort((a, b) => a.key.localeCompare(b.key) || a.startMin - b.startMin);
   const lines = slots.map((s) => {
     const d = fromKey(s.key);
     return `・${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`;
@@ -1238,34 +1265,117 @@ function slotBusy(s) {
   });
 }
 
+function meetUrl(code) { return `${location.origin}${location.pathname}?meet=${code}`; }
+
 async function schedIssueLink() {
   if (!ui.schedSlots.length) return;
   if (!fbReady || !fbUser) { flashToast('リンク発行にはログインが必要です（設定→アカウントと同期）'); return; }
-  const code = Math.random().toString(36).slice(2, 10);
+  const editing = ui.schedEditCode ? (db.settings.meetOffers || []).find((o) => o.code === ui.schedEditCode) : null;
+  const code = editing ? editing.code : Math.random().toString(36).slice(2, 10);
+  const slots = ui.schedSlots.map((s) => ({ ...s }));
+  const meet = Boolean(ui.schedMeet && gcalCanWrite());
   const offerDoc = {
     v: 1,
     ownerUid: fbUser.uid,
     owner: (db.settings.userName || '').trim() || null,
-    slots: ui.schedSlots.map((s) => ({ ...s })),
-    meet: Boolean(ui.schedMeet && gcalCanWrite()),
+    slots,
+    meet,
     status: 'open',
     picked: null,
     meetLink: null,
     updatedAt: Date.now(),
   };
   try {
-    await meetDocRef(code).set(offerDoc);
+    await meetDocRef(code).set(offerDoc); // 変更時も丸ごと上書き（open に戻す）
     db.settings.meetOffers = db.settings.meetOffers || [];
-    db.settings.meetOffers.push({ code, done: false });
+    if (editing) {
+      removeMeetEvent(code); // 前に自動で入った予定があれば取り消して募集に戻す
+      Object.assign(editing, { done: false, slots, owner: offerDoc.owner, meet, status: 'open', picked: null, meetLink: null, createdAt: editing.createdAt || Date.now(), url: meetUrl(code) });
+    } else {
+      db.settings.meetOffers.push({ code, done: false, slots, owner: offerDoc.owner, meet, status: 'open', picked: null, meetLink: null, createdAt: Date.now(), url: meetUrl(code) });
+    }
+    ui.schedEditCode = null;
     persistLocal();
     meetWatch(code);
-    const url = `${location.origin}${location.pathname}?meet=${code}`;
-    const text = `${schedText()}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${url}`;
+    const text = `${schedText()}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${meetUrl(code)}`;
     try { await navigator.clipboard.writeText(text); } catch (e) { /* 手動コピーでも可 */ }
-    flashToast('リンクを発行して、定型文ごとコピーしました');
+    ui.schedSlots = [];
+    renderAll();
+    flashToast(editing ? '変更を保存して、定型文ごとコピーしました（相手に送り直してね）' : 'リンクを発行して、定型文ごとコピーしました');
   } catch (err) {
     flashToast('リンク発行に失敗しました（Firestoreルールの設定を確認してね）');
   }
+}
+
+// 予約リンクに紐づいて自動で入った予定を取り消す（Google側からも削除）
+function removeMeetEvent(code) {
+  const idx = (db.events || []).findIndex((e) => e.meetCode === code);
+  if (idx < 0) return;
+  const ev = db.events[idx];
+  if (ev.gcalId) gcalDeleteEvent(ev.gcalId);
+  db.events.splice(idx, 1);
+}
+
+// 発行済みリンクの一覧を作る（募集中・確定・Meetリンクのコピー・変更・取り消し）
+function schedStatusLabel(o) {
+  if (o.status === 'confirmed' || (o.status === 'picked' && o.done)) return '確定';
+  if (o.status === 'picked') return '確定処理中';
+  return '募集中';
+}
+function schedSlotLine(s) {
+  const d = fromKey(s.key);
+  return `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`;
+}
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e2) { /* noop */ } ta.remove();
+  }
+  if (msg) flashToast(msg);
+}
+async function schedCancelOffer(code) {
+  removeMeetEvent(code);
+  try { await meetDocRef(code).delete(); } catch (e) { /* ローカルからは消す */ }
+  db.settings.meetOffers = (db.settings.meetOffers || []).filter((o) => o.code !== code);
+  delete meetWatched[code];
+  if (ui.schedEditCode === code) { ui.schedEditCode = null; ui.schedSlots = []; }
+  persistLocal();
+  renderAll();
+  flashToast('予約リンクを取り消しました');
+}
+function schedEditOffer(o) {
+  ui.schedEditCode = o.code;
+  ui.schedSlots = (o.slots || []).map((s) => ({ ...s }));
+  if (o.slots && o.slots[0]) ui.schedDur = o.slots[0].durMin;
+  ui.schedMeet = Boolean(o.meet);
+  flashToast('候補を読み込みました。変更して「変更を保存」を押してね');
+  renderAll();
+}
+function buildOfferList() {
+  const offers = (db.settings.meetOffers || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (!offers.length) return null;
+  const box = el('div', 'sched-offers');
+  box.append(el('p', 'sched-offers-h', '発行済みのリンク'));
+  for (const o of offers) {
+    const card = el('div', `sched-offer${ui.schedEditCode === o.code ? ' is-editing' : ''}`);
+    const head = el('div', 'sched-offer-head');
+    const lab = schedStatusLabel(o);
+    head.append(el('span', `sched-badge sched-badge-${lab === '確定' ? 'done' : (lab === '募集中' ? 'open' : 'wait')}`, lab));
+    const picked = o.picked;
+    head.append(el('span', 'sched-offer-when', picked ? schedSlotLine(picked) : `候補${(o.slots || []).length}件`));
+    card.append(head);
+    if (!picked && (o.slots || []).length) card.append(el('p', 'sched-offer-slots', (o.slots).map(schedSlotLine).join(' / ')));
+    const acts = el('div', 'sched-offer-acts');
+    const mkBtn = (label, cls, fn) => { const b = el('button', `sched-mini${cls ? ` ${cls}` : ''}`, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
+    acts.append(mkBtn('リンクをコピー', '', () => copyText(o.url || meetUrl(o.code), 'リンクをコピーしました')));
+    acts.append(mkBtn('定型文をコピー', '', () => copyText(`${schedText(o.slots || [])}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${o.url || meetUrl(o.code)}`, '定型文をコピーしました。送り直してね')));
+    if (o.meetLink) acts.append(mkBtn('会議リンクをコピー', 'sched-mini-meet', () => copyText(o.meetLink, 'Google Meetのリンクをコピーしました')));
+    acts.append(mkBtn(ui.schedEditCode === o.code ? '変更中' : '変更', '', () => schedEditOffer(o)));
+    acts.append(mkBtn('取り消し', 'sched-mini-del', () => { if (confirm('この予約リンクを取り消しますか？（相手は選べなくなり、入っていた予定も消えます）')) schedCancelOffer(o.code); }));
+    card.append(acts);
+    box.append(card);
+  }
+  return box;
 }
 
 // 相手が選んだら: 自分のカレンダーに予定を入れ、必要ならMeetを発行してリンクを共有
@@ -1275,12 +1385,18 @@ function meetWatch(code) {
   meetWatched[code] = true;
   meetDocRef(code).onSnapshot(async (snap) => {
     const d = snap.data();
-    if (!d || d.status !== 'picked' || !d.picked) return;
     const offer = (db.settings.meetOffers || []).find((o) => o.code === code);
+    // ローカルの控えを最新化（一覧に反映）
+    if (offer && d) {
+      Object.assign(offer, { slots: d.slots || offer.slots, status: d.status, picked: d.picked || null, meetLink: d.meetLink || null });
+      persistLocal();
+      if (ui.schedMode) renderAll();
+    }
+    if (!d || d.status !== 'picked' || !d.picked) return;
     if (!offer || offer.done) return;
     offer.done = true;
     const s = d.picked;
-    const ev = { id: newId('e'), title: '打ち合わせ', date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin), calendarId: null, pushGoogle: d.meet, createdAt: Date.now() };
+    const ev = { id: newId('e'), title: '打ち合わせ', date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin), calendarId: null, pushGoogle: d.meet, meetCode: code, createdAt: Date.now() };
     db.events.push(ev);
     save(); renderAll();
     const dd = fromKey(s.key);
@@ -1331,8 +1447,11 @@ setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter
   scrim.append(card);
   document.body.append(scrim);
   const fmt = (s) => { const d = fromKey(s.key); return `${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）${tgMinToStr(s.startMin)}〜${tgMinToStr(s.startMin + s.durMin)}`; };
-  const start = () => {
-    if (!fbReady) { setTimeout(start, 300); return; }
+  const start = async () => {
+    // 相手はログインしていないので、こちらから明示的にFirebaseを起動する（fbReady待ちだと永久に読み込み中になる）
+    let ok = false;
+    try { ok = await ensureFirebase(); } catch (e) { ok = false; }
+    if (!ok) { bodyEl.textContent = ''; bodyEl.append(el('p', 'hint', '読み込めませんでした（通信環境を確認してください）。')); return; }
     meetDocRef(code).onSnapshot((snap) => {
       const d = snap.data();
       bodyEl.textContent = '';
@@ -1356,6 +1475,10 @@ setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter
           const a = document.createElement('a');
           a.href = d.meetLink; a.target = '_blank'; a.rel = 'noopener'; a.className = 'cta meet-slot'; a.textContent = '会議リンクを開く（Google Meet）';
           bodyEl.append(a);
+          const cp = el('button', 'cta ghost meet-slot', '会議リンクをコピー');
+          cp.type = 'button';
+          cp.addEventListener('click', () => copyText(d.meetLink, 'Google Meetのリンクをコピーしました'));
+          bodyEl.append(cp);
         } else if (d.meet && d.status === 'picked') {
           bodyEl.append(el('p', 'hint', '会議リンクを準備中です。少し待ってからもう一度開いてください。'));
         }
@@ -1494,7 +1617,7 @@ function renderDay(body) {
     body.append(banner);
   }
 
-  body.append(buildSleepCard(key));
+  if (!sectionHidden('sleep')) body.append(buildSleepCard(key));
 
   const items = itemsFor(key).filter(passFilter);
   const stats = tasksStatsFor(key);
@@ -1506,7 +1629,7 @@ function renderDay(body) {
 
   if (items.length === 0) {
     body.append(el('p', 'empty', 'まだ何もありません。右下の「＋」からタスクや予定を追加してみましょう。'));
-    body.append(buildDayLogCard(key));
+    if (!sectionHidden('daylog')) body.append(buildDayLogCard(key));
     return;
   }
   const tl = el('div', 'tl');
@@ -1541,25 +1664,59 @@ function renderDay(body) {
     tl.append(row);
   }
   body.append(tl);
-  body.append(buildDayLogCard(key));
+  if (!sectionHidden('daylog')) body.append(buildDayLogCard(key));
 }
 
+// まとめ日記の名前（設定で変更可・空欄なら既定）
+function dayLogName() { return (db.settings.dayLogName || '').trim() || 'あのね。ノート'; }
+
 // 「あのね。ノート」: その日まるごとの感想を書くまとめ日記（日ビュー最下部）
+// プレビュー（全文表示）→「編集」で入力、という流れにして、長文でも切れずに読み返せるようにする
 function buildDayLogCard(key) {
   const card = el('div', 'daylog-card');
-  card.append(el('p', 'daylog-title', 'あのね。ノート'));
-  const ta = document.createElement('textarea');
-  ta.className = 'daylog-input';
-  ta.rows = 3;
-  ta.maxLength = 2000;
-  ta.placeholder = '今日はどんな一日だった？　まるっと書き残しておこう。';
-  ta.value = db.dayLogs[key] || '';
-  ta.addEventListener('input', () => {
-    const v = ta.value.trim();
-    if (v) db.dayLogs[key] = ta.value; else delete db.dayLogs[key];
-    save();
-  });
-  card.append(ta);
+  card.append(el('p', 'daylog-title', dayLogName()));
+  const text = db.dayLogs[key] || '';
+  if (ui.dayLogEditKey === key) {
+    const ta = document.createElement('textarea');
+    ta.className = 'daylog-input';
+    ta.rows = 6;
+    ta.maxLength = 2000;
+    ta.placeholder = '今日はどんな一日だった？　まるっと書き残しておこう。';
+    ta.value = text;
+    const original = text; // キャンセル時はここへ戻す
+    // 入力中も自動保存（別の日へ移動しても消えないように）
+    ta.addEventListener('input', () => {
+      const v = ta.value.trim();
+      if (v) db.dayLogs[key] = ta.value; else delete db.dayLogs[key];
+      save();
+    });
+    card.append(ta);
+    const acts = el('div', 'daylog-acts');
+    const saveB = el('button', 'cta', '保存');
+    saveB.type = 'button';
+    saveB.addEventListener('click', () => { ui.dayLogEditKey = null; renderAll(); });
+    const cancelB = el('button', 'cta ghost', 'キャンセル');
+    cancelB.type = 'button';
+    cancelB.addEventListener('click', () => {
+      if (original) db.dayLogs[key] = original; else delete db.dayLogs[key];
+      ui.dayLogEditKey = null;
+      save(); renderAll();
+    });
+    acts.append(saveB, cancelB);
+    card.append(acts);
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
+  } else if (text) {
+    card.append(el('div', 'daylog-preview', text)); // 全文表示（改行そのまま・省略しない）
+    const editB = el('button', 'cta ghost daylog-edit', '編集');
+    editB.type = 'button';
+    editB.addEventListener('click', () => { ui.dayLogEditKey = key; renderAll(); });
+    card.append(editB);
+  } else {
+    const empty = el('button', 'daylog-empty', '今日のことを書く');
+    empty.type = 'button';
+    empty.addEventListener('click', () => { ui.dayLogEditKey = key; renderAll(); });
+    card.append(empty);
+  }
   return card;
 }
 
@@ -2120,16 +2277,32 @@ function buildSleepCard(key) {
 
 /* ----- insights（振り返り） ----- */
 
-function periodDays(period) {
+function periodStart(period, offset = 0) {
   const now = new Date();
-  let start;
+  if (period === 'week') return addDays(startOfWeekMon(now), offset * 7);
+  if (period === 'month') return new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  return new Date(now.getFullYear() + offset, 0, 1);
+}
+function periodDays(period, offset = 0) {
+  const start = periodStart(period, offset);
   let count;
-  if (period === 'week') { start = startOfWeekMon(now); count = 7; }
-  else if (period === 'month') { start = new Date(now.getFullYear(), now.getMonth(), 1); count = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(); }
-  else { start = new Date(now.getFullYear(), 0, 1); count = Math.round((new Date(now.getFullYear() + 1, 0, 1) - start) / 86400000); }
+  if (period === 'week') count = 7;
+  else if (period === 'month') count = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+  else count = Math.round((new Date(start.getFullYear() + 1, 0, 1) - start) / 86400000);
   const keys = [];
   for (let i = 0; i < count; i += 1) keys.push(toKey(addDays(start, i)));
   return keys;
+}
+// 期間の見出しラベル（0=今週/今月/今年、それ以外は具体的な期間）
+function periodRangeLabel(period, offset = 0) {
+  const start = periodStart(period, offset);
+  if (period === 'week') {
+    if (offset === 0) return '今週';
+    const e2 = addDays(start, 6);
+    return `${start.getMonth() + 1}/${start.getDate()}〜${e2.getMonth() + 1}/${e2.getDate()}`;
+  }
+  if (period === 'month') return offset === 0 ? '今月' : `${start.getFullYear()}年${start.getMonth() + 1}月`;
+  return offset === 0 ? '今年' : `${start.getFullYear()}年`;
 }
 
 function renderInsights() {
@@ -2138,35 +2311,56 @@ function renderInsights() {
   const tKey = todayKey();
   const period = ui.insightsPeriod;
 
-  // 期間セグメント（週／月／年）
+  // 期間セグメント（週／月／年）。種類を変えたらオフセットは今に戻す
   const seg = el('div', 'seg period-seg');
   [['week', '週'], ['month', '月'], ['year', '年']].forEach(([v, label]) => {
     const b = el('button', `seg-btn${period === v ? ' is-active' : ''}`, label);
     b.type = 'button';
-    b.addEventListener('click', () => { ui.insightsPeriod = v; renderAll(); });
+    b.addEventListener('click', () => { ui.insightsPeriod = v; ui.insightsOffset = 0; renderAll(); });
     seg.append(b);
   });
   body.append(seg);
 
-  const keys = periodDays(period);
+  const offset = ui.insightsOffset;
+  // 期間ナビ（‹ 前へ ・ ラベル ・ 次へ ›）。今より先へは進めない
+  const nav = el('div', 'period-nav');
+  const prev = el('button', 'period-arrow', '‹');
+  prev.type = 'button';
+  prev.setAttribute('aria-label', '前の期間');
+  prev.addEventListener('click', () => { ui.insightsOffset -= 1; renderAll(); });
+  const next = el('button', 'period-arrow', '›');
+  next.type = 'button';
+  next.setAttribute('aria-label', '次の期間');
+  next.disabled = offset >= 0;
+  next.addEventListener('click', () => { if (ui.insightsOffset < 0) { ui.insightsOffset += 1; renderAll(); } });
+  nav.append(prev, el('span', 'period-navlabel', periodRangeLabel(period, offset)), next);
+  body.append(nav);
+
+  const keys = periodDays(period, offset);
   const perDay = keys.map((key) => ({ key, ...tasksStatsFor(key) }));
   const total = perDay.reduce((s, d) => s + d.total, 0);
   const done = perDay.reduce((s, d) => s + d.done, 0);
   const rate = total ? Math.round((done / total) * 100) : null;
-  const periodLabel = { week: '今週', month: '今月', year: '今年' }[period];
+  const periodLabel = periodRangeLabel(period, offset);
+  const isNow = offset === 0;
 
   const stats = el('div', 'stats-row');
   const c1 = el('div', 'stat-card deep');
   c1.innerHTML = `<div class="stat-num">${rate === null ? '--' : `${rate}<small>%</small>`}</div><div class="stat-label">${periodLabel}の完了率（${done}/${total}）</div>`;
   const c2 = el('div', 'stat-card');
-  c2.innerHTML = `<div class="stat-num">${streakDays()}<small>日</small></div><div class="stat-label">連続達成</div>`;
+  if (isNow) {
+    c2.innerHTML = `<div class="stat-num">${streakDays()}<small>日</small></div><div class="stat-label">連続達成</div>`;
+  } else {
+    const activeDays = perDay.filter((d) => d.done > 0).length;
+    c2.innerHTML = `<div class="stat-num">${activeDays}<small>日</small></div><div class="stat-label">達成した日</div>`;
+  }
   const c3 = el('div', 'stat-card');
   c3.innerHTML = `<div class="stat-num">${done}<small>件</small></div><div class="stat-label">${periodLabel}の完了数</div>`;
   stats.append(c1, c2, c3);
   body.append(stats);
 
   // 期間のふりかえりメモ（週・月・年ごとに書き溜めて、あとから見返せる）
-  renderPeriodNote(body, period, periodLabel);
+  renderPeriodNote(body, period, periodLabel, offset);
 
   // 完了の棒グラフ（週=曜日別／月=週別／年=月別）
   let cols;
@@ -2181,7 +2375,7 @@ function renderInsights() {
       if (d.key === tKey) cols[w].now = true;
     });
   } else {
-    cols = Array.from({ length: 12 }, (_, m) => ({ label: String(m + 1), done: 0, now: m === new Date().getMonth() }));
+    cols = Array.from({ length: 12 }, (_, m) => ({ label: String(m + 1), done: 0, now: isNow && m === new Date().getMonth() }));
     perDay.forEach((d) => { cols[Number(d.key.slice(5, 7)) - 1].done += d.done; });
   }
   const chart = el('div', 'card chart-card');
@@ -2231,8 +2425,8 @@ function renderInsights() {
   }
   body.append(doneCard);
 
-  // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様）
-  const mem = [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
+  // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様・今の期間のときだけ）
+  const mem = isNow && [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
     .map(([days, label]) => ({ key: toKey(addDays(new Date(), -days)), label }))
     .find((m2) => db.notes[m2.key]);
   if (mem) {
@@ -2271,8 +2465,8 @@ function renderInsights() {
     body.append(sCard);
   }
 
-  // ルーティン別の達成
-  if (db.routines.length > 0) {
+  // ルーティン別の達成（今週の状況なので、今の期間のときだけ）
+  if (isNow && db.routines.length > 0) {
     const rCard = el('div', 'card chart-card');
     rCard.append(el('p', 'section-label', 'ルーティン'));
     for (const r of db.routines) {
@@ -2291,21 +2485,6 @@ function renderInsights() {
     }
     body.append(rCard);
   }
-
-  // 今日のひとこと
-  const note = el('div', 'card note-card');
-  note.append(el('p', 'section-label', '今日のひとこと'));
-  const ta = document.createElement('textarea');
-  ta.placeholder = '今日できたこと・気づきをひとこと。';
-  ta.value = db.notes[tKey] || '';
-  let noteTimer = null;
-  ta.addEventListener('input', () => {
-    db.notes[tKey] = ta.value;
-    clearTimeout(noteTimer);
-    noteTimer = setTimeout(save, 300);
-  });
-  note.append(ta);
-  body.append(note);
 }
 
 /* ----- settings ----- */
@@ -2430,6 +2609,8 @@ function renderSettings() {
   if (un) un.value = db.settings.userName || '';
   const sn = $('#sender-name');
   if (sn) sn.value = db.settings.senderName || '';
+  const dln = $('#daylog-name');
+  if (dln) dln.value = db.settings.dayLogName || '';
   const tn = $('#timer-notify');
   if (tn) tn.checked = !!db.settings.timerNotify;
   const me = $('#month-edge-toggle');
@@ -2512,6 +2693,7 @@ document.querySelectorAll('#style-seg button').forEach((b) => {
 });
 $('#user-name').addEventListener('change', (e) => { db.settings.userName = e.target.value.trim(); save(); });
 $('#sender-name').addEventListener('change', (e) => { db.settings.senderName = e.target.value.trim(); save(); });
+$('#daylog-name').addEventListener('change', (e) => { db.settings.dayLogName = e.target.value.trim(); save(); });
 $('#timer-notify').addEventListener('change', async (e) => {
   if (e.target.checked && 'Notification' in window && Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch (err) { /* 拒否でもトグルは有効（音・バイブは動く） */ }
@@ -2642,6 +2824,23 @@ function openDetail(it) {
     row('場所', it.ref.place);
     const cal = db.calendars.find((c) => c.id === it.ref.calendarId);
     if (cal && cal.id !== 'c-default') row('カレンダー', cal.name);
+    if ((it.ref.subs || []).length) {
+      const blk = el('div', 'dt-block');
+      const doneN = it.ref.subs.filter((s) => s.done).length;
+      blk.append(el('span', 'dt-key', `詳細（${doneN}/${it.ref.subs.length}）`));
+      const list = el('div', 'item-subs');
+      for (const s of it.ref.subs) {
+        const r2 = el('button', `item-sub${s.done ? ' is-done' : ''}`);
+        r2.type = 'button';
+        const box = el('span', 'item-sub-box');
+        if (s.done) box.innerHTML = ICONS.check;
+        r2.append(box, el('span', 'item-sub-title', s.title));
+        r2.addEventListener('click', () => { s.done = !s.done; save(); openDetail(it); renderAll(); });
+        list.append(r2);
+      }
+      blk.append(list);
+      body.append(blk);
+    }
     const memo = memoFor(it);
     if (memo) { const r = el('div', 'dt-block'); r.append(el('span', 'dt-key', 'メモ')); r.append(el('p', 'dt-text', memo)); body.append(r); }
     const diary = diaryFor(it);
@@ -2711,6 +2910,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-invite').value = (r.attendees || []).join('、');
     $('#f-invite-note').value = r.inviteNote || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
+    ui.sheetSubs = (r.subs || []).map((s) => ({ ...s }));
   } else {
     sheetEls.fTitle.value = '';
     sheetEls.fDate.value = dateKey || (ui.view === 'month' ? (ui.selectedKey || todayKey()) : toKey(ui.cursor));
@@ -2730,7 +2930,10 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-invite').value = '';
     $('#f-invite-note').value = '';
     buildWhoChips([]);
+    ui.sheetSubs = [];
   }
+  $('#f-sub-input').value = '';
+  renderSheetSubs();
   $('#f-gcal-sync').hidden = !gcalCanWrite(); // Google連携中のみ表示
   buildSheetColors(item ? (item.ref.color || '') : '');
   const calSel = $('#f-cal');
@@ -2772,6 +2975,43 @@ function buildWhoChips(selected) {
   $('#f-who').value = selected.filter((n) => !db.people.includes(n)).join('、');
   $('#f-who-suggest').textContent = '';
 }
+
+/* 詳細（サブ項目）: 大きなタスクの中身を階層で持つ。編集中は ui.sheetSubs で管理 */
+function renderSheetSubs() {
+  const wrap = $('#f-subs');
+  wrap.textContent = '';
+  const subs = ui.sheetSubs || (ui.sheetSubs = []);
+  wrap.hidden = !subs.length;
+  subs.forEach((s, i) => {
+    const row = el('div', 'f-sub-row');
+    const chk = el('button', `f-sub-chk${s.done ? ' is-done' : ''}`);
+    chk.type = 'button';
+    chk.setAttribute('aria-label', s.done ? '未完了に戻す' : '完了にする');
+    if (s.done) chk.innerHTML = ICONS.check;
+    chk.addEventListener('click', () => { s.done = !s.done; renderSheetSubs(); });
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.maxLength = 80; inp.value = s.title; inp.className = `f-sub-title${s.done ? ' is-done' : ''}`;
+    inp.addEventListener('input', () => { s.title = inp.value; });
+    const del = el('button', 'f-sub-del');
+    del.type = 'button';
+    del.setAttribute('aria-label', '削除');
+    del.innerHTML = ICONS.trash || '×';
+    del.addEventListener('click', () => { subs.splice(i, 1); renderSheetSubs(); });
+    row.append(chk, inp, del);
+    wrap.append(row);
+  });
+}
+function addSheetSub() {
+  const inp = $('#f-sub-input');
+  const v = inp.value.trim();
+  if (!v) return;
+  (ui.sheetSubs = ui.sheetSubs || []).push({ id: newId('s'), title: v, done: false });
+  inp.value = '';
+  renderSheetSubs();
+  inp.focus();
+}
+$('#f-sub-add').addEventListener('click', addSheetSub);
+$('#f-sub-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addSheetSub(); } });
 
 /* 自由入力の名前補完: よく会う人＋過去の予定に登場した名前から候補を出す */
 function whoNameUniverse() {
@@ -2903,6 +3143,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
   const inviteNote = $('#f-invite-note').value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
+  const subs = (ui.sheetSubs || []).map((s) => ({ id: s.id || newId('s'), title: (s.title || '').trim(), done: !!s.done })).filter((s) => s.title);
   const hideMonth = !getOpt('#opt-month'); // 「月」カレンダーに表示しない
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
@@ -2911,7 +3152,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
 
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs });
     if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
@@ -2920,7 +3161,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -2928,11 +3169,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -2958,11 +3199,12 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
   }
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs }) {
   const r = item.ref;
   r.title = title;
   r.color = color;
   r.calendarId = calendarId;
+  if (subs && subs.length) r.subs = subs; else delete r.subs;
   if (item.kind === 'event') {
     r.place = place;
     r.who = who && who.length ? who : null;
@@ -4956,6 +5198,9 @@ function renderSharedCard() {
 
 const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
 const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['routines', 'ルーティン']];
+// 日ビューに出るカード（後から追加された機能ぶんも隠せるように）
+function hideSections() { return [['sleep', '睡眠の記録'], ['daylog', dayLogName()]]; }
+function sectionHidden(key) { return !!(db.settings.hidden || {})[`section:${key}`]; }
 
 function applyVisibility() {
   const h = db.settings.hidden || {};
@@ -4991,8 +5236,11 @@ function renderVisibilityCard() {
     row.append(cb, ` ${label}`);
     wrap.append(row);
   };
+  wrap.append(el('p', 'vis-group', 'ビュー・タブ'));
   HIDE_VIEWS.forEach(([v, label]) => mk(`view:${v}`, label));
   HIDE_NAVS.forEach(([n, label]) => mk(`nav:${n}`, label));
+  wrap.append(el('p', 'vis-group', '日ビューのカード'));
+  hideSections().forEach(([s, label]) => mk(`section:${s}`, label));
 }
 
 /* ========== v14: 記念日（あと◯日カウントダウン） ========== */
@@ -5181,11 +5429,11 @@ function renderColorRuleCard() {
 
 /* ========== v14: 期間のふりかえりメモ（週・月・年ごとに書き溜め→見返し） ========== */
 
-function periodNoteKey(period) {
-  const now = new Date();
-  if (period === 'week') return `w:${toKey(startOfWeekMon(now))}`;
-  if (period === 'month') return `m:${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  return `y:${now.getFullYear()}`;
+function periodNoteKey(period, offset = 0) {
+  const start = periodStart(period, offset);
+  if (period === 'week') return `w:${toKey(start)}`;
+  if (period === 'month') return `m:${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+  return `y:${start.getFullYear()}`;
 }
 function periodNoteLabel(key) {
   const [t, rest] = key.split(':');
@@ -5193,8 +5441,8 @@ function periodNoteLabel(key) {
   if (t === 'm') { const [y, m] = rest.split('-'); return `${y}年${Number(m)}月`; }
   return `${rest}年`;
 }
-function renderPeriodNote(container, period, periodLabel) {
-  const key = periodNoteKey(period);
+function renderPeriodNote(container, period, periodLabel, offset = 0) {
+  const key = periodNoteKey(period, offset);
   const card = el('div', 'card chart-card');
   card.append(el('p', 'section-label', `${periodLabel}のふりかえりメモ`));
   const ta = document.createElement('textarea');
@@ -5237,13 +5485,18 @@ function notionReady() { const n = notionCfg(); return Boolean(n.url && n.secret
 function notionDayPayload(key) {
   const n = notionCfg();
   const diaries = [];
+  const memos = [];
   const log = db.dayLogs[key];
-  if (log) diaries.push(`【あのね。ノート】${log}`);
+  if (log) diaries.push(`【${dayLogName()}】${log}`);
   const note = db.notes[key];
   if (note) diaries.push(`【ひとこと】${note}`);
   for (const it of itemsFor(key)) {
-    const d = diaryFor(it);
-    if (d) diaries.push(`【${it.title}】${d}`);
+    const dv = diaryFor(it);
+    if (dv) diaries.push(`【${it.title}】${dv}`);
+    const mv = memoFor(it);
+    if (mv) memos.push(`【${it.title}】${mv}`);
+    const subs = it.ref && it.ref.subs;
+    if (subs && subs.length) memos.push(`【${it.title}｜詳細】${subs.map((s) => `${s.done ? '✓' : '・'}${s.title}`).join(' ')}`);
   }
   const d = fromKey(key);
   const rec = db.sleep[key] || {};
@@ -5251,8 +5504,8 @@ function notionDayPayload(key) {
     dbId: n.dbId,
     date: key,
     title: `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD_JA[d.getDay()]}）`,
-    diary: diaries.join('\n') || null,
-    memo: note || null,
+    diary: diaries.join('\n') || null,       // あのね。ノート＋ひとこと＋各タスク/予定の日記（全文）
+    memo: memos.join('\n') || null,          // 各タスク/予定の「メモ」をまとめて反映
     doneCount: tasksStatsFor(key).done,
     bed: rec.bed || null,
     wake: rec.wake || null,
