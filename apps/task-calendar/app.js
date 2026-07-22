@@ -5144,6 +5144,10 @@ function shItemsFor(code) { // 共有ドキュメントに入れる形（calenda
 function shApplyRemote(code, data) {
   const isOwner = fbUser && data.ownerUid === fbUser.uid;
   const me = fbUser && (data.members || {})[fbUser.uid];
+  // 過去に保存されていたメールアドレスは使わないので、オーナーが開いたら削除しておく（プライバシー）
+  if (isOwner && Object.prototype.hasOwnProperty.call(data, 'ownerEmail')) {
+    try { shDocRef(code).update({ ownerEmail: window.firebase.firestore.FieldValue.delete() }); } catch (e) { /* 次回でよい */ }
+  }
   if (fbUser && !isOwner && !me) { // オーナーに共有を解除された
     shLeaveLocal(code);
     flashToast(`「${data.title || code}」の共有が解除されました`);
@@ -5218,7 +5222,7 @@ async function shCreate(title) {
   if (!navigator.onLine) { flashToast('オフラインです'); return; }
   if (!(await ensureFirebase()) || !fbUser) { flashToast('先にGoogleでログインしてね'); return; }
   const code = shNewCode();
-  const data = { title, color: 'blue', ownerUid: fbUser.uid, ownerEmail: fbUser.email || '', members: {}, updatedAt: Date.now(), tasks: [], events: [] };
+  const data = { title, color: 'blue', ownerUid: fbUser.uid, members: {}, updatedAt: Date.now(), tasks: [], events: [] };
   try {
     await shDocRef(code).set(data);
     db.sharedJoined.push(code);
