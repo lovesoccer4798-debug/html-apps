@@ -4677,9 +4677,76 @@ $('#search-open').addEventListener('click', () => {
   $('#search-results').textContent = '';
   $('#search-input').focus();
 });
-$('#search-close').addEventListener('click', () => { $('#search-scrim').hidden = true; });
-$('#search-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#search-close').addEventListener('click', () => { $('#search-scrim').hidden = true; stopVoice(); });
+$('#search-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.hidden = true; stopVoice(); } });
 $('#search-input').addEventListener('input', renderSearchResults);
+
+/* ========== 音声で検索（Web Speech API・対応端末のみ・候補はリスト表示）==========
+   話した言葉を検索ボックスに入れて、既存の検索でマッチする予定を一覧表示する。
+   iOSのホーム画面アプリ等・非対応環境ではマイクを自動で隠す（邪魔にならない）。 */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let voiceRec = null;
+let voiceActive = false;
+function voiceSupported() { return Boolean(SpeechRec); }
+function setVoiceStatus(msg, on) {
+  const el2 = $('#voice-status');
+  if (!el2) return;
+  el2.textContent = msg || '';
+  el2.hidden = !msg;
+  const mic = $('#search-mic');
+  if (mic) mic.classList.toggle('is-listening', !!on);
+}
+function stopVoice() {
+  voiceActive = false;
+  try { if (voiceRec) voiceRec.stop(); } catch (e) { /* noop */ }
+  setVoiceStatus('', false);
+}
+function startVoice() {
+  if (!voiceSupported()) { flashToast('この端末では音声入力が使えません'); return; }
+  if (voiceActive) { stopVoice(); return; }
+  try {
+    voiceRec = new SpeechRec();
+    voiceRec.lang = 'ja-JP';
+    voiceRec.interimResults = true;
+    voiceRec.maxAlternatives = 1;
+    voiceRec.continuous = false;
+    voiceActive = true;
+    setVoiceStatus('聞き取り中… 話してください', true);
+    voiceRec.onresult = (ev) => {
+      let text = '';
+      for (let i = 0; i < ev.results.length; i += 1) text += ev.results[i][0].transcript;
+      text = text.replace(/[。、.\s]+$/, '').trim();
+      $('#search-input').value = text;
+      renderSearchResults();
+      if (ev.results[ev.results.length - 1].isFinal) setVoiceStatus(`「${text}」で検索中`, false);
+    };
+    voiceRec.onerror = (ev) => {
+      voiceActive = false;
+      const code = ev && ev.error;
+      if (code === 'not-allowed' || code === 'service-not-allowed') setVoiceStatus('マイクの使用が許可されていません（設定を確認してね）', false);
+      else if (code === 'no-speech') setVoiceStatus('うまく聞き取れませんでした。もう一度どうぞ', false);
+      else setVoiceStatus('音声入力を使えませんでした', false);
+    };
+    voiceRec.onend = () => { voiceActive = false; const mic = $('#search-mic'); if (mic) mic.classList.remove('is-listening'); };
+    voiceRec.start();
+  } catch (e) {
+    voiceActive = false;
+    setVoiceStatus('音声入力を開始できませんでした', false);
+  }
+}
+function openSearch(voice) {
+  $('#search-scrim').hidden = false;
+  $('#search-input').value = '';
+  $('#search-results').textContent = '';
+  setVoiceStatus('', false);
+  if (voice && voiceSupported()) startVoice(); else $('#search-input').focus();
+}
+if (voiceSupported()) { // 対応端末だけマイクを出す
+  $('#voice-open').hidden = false;
+  $('#search-mic').hidden = false;
+  $('#voice-open').addEventListener('click', () => openSearch(true));
+  $('#search-mic').addEventListener('click', startVoice);
+}
 
 /* ========== v13: Googleカレンダー連携（第1弾: メインカレンダーの読み込み・表示）==========
    OAuthはライブラリ不要のリダイレクト方式（インプリシットフロー）— CDN禁止方針と両立。
