@@ -65,6 +65,10 @@ const ICONS = {
 
 /* ========== persistent data ========== */
 
+// 新しく入った人が最初に見る「デフォルト（そぎ落とし）」構成で隠す項目。
+// フル機能はそのまま全部残っていて、設定の「表示モード」でいつでも切替できる。
+const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
+
 function defaultDb() {
   return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
@@ -86,7 +90,11 @@ function loadDb() {
   } catch (err) {
     console.warn('Task Calendar: failed to load, starting empty', err);
   }
-  return defaultDb();
+  // まっさらな新規ユーザー（保存データなし）は、そぎ落とした「デフォルト」構成で開始する。
+  // 既存ユーザーは上の raw 分岐で自分の設定がそのまま読まれるので影響なし。
+  const fresh = defaultDb();
+  fresh.settings.hidden = { ...PRESET_DEFAULT };
+  return fresh;
 }
 
 let db = loadDb(); // バックアップ復元でまるごと入れ替えることがあるため let
@@ -5701,11 +5709,77 @@ function applyVisibility() {
   }
 }
 
+/* 表示モード（プリセット）: 表示する項目のON/OFFをまとめて切り替え・保存できる。
+   デフォルト＝新しく入った人が最初に見る、そぎ落とした構成。フルカスタム＝全部表示。
+   お気に入り＝自分の構成を2つまで保存。PRESET_DEFAULTはファイル冒頭で定義（loadDbより前）。 */
+function hiddenSig(map) { return Object.keys(map || {}).filter((k) => (map || {})[k]).sort().join('|'); }
+function currentPresetId() {
+  const cur = hiddenSig(db.settings.hidden);
+  if (cur === hiddenSig({})) return 'full';
+  if (cur === hiddenSig(PRESET_DEFAULT)) return 'default';
+  const favs = db.settings.favPresets || [];
+  for (let i = 0; i < favs.length; i += 1) { if (favs[i] && hiddenSig(favs[i].hidden) === cur) return `fav${i}`; }
+  return 'custom';
+}
+function applyHiddenPreset(map) {
+  db.settings.hidden = { ...(map || {}) };
+  save();
+  applyVisibility();
+  renderAll();
+}
+function saveFavPreset() {
+  const favs = db.settings.favPresets = db.settings.favPresets || [];
+  if (favs.filter(Boolean).length >= 2) { flashToast('お気に入りは2つまで。不要なものを削除してね'); return; }
+  const title = (prompt('お気に入りの名前を決めてね（例：仕事用・週末用）', '') || '').trim();
+  if (!title) return;
+  const snap = { title: title.slice(0, 16), hidden: { ...(db.settings.hidden || {}) } };
+  const empty = favs.findIndex((f) => !f);
+  if (empty >= 0) favs[empty] = snap; else favs.push(snap);
+  save();
+  renderAll();
+  flashToast(`「${snap.title}」を保存しました`);
+}
+function deleteFavPreset(i) {
+  const favs = db.settings.favPresets || [];
+  favs[i] = null;
+  if (!favs.some(Boolean)) db.settings.favPresets = [];
+  save();
+  renderAll();
+}
+function renderModePicker(wrap) {
+  const cur = currentPresetId();
+  wrap.append(el('p', 'vis-group', '表示モード'));
+  const row = el('div', 'mode-row');
+  const mk = (id, label, apply, delFn) => {
+    const chip = el('button', `mode-chip${cur === id ? ' is-on' : ''}`);
+    chip.type = 'button';
+    chip.append(el('span', 'mode-chip-t', label));
+    chip.addEventListener('click', apply);
+    if (delFn) {
+      const x = el('span', 'mode-del', '×');
+      x.addEventListener('click', (e) => { e.stopPropagation(); delFn(); });
+      chip.append(x);
+    }
+    row.append(chip);
+  };
+  mk('full', 'フルカスタム', () => applyHiddenPreset({}));
+  mk('default', 'デフォルト', () => applyHiddenPreset(PRESET_DEFAULT));
+  (db.settings.favPresets || []).forEach((f, i) => { if (f) mk(`fav${i}`, f.title, () => applyHiddenPreset(f.hidden), () => deleteFavPreset(i)); });
+  wrap.append(row);
+  if ((db.settings.favPresets || []).filter(Boolean).length < 2) {
+    const saveBtn = el('button', 'mode-save', '＋ 今の表示をお気に入りに保存');
+    saveBtn.type = 'button';
+    saveBtn.addEventListener('click', saveFavPreset);
+    wrap.append(saveBtn);
+  }
+  wrap.append(el('p', 'hint', cur === 'custom' ? '今は「カスタム」表示です。お気に入りに保存できます。' : 'フルカスタム＝全機能／デフォルト＝おすすめの最小構成。下のチェックで個別にも調整できます。'));
+}
 function renderVisibilityCard() {
   const wrap = $('#visibility-body');
   if (!wrap) return;
   wrap.textContent = '';
   const h = db.settings.hidden = db.settings.hidden || {};
+  renderModePicker(wrap);
   const mk = (k, label) => {
     const row = el('label', 'vis-row');
     const cb = document.createElement('input');
