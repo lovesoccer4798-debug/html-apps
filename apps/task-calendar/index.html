@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=51">
-<link rel="stylesheet" href="style.css?v=51">
+<link rel="stylesheet" href="tokens.css?v=52">
+<link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
 
@@ -83,6 +83,7 @@
       </div>
       <div class="date-row"><h1 class="date-title">設定</h1></div>
     </header>
+    <button type="button" class="settings-return" id="settings-return"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg><span>とじる</span></button>
     <div class="body">
       <p class="section-label">テーマ</p>
       <div class="card">
@@ -143,7 +144,9 @@
 
       <p class="section-label">月の予定のフチ・色分け（自分の画面だけ）</p>
       <div class="card">
-        <label class="sync-toggle"><input type="checkbox" id="month-edge-toggle"> 月の予定に「くっきりフチ」をつける</label>
+        <p class="f-label" style="margin-top:0">カレンダーごとに「くっきりフチ」</p>
+        <div id="edge-cals"></div>
+        <p class="hint">カレンダーごとに、月表示でフチをつけるか選べます。共有カレンダーは「相手の分だけ／自分の分だけ」も選べるので、誰の予定かをひと目で分けられます（判定は最新版アプリで入れた予定から・フチは自分の画面だけ）。</p>
         <label class="sync-toggle"><input type="checkbox" id="invert-events-toggle"> 予定の色を反転（フチ＋薄塗り）してタスクと見分ける</label>
         <div id="colorrule-body"></div>
         <p class="hint">名前や意味（例：「村山さん」「遊び」）に色を割り当てると、その言葉を含む予定・タスクの月表示に、その色のフチがつきます。予定のタイトルや「誰と」に一致で判定。共有カレンダーでも<strong>この色分けは自分の画面だけ</strong>で、共有相手には影響しません。相手は相手で自由に色分けできます。</p>
@@ -673,7 +676,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=51"></script>
-<script src="app.js?v=51"></script>
+<script src="firebase-config.js?v=52"></script>
+<script src="app.js?v=52"></script>
 </body>
 </html>

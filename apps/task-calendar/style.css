@@ -34,6 +34,19 @@ input, select, textarea { font: inherit; color: inherit; }
 
 .screen { padding: 0 20px; }
 
+/* 設定を下までスクロールしても、いつでも閉じられる浮動ボタン */
+.settings-return {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 40;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 10px 20px 10px 16px; border-radius: var(--tc-r-pill);
+  background: var(--tc-ink); color: var(--tc-bg);
+  font-size: 14px; font-weight: 700;
+  box-shadow: var(--tc-shadow);
+}
+.settings-return .icon { width: 18px; height: 18px; }
+
 /* ---------- アプリバー ---------- */
 
 .appbar { padding-top: max(14px, env(safe-area-inset-top)); }
@@ -1348,6 +1361,16 @@ input, select, textarea { font: inherit; color: inherit; }
 .vis-row:last-child { border-bottom: none; }
 .vis-group { font-size: 11px; font-weight: 700; color: var(--tc-ink3); margin: 12px 0 2px; letter-spacing: 0.02em; }
 .vis-group:first-child { margin-top: 0; }
+
+/* カレンダーごとの月フチ設定 */
+.edge-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
+.edge-row:last-child { border-bottom: none; }
+.edge-name { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edge-mini { flex: none; font-size: 12px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--tc-line); background: var(--tc-surface); color: var(--tc-ink3); }
+.edge-mini.is-on { border-color: var(--tc-accent); background: var(--tc-accent-soft); color: var(--tc-accent); font-weight: 700; }
+.edge-seg { flex: none; display: flex; background: var(--tc-surface2); border-radius: 999px; padding: 2px; }
+.edge-seg-btn { font-size: 12px; padding: 4px 9px; border-radius: 999px; color: var(--tc-ink3); }
+.edge-seg-btn.is-active { background: var(--tc-accent); color: #fff; font-weight: 700; }
 .vis-row input { width: 18px; height: 18px; accent-color: var(--tc-accent); }
 
 /* ---------- v16: 睡眠一覧・ルーティン期間・gcal URI ---------- */

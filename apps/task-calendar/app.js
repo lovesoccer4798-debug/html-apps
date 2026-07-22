@@ -250,8 +250,19 @@ function itemColor(it) {
   }
   return null;
 }
-// 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）に一致すればその色、
-// なければ「フチをはっきり」ONのとき黒っぽい縁。ローカル設定なので共有相手の画面には出ない。
+// その予定・タスクを自分が入れたか（共有カレンダーで「相手の分だけ」等の判定に使う）
+function itemIsMine(it) {
+  const by = it.ref && it.ref.by;
+  return !by || (fbUser && by === fbUser.uid);
+}
+// カレンダーごとのフチ設定を返す（'all'|'others'|'mine'|null）。旧「くっきりフチ」は全カレンダー'all'として互換
+function edgeModeFor(calId) {
+  const map = db.settings.edgeCals;
+  if (map) return map[calId || 'c-default'] || null;
+  return db.settings.monthEdge ? 'all' : null;
+}
+// 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）優先、なければカレンダーごとのフチ設定。
+// ローカル設定なので共有相手の画面には出ない。
 function itemEdgeColor(it) {
   const rules = db.colorRules || [];
   if (rules.length) {
@@ -259,7 +270,13 @@ function itemEdgeColor(it) {
     const rule = rules.find((r) => r.label && hay.includes(r.label));
     if (rule) return (ACCENTS[rule.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
   }
-  if (db.settings.monthEdge) return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+  const mode = edgeModeFor(it.ref && it.ref.calendarId);
+  if (mode) {
+    const mine = itemIsMine(it);
+    if (mode === 'all' || (mode === 'others' && !mine) || (mode === 'mine' && mine)) {
+      return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+    }
+  }
   return null;
 }
 // 「月」カレンダーに表示するか（個別の予定・タスク、またはそのルーティンの設定で隠せる。一覧・他ビューには残る）
@@ -744,6 +761,7 @@ function setScreen(screen) {
 
 document.querySelectorAll('[data-goto="settings"]').forEach((b) => b.addEventListener('click', () => setScreen('settings')));
 $('#settings-back').addEventListener('click', () => setScreen(ui.prevScreen));
+$('#settings-return').addEventListener('click', () => setScreen(ui.prevScreen)); // 下までスクロールしても閉じられる浮動ボタン
 $('#bottomnav').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-nav]');
   if (!btn) return;
@@ -2613,8 +2631,7 @@ function renderSettings() {
   if (dln) dln.value = db.settings.dayLogName || '';
   const tn = $('#timer-notify');
   if (tn) tn.checked = !!db.settings.timerNotify;
-  const me = $('#month-edge-toggle');
-  if (me) me.checked = !!db.settings.monthEdge;
+  renderEdgeCals();
   const ie = $('#invert-events-toggle');
   if (ie) ie.checked = !!db.settings.invertEvents;
   const st = $('#sched-template');
@@ -2705,11 +2722,57 @@ $('#timer-notify').addEventListener('change', async (e) => {
   save();
 });
 
-$('#month-edge-toggle').addEventListener('change', (e) => {
-  db.settings.monthEdge = e.target.checked;
-  save();
-  renderAll();
-});
+// カレンダーごとの「くっきりフチ」設定。旧 monthEdge から edgeCals へ移行しつつ描画
+function edgeCalsMap() {
+  if (!db.settings.edgeCals) { // 旧設定からの移行（初回のみ）
+    const map = {};
+    if (db.settings.monthEdge) {
+      map['c-default'] = 'all';
+      db.calendars.forEach((c) => { map[c.id] = 'all'; });
+      db.sharedJoined.forEach((code) => { map[SH_PREFIX + code] = 'all'; });
+    }
+    db.settings.edgeCals = map;
+    delete db.settings.monthEdge;
+  }
+  return db.settings.edgeCals;
+}
+function renderEdgeCals() {
+  const wrap = $('#edge-cals');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const map = edgeCalsMap();
+  const setMode = (id, mode) => { if (mode) map[id] = mode; else delete map[id]; save(); renderAll(); };
+  // 自分のカレンダー: なし / つける の2択トグル
+  const ownRow = (id, name) => {
+    const row = el('div', 'edge-row');
+    row.append(el('span', 'edge-name', name));
+    const btn = el('button', `edge-mini${map[id] === 'all' ? ' is-on' : ''}`, map[id] === 'all' ? 'フチあり' : 'フチなし');
+    btn.type = 'button';
+    btn.addEventListener('click', () => setMode(id, map[id] === 'all' ? null : 'all'));
+    row.append(btn);
+    wrap.append(row);
+  };
+  // 共有カレンダー: なし / 全部 / 相手の分だけ / 自分の分だけ の4択
+  const shRow = (id, name) => {
+    const row = el('div', 'edge-row');
+    row.append(el('span', 'edge-name', name));
+    const seg = el('div', 'edge-seg');
+    [['', 'なし'], ['all', '全部'], ['others', '相手'], ['mine', '自分']].forEach(([v, label]) => {
+      const b = el('button', `edge-seg-btn${(map[id] || '') === v ? ' is-active' : ''}`, label);
+      b.type = 'button';
+      b.addEventListener('click', () => setMode(id, v || null));
+      seg.append(b);
+    });
+    row.append(seg);
+    wrap.append(row);
+  };
+  ownRow('c-default', (db.calendars.find((c) => c.id === 'c-default') || {}).name || 'マイカレンダー');
+  db.calendars.filter((c) => c.id !== 'c-default').forEach((c) => ownRow(c.id, c.name));
+  for (const code of db.sharedJoined) {
+    const c = db.sharedCache[code];
+    shRow(SH_PREFIX + code, `${(c && c.title) || code}（共有）`);
+  }
+}
 
 $('#sticky-toggle').addEventListener('change', (e) => {
   db.settings.stickyHeader = e.target.checked;
@@ -3161,7 +3224,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -3169,11 +3232,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
