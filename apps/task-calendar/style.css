@@ -53,8 +53,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .acc.is-open .acc-chev { transform: rotate(-135deg); }
 .acc-body { display: none; padding: 0 14px 14px; }
 .acc.is-open .acc-body { display: block; }
-/* 折りたたみの中に入るカードは、二重の枠にならないよう素の見た目に */
-.acc-body > .card { background: transparent; box-shadow: none; padding: 0; }
+/* 折りたたみの中に入るカードは、二重の枠にならないよう完全に素の見た目に。
+   くっきり/カクカク（[data-style] .card の枠線）にも勝てるよう詳細度を上げる。 */
+:root .acc > .acc-body > .card { background: transparent; box-shadow: none; border: none; border-radius: 0; padding: 0; }
 
 /* ---------- アプリバー ---------- */
 
@@ -1443,6 +1444,7 @@ input, select, textarea { font: inherit; color: inherit; }
 /* ---------- v19: スタイル変更（カクカク／くっきり） ---------- */
 :root[data-style="square"] .item,
 :root[data-style="square"] .card,
+:root[data-style="square"] .acc,
 :root[data-style="square"] .sleep-card,
 :root[data-style="square"] .anniv-card,
 :root[data-style="square"] .run-card { border: 1px solid var(--tc-line); }
@@ -1451,6 +1453,7 @@ input, select, textarea { font: inherit; color: inherit; }
 :root[data-style="square"] .chip { border-radius: var(--tc-r-pill); }
 :root[data-style="crisp"] .item,
 :root[data-style="crisp"] .card,
+:root[data-style="crisp"] .acc,
 :root[data-style="crisp"] .sleep-card,
 :root[data-style="crisp"] .anniv-card { border: 1.5px solid var(--tc-ink4); }
 :root[data-style="crisp"] .cal-chip,
@@ -1773,8 +1776,12 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .tg-sched-t { font-size: 10px; font-weight: 700; color: var(--tc-accent); }
 
 /* ヘルプ・定型文 */
-.help-body { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow-y: auto; padding-bottom: 8px; }
-.help-body b { color: var(--tc-ink); }
+#help-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
+.help-intro { font-size: 13.5px; color: var(--tc-ink2); line-height: 1.75; margin: 2px 2px 14px; }
+.help-intro b { color: var(--tc-ink); }
+.help-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 14px; }
+.help-chips-label { font-size: 11px; font-weight: 700; color: var(--tc-ink3); margin-right: 2px; }
+.help-chip { font-size: 12.5px; padding: 6px 13px; border-radius: var(--tc-r-pill); border: 1px solid var(--tc-line); background: var(--tc-surface); color: var(--tc-ink2); }
 /* ヘルプ: 検索バー */
 .help-search {
   display: flex; align-items: center; gap: 8px; margin: 4px 0 12px;

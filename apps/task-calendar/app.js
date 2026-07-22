@@ -872,7 +872,8 @@ function renderAll() {
   $('#scr-routines').hidden = ui.screen !== 'routines';
   $('#scr-anniv').hidden = ui.screen !== 'anniv';
   $('#scr-tasklist').hidden = ui.screen !== 'tasklist';
-  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv';
+  $('#scr-help').hidden = ui.screen !== 'help';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -895,6 +896,7 @@ function renderAll() {
   if (ui.screen === 'settings') renderSettings();
   if (ui.screen === 'routines') renderRoutines();
   if (ui.screen === 'tasklist') renderTaskList();
+  if (ui.screen === 'help') { renderHelpChips(); renderHelp(($('#help-search') && $('#help-search').value) || ''); }
 }
 
 function streakDays() {
@@ -1538,21 +1540,45 @@ $('#side-sched').addEventListener('click', () => {
   renderAll();
 });
 function openHelp() {
-  $('#help-search').value = '';
+  if (ui.screen !== 'help') ui.prevScreen = ui.screen;
+  const s = $('#help-search');
+  if (s) s.value = '';
   $('#help-search-clear').hidden = true;
-  renderHelp('');
-  $('#help-scrim').hidden = false;
+  ui.screen = 'help';
+  renderAll(); // renderHelp / チップの描画は renderAll 経由
+}
+const HELP_CHIPS = ['保存', '消える', '共有', 'バックアップ', 'タイマー', 'Notion', '無料'];
+function renderHelpChips() {
+  const wrap = $('#help-chips');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const cur = ($('#help-search').value || '').trim();
+  if (cur) { wrap.hidden = true; return; } // 検索中はチップを隠す
+  wrap.hidden = false;
+  wrap.append(el('span', 'help-chips-label', 'よく見られる:'));
+  for (const w of HELP_CHIPS) {
+    const b = el('button', 'help-chip', w);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      $('#help-search').value = w;
+      $('#help-search-clear').hidden = false;
+      renderHelp(w);
+      renderHelpChips();
+    });
+    wrap.append(b);
+  }
 }
 $('#side-help').addEventListener('click', () => { closeSidebar(); openHelp(); });
-$('#help-close').addEventListener('click', () => { $('#help-scrim').hidden = true; });
-$('#help-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#help-back').addEventListener('click', () => setScreen(ui.prevScreen || 'cal'));
 $('#help-search').addEventListener('input', (e) => {
   $('#help-search-clear').hidden = !e.target.value;
+  renderHelpChips();
   renderHelp(e.target.value);
 });
 $('#help-search-clear').addEventListener('click', () => {
   $('#help-search').value = '';
   $('#help-search-clear').hidden = true;
+  renderHelpChips();
   renderHelp('');
   $('#help-search').focus();
 });

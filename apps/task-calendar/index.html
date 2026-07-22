@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=57">
-<link rel="stylesheet" href="style.css?v=57">
+<link rel="stylesheet" href="tokens.css?v=58">
+<link rel="stylesheet" href="style.css?v=58">
 </head>
 <body>
 
@@ -252,6 +252,29 @@
         <p class="data-line" id="data-summary"></p>
         <p class="hint">データはこの端末のブラウザ内にだけ保存されます。</p>
       </div>
+    </div>
+  </section>
+
+  <!-- 使い方（ヘルプ・FAQ） -->
+  <section class="screen" id="scr-help" hidden>
+    <header class="appbar">
+      <div class="appbar-top">
+        <span class="eyebrow mono">HELP</span>
+        <div class="appbar-actions">
+          <button class="iconbtn" id="help-back" aria-label="戻る"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+      </div>
+      <div class="date-row"><h1 class="date-title">使い方・よくある質問</h1></div>
+    </header>
+    <div class="body">
+      <p class="help-intro">困ったときはここ。<b>上の検索</b>にことばを入れるか、<b>下の質問をタップ</b>すると答えが開きます。まずはよく見られる質問からどうぞ。</p>
+      <div class="help-search">
+        <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="help-search" placeholder="キーワードで探す（例：バックアップ・共有・Notion）">
+        <button type="button" id="help-search-clear" aria-label="消す" hidden><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <div class="help-chips" id="help-chips"></div>
+      <div id="help-list"></div>
     </div>
   </section>
 
@@ -525,21 +548,6 @@
   </nav>
 </div>
 
-<!-- 使い方（ヘルプ） -->
-<div class="sheet-scrim" id="help-scrim" hidden>
-  <div class="sheet" role="dialog" aria-modal="true">
-    <div class="sheet-grip"></div>
-    <button type="button" class="sheet-close" id="help-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-    <h2 class="sheet-title">使い方・よくある質問</h2>
-    <div class="help-search">
-      <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="text" id="help-search" placeholder="キーワードで探す（例：バックアップ・共有・Notion）">
-      <button type="button" id="help-search-clear" aria-label="消す" hidden><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-    </div>
-    <div class="help-body" id="help-list"></div>
-  </div>
-</div>
-
 <!-- 記念日の追加・編集 -->
 <div class="sheet-scrim" id="anniv-scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="anniv-sheet-title">
@@ -677,7 +685,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=57"></script>
-<script src="app.js?v=57"></script>
+<script src="firebase-config.js?v=58"></script>
+<script src="app.js?v=58"></script>
 </body>
 </html>
