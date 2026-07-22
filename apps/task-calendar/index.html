@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Task Calendar">
-<link rel="stylesheet" href="tokens.css?v=56">
-<link rel="stylesheet" href="style.css?v=56">
+<link rel="stylesheet" href="tokens.css?v=57">
+<link rel="stylesheet" href="style.css?v=57">
 </head>
 <body>
 
@@ -530,17 +530,13 @@
   <div class="sheet" role="dialog" aria-modal="true">
     <div class="sheet-grip"></div>
     <button type="button" class="sheet-close" id="help-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-    <h2 class="sheet-title">使い方</h2>
-    <div class="help-body">
-      <p><b>ビュー切替</b> — 日・週・時間・月・年をタブで。横スワイプで日付移動、上部は固定（設定でOFF可）</p>
-      <p><b>追加</b> — 右下の「＋」からタスク／予定。予定は終了日を入れると旅行など連日の帯に</p>
-      <p><b>タイマー</b> — タスクの▶で集中タイマー。完了すると実際の時間で開始・終了を自動記録</p>
-      <p><b>ルーティン</b> — 習慣の束（タスク型）と出勤・休みなど（予定型）。平日/土日祝/曜日選択OK。削除時は過去の記録を残せる</p>
-      <p><b>パッケージ</b> — お気に入りの1日を保存して別の日にコピー（ルーティン画面内）</p>
-      <p><b>スケジュール調整</b> — メニューから。時間割で空き枠を3つまで選んで、定型文をコピーしてLINEなどで共有</p>
-      <p><b>連携</b> — Googleカレンダー（常時連携可）・Notion・クラウド同期は設定から</p>
-      <p><b>バックアップ</b> — 設定→バックアップで書き出し／復元。同期ONなら自動でクラウドにも保存</p>
+    <h2 class="sheet-title">使い方・よくある質問</h2>
+    <div class="help-search">
+      <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="help-search" placeholder="キーワードで探す（例：バックアップ・共有・Notion）">
+      <button type="button" id="help-search-clear" aria-label="消す" hidden><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
+    <div class="help-body" id="help-list"></div>
   </div>
 </div>
 
@@ -681,7 +677,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=56"></script>
-<script src="app.js?v=56"></script>
+<script src="firebase-config.js?v=57"></script>
+<script src="app.js?v=57"></script>
 </body>
 </html>

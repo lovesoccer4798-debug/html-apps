@@ -1773,9 +1773,33 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .tg-sched-t { font-size: 10px; font-weight: 700; color: var(--tc-accent); }
 
 /* ヘルプ・定型文 */
-.help-body { display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding-bottom: 8px; }
-.help-body p { font-size: 13.5px; color: var(--tc-ink2); line-height: 1.7; }
+.help-body { display: flex; flex-direction: column; gap: 8px; max-height: 62vh; overflow-y: auto; padding-bottom: 8px; }
 .help-body b { color: var(--tc-ink); }
+/* ヘルプ: 検索バー */
+.help-search {
+  display: flex; align-items: center; gap: 8px; margin: 4px 0 12px;
+  padding: 9px 12px; border-radius: var(--tc-r-pill);
+  background: var(--tc-surface2); color: var(--tc-ink3);
+}
+.help-search .icon { width: 18px; height: 18px; flex: none; }
+.help-search input { flex: 1; min-width: 0; border: none; background: transparent; font-size: 14px; color: var(--tc-ink); }
+.help-search input:focus { outline: none; }
+.help-search input::placeholder { color: var(--tc-ink4); }
+.help-search button { flex: none; display: flex; color: var(--tc-ink3); }
+.help-search button .icon { width: 16px; height: 16px; }
+/* ヘルプ: カテゴリ見出しとQ&A */
+.help-cat { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--tc-ink3); margin: 12px 2px 2px; }
+.help-cat:first-child { margin-top: 0; }
+.help-q { border: 1px solid var(--tc-line); border-radius: 12px; overflow: hidden; }
+.help-q-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; text-align: left; }
+.help-q-t { font-size: 14px; font-weight: 600; color: var(--tc-ink); line-height: 1.5; }
+.help-q .acc-chev { flex: none; }
+.help-q-body { display: none; padding: 0 14px 13px; }
+.help-q.is-open .help-q-body { display: block; }
+.help-a { font-size: 13.5px; color: var(--tc-ink2); line-height: 1.75; }
+.help-more { margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--tc-accent); }
+.help-more-text { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--tc-line); }
+.help-empty { font-size: 13.5px; color: var(--tc-ink3); text-align: center; padding: 20px 0; }
 #sched-template {
   width: 100%; font: inherit; font-size: 14px; color: var(--tc-ink); line-height: 1.6;
   background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px;

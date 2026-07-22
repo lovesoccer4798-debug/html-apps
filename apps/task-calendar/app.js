@@ -1537,9 +1537,109 @@ $('#side-sched').addEventListener('click', () => {
   ui.schedMode = true; ui.schedSlots = [];
   renderAll();
 });
-$('#side-help').addEventListener('click', () => { closeSidebar(); $('#help-scrim').hidden = false; });
+function openHelp() {
+  $('#help-search').value = '';
+  $('#help-search-clear').hidden = true;
+  renderHelp('');
+  $('#help-scrim').hidden = false;
+}
+$('#side-help').addEventListener('click', () => { closeSidebar(); openHelp(); });
 $('#help-close').addEventListener('click', () => { $('#help-scrim').hidden = true; });
 $('#help-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#help-search').addEventListener('input', (e) => {
+  $('#help-search-clear').hidden = !e.target.value;
+  renderHelp(e.target.value);
+});
+$('#help-search-clear').addEventListener('click', () => {
+  $('#help-search').value = '';
+  $('#help-search-clear').hidden = true;
+  renderHelp('');
+  $('#help-search').focus();
+});
+
+/* ヘルプ（使い方・FAQ）: カテゴリ別Q&A。各項目は「短い答え」＋必要なら「もっと詳しく」。
+   検索は質問・答え・詳細・カテゴリを対象にキーワードで絞り込む。 */
+const HELP_FAQ = [
+  ['はじめかた', [
+    { q: 'このアプリは何ができる？', a: '日・週・時間・月・年の5つの見方でタスクと予定を管理して、こなした「できた」を積み上げて振り返るアプリです。タイマー・習慣（ルーティン）・日記・睡眠記録・スケジュール調整・カレンダー共有・Google/Notion連携まで入っています。', more: 'まずは右下の「＋」からタスクや予定を1つ追加してみてください。チェックで完了、下の「振り返り」で達成が見えます。' },
+    { q: 'アカウント登録は必要？', a: 'いりません。開いたその場ですぐ使えます。データはこの端末に保存されます。', more: '複数の端末で同じデータを見たいときや、機種変更に備えたいときだけ、設定 →「アカウントと同期」でGoogleログインするとクラウド同期できます（無料）。' },
+    { q: 'お金はかかる？', a: '完全無料です。課金要素はありません。', more: '同期やNotion連携などは無料枠（Firebase・Cloudflare・GitHub）の中で動く設計です。クレジットカード登録も不要です。' },
+  ]],
+  ['記録とデータ（保存・消える？）', [
+    { q: '書いた内容は保存される？', a: '自動で保存されます。入力するたびにこの端末（ブラウザ）へ即保存されるので、「保存ボタン」を押し忘れて消える心配はありません。', more: 'タスク・予定・日記・睡眠・設定など、ほぼすべて自動保存です。編集シートの内容は「保存」を押した時点で確定します。' },
+    { q: 'データが消えることはある？', a: 'アプリを閉じても消えません。ただし「ブラウザの履歴・サイトデータを消去」するとこの端末のデータは消えます。', more: '心配な場合の対策は2つ。①設定 →「アカウントと同期」でGoogleログイン（クラウドに自動バックアップ）。②設定 →「バックアップ」で書き出し（ファイル保存）。どちらかをしておくと安心です。' },
+    { q: 'バックアップの取り方は？', a: '設定 →「アカウント・データ」→「バックアップ」→「バックアップを書き出す」。全データが1つのファイルで保存できます。', more: '戻すときは同じ場所から「復元」。復元の前に、今のデータも自動で書き出される安全弁つきです。ファイルを書き出すだけなので容量は使いません。' },
+    { q: '機種変更・別の端末に移すには？', a: 'いちばん簡単なのはGoogleログイン。新しい端末で同じGoogleでログインすれば、データがそのまま出てきます。', more: 'ログインを使わない場合は、バックアップファイルを書き出して新端末で「復元」でもOKです。' },
+    { q: 'ホーム画面に置ける？（アプリみたいに）', a: 'できます。ブラウザの「ホーム画面に追加」で、アプリのように全画面で開けます。', more: 'iPhoneはSafariの共有ボタン →「ホーム画面に追加」。Androidはメニュー →「ホーム画面に追加」。' },
+  ]],
+  ['基本の使い方', [
+    { q: 'タスクと予定の違いは？', a: 'タスクはチェックで「完了」にできるやること。予定は時間の入った出来事です。', more: 'タスクには所要時間を入れてタイマーで実行できます。予定は終了日を入れると、旅行など複数日にまたぐ帯で表示できます。' },
+    { q: '5つのビュー（日・週・時間・月・年）の使い分けは？', a: '「日」は今日に集中、「週」は1週間の消化、「時間」は時間割で空きを見る、「月」は全体、「年」はざっくり。上のタブで切り替えます。', more: '使わないビューは設定 →「見た目・表示」→「表示する項目」で隠せます（データは消えません）。' },
+    { q: 'タイマーの使い方は？', a: 'タスクに所要時間を入れて▶を押すと集中タイマーが始まります。完了すると、実際にかかった時間で開始・終了時刻を自動で記録します。', more: '同時に動かせるタイマーは1つ。アプリを閉じても続き、開き直すと残り時間が復元されます。' },
+    { q: 'サブ項目（詳細）って何？', a: '大きなタスクの中に小さな項目をぶら下げられます。例：「読書」の中に本の名前。作成・編集画面で追加でき、チェックで1つずつ完了できます。', more: 'サブ項目はNotion連携にも反映されます（メモ欄に「【タスク名｜詳細】」の形で）。' },
+    { q: 'ルーティン（習慣）は？', a: '毎日・平日・曜日ごとなど、繰り返すことをまとめて管理できます。達成を続けると連続記録が伸びます。', more: '「タスク型」（歯みがき等の習慣）と「予定型」（出勤・休み等）があります。やめるときは「今日以降だけやめる（過去は残す）」も選べます。' },
+  ]],
+  ['スケジュール調整（予約リンク）', [
+    { q: 'スケジュール調整って何？', a: 'メニュー →「スケジュール調整」で、空いている時間を選んで相手に共有できます。相手はリンクから都合の良い日時をワンタップで選べます。', more: '相手が選ぶと、あなたのカレンダーに自動で「打ち合わせ」が入ります。「確定時にMeet発行」をONにすると（Google連携中）Google Meetのリンクも自動で作られます。' },
+    { q: '相手はアプリやログインが必要？', a: 'いりません。相手はリンクを開いて日時を選ぶだけ。アプリのインストールもログインも不要です。', more: '予約リンクを使うには、あなた側がGoogleログインしている必要があります（発行するため）。' },
+    { q: '発行したリンクは後から確認できる？', a: 'できます。「スケジュール調整」を開くと発行済みリンクが一覧で並び、状態（募集中／確定）や、リンク・定型文の再コピー、変更、取り消しができます。', more: '「終了」を押しても発行済みのリンクは生き続けます（画面の選択が消えるだけ）。' },
+  ]],
+  ['共有・同期（家族や友達と）', [
+    { q: '家族や友達と一緒に使える？', a: '使えます。アプリのURLを教えれば、相手も自分のデータで独立して使えます。', more: '予定を「一緒に見る」には共有カレンダー機能を使います（設定 →「連携・同期」→「共有カレンダー」で作成し、招待コードを渡す）。' },
+    { q: 'リンクを共有したら個人情報は漏れない？', a: '漏れません。アプリURLや予約リンクにメールアドレスなどの個人情報は含まれません。予約リンクで相手が見られるのは候補の日時とあなたのニックネームだけです。', more: '共有カレンダーは、招待コードを渡した相手だけがその予定（タイトル・時間など）を見られます。あなたの他のカレンダーやアプリ全体のデータは相手に見えません。' },
+    { q: '無料のまま何人まで使える？', a: '家族・友達〜小規模グループ（数人〜数十人の軽い利用）なら余裕で無料の範囲です。', more: 'みんなが1つの無料枠（作者のFirebase）を共有する仕組みのため、共有カレンダーやリアルタイム同期を多用するほど使用量が増えます。数百人規模に広く公開すると無料枠を超える可能性があります。' },
+    { q: 'クラウド同期は安全？', a: 'ログインはGoogleの仕組みを使い、パスワードはアプリ側で保持しません。自分のデータは自分だけが読み書きできるよう、サーバー側のルールで守られています。', more: 'Notionのトークンなどの秘密情報は、ブラウザではなくサーバー（Cloudflare Worker）にだけ保存され、外に出ません。' },
+  ]],
+  ['連携（Google・Notion）', [
+    { q: 'Googleカレンダーと連携できる？', a: 'できます。設定 →「連携・同期」→「Googleカレンダー連携」から。予定の読み込み・書き込み、Google Meetの自動発行に対応します。', more: '「その場連携」はすぐ使えますが約1時間で切れます。「常時連携」にすると自動更新で切れにくくなります（無料のCloudflare Worker設定が必要）。' },
+    { q: 'Notionに記録を残せる？', a: '残せます。設定 →「連携・同期」→「Notion連携」から、日記・メモ・できたこと・睡眠を1日1ページで自動保存できます。', more: 'Notion連携には各自のNotionデータベースと、中継用の無料Cloudflare Workerの用意が必要です。手順はアプリ内の案内とリポジトリの notion-worker.js に書いてあります。' },
+    { q: 'Notion連携は友達も同じ設定が必要？', a: 'はい。Notion連携は一人ひとりが自分のNotionと自分のWorkerを用意する必要があります。', more: 'あなたのWorkerを他の人が使うと、あなたのNotionに書き込まれてしまうため、各自が自分の分をセットアップします。' },
+  ]],
+  ['見た目・こまったとき', [
+    { q: '色やデザインを変えたい', a: '設定 →「見た目・表示」から、テーマ（自動/ライト/ダーク）、配色テーマ（7種の着せ替え）、アクセントカラー、フォント、文字サイズを変えられます。', more: '配色テーマの「デフォルト」はいつでも元のデザインに戻せます。' },
+    { q: '設定が多くて目的の項目が見つからない', a: '設定はカテゴリ別に折りたたまれています。見出しをタップで開閉。目的のカテゴリだけ開いて使ってください。', more: '' },
+    { q: '同期やNotionがうまくいかない', a: 'まず通信環境を確認し、設定から一度ログインし直す・再連携すると直ることが多いです。', more: 'Notion/Googleの常時連携はWorkerの設定（貼り替え・環境変数）が最新か確認してください。予約リンクが相手側で開かないときは、Firebaseのセキュリティルールが公開済みかを確認します。' },
+  ]],
+];
+function helpMatches(item, cat, q) {
+  const hay = `${cat} ${item.q} ${item.a} ${item.more || ''}`.toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every((w) => hay.includes(w.toLowerCase()));
+}
+function renderHelp(query) {
+  const list = $('#help-list');
+  if (!list) return;
+  list.textContent = '';
+  const q = (query || '').trim();
+  let shown = 0;
+  for (const [cat, items] of HELP_FAQ) {
+    const hits = q ? items.filter((it) => helpMatches(it, cat, q)) : items;
+    if (!hits.length) continue;
+    list.append(el('p', 'help-cat', cat));
+    for (const it of hits) {
+      shown += 1;
+      const card = el('div', 'help-q');
+      const head = el('button', 'help-q-head');
+      head.type = 'button';
+      head.append(el('span', 'help-q-t', it.q));
+      head.append(el('span', 'acc-chev'));
+      const body = el('div', 'help-q-body');
+      body.append(el('p', 'help-a', it.a));
+      if (it.more) {
+        const moreBtn = el('button', 'help-more', 'もっと詳しく');
+        moreBtn.type = 'button';
+        const moreP = el('p', 'help-a help-more-text', it.more);
+        moreP.hidden = true;
+        moreBtn.addEventListener('click', () => { moreP.hidden = !moreP.hidden; moreBtn.textContent = moreP.hidden ? 'もっと詳しく' : '閉じる'; });
+        body.append(moreBtn, moreP);
+      }
+      head.addEventListener('click', () => card.classList.toggle('is-open'));
+      if (q) card.classList.add('is-open'); // 検索中は開いて見せる
+      card.append(head, body);
+      list.append(card);
+    }
+  }
+  if (!shown) list.append(el('p', 'help-empty', '見つかりませんでした。別のことばで探してみてください（例：保存・共有・タイマー）。'));
+}
 $('#side-backup').addEventListener('click', () => { closeSidebar(); downloadBackup(); flashToast('バックアップを書き出しました（ファイル）'); });
 $('#side-settings').addEventListener('click', () => { closeSidebar(); setScreen('settings'); });
 
