@@ -66,7 +66,7 @@ const ICONS = {
 /* ========== persistent data ========== */
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -873,7 +873,8 @@ function renderAll() {
   $('#scr-anniv').hidden = ui.screen !== 'anniv';
   $('#scr-tasklist').hidden = ui.screen !== 'tasklist';
   $('#scr-help').hidden = ui.screen !== 'help';
-  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help';
+  $('#scr-person').hidden = ui.screen !== 'person';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -897,6 +898,7 @@ function renderAll() {
   if (ui.screen === 'routines') renderRoutines();
   if (ui.screen === 'tasklist') renderTaskList();
   if (ui.screen === 'help') { renderHelpChips(); renderHelp(($('#help-search') && $('#help-search').value) || ''); }
+  if (ui.screen === 'person') renderPerson();
 }
 
 function streakDays() {
@@ -1570,6 +1572,7 @@ function renderHelpChips() {
 }
 $('#side-help').addEventListener('click', () => { closeSidebar(); openHelp(); });
 $('#help-back').addEventListener('click', () => setScreen(ui.prevScreen || 'cal'));
+$('#person-back').addEventListener('click', () => setScreen(ui.prevScreen === 'person' ? 'insights' : (ui.prevScreen || 'insights')));
 $('#help-search').addEventListener('input', (e) => {
   $('#help-search-clear').hidden = !e.target.value;
   renderHelpChips();
@@ -2584,6 +2587,9 @@ function renderInsights() {
   }
   body.append(doneCard);
 
+  // よく会った人（期間内・2回以上・回数つき）→ タップでその人のページへ
+  renderPeopleSection(body, keys, periodLabel);
+
   // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様・今の期間のときだけ）
   const mem = isNow && [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
     .map(([days, label]) => ({ key: toKey(addDays(new Date(), -days)), label }))
@@ -2644,6 +2650,121 @@ function renderInsights() {
     }
     body.append(rCard);
   }
+}
+
+/* ========== 人ごとの振り返り（プロフィール帳・思い出） ==========
+   予定の「誰と」を集計。期間内に2回以上会った人を回数つきで表示し、
+   タップでその人の履歴＋プロフィール帳（自由記入）を開く。 */
+const PROFILE_FIELDS = [
+  { key: 'nick', label: '呼び方（ニックネーム）', ph: '例：むらやん' },
+  { key: 'relation', label: '関係性', ph: '例：大学の友だち・同僚・家族' },
+  { key: 'age', label: '年齢', ph: '例：28' },
+  { key: 'birthday', label: '誕生日', ph: '例：5/12' },
+  { key: 'personality', label: '性格', ph: '例：明るい・聞き上手', multi: true },
+  { key: 'likes', label: '好きなところ', ph: '一緒にいて落ち着く、話が面白い…', multi: true },
+  { key: 'met', label: '出会ったきっかけ', ph: 'いつ・どこで・どうやって出会った？', multi: true },
+  { key: 'next', label: '次に会ったらしたいこと', ph: '例：あの店に行く・旅行の話をする', multi: true },
+  { key: 'memory', label: '思い出・エピソード', ph: '一緒に過ごした思い出を自由に書けます', multi: true },
+];
+function peopleCountsInPeriod(keys) {
+  const set = new Set(keys);
+  const counts = {};
+  for (const e of db.events) {
+    const day = e.repeat ? null : e.date;
+    if (!day || !set.has(day)) continue;
+    for (const n of (e.who || [])) counts[n] = (counts[n] || 0) + 1;
+  }
+  return counts;
+}
+function personEventList(name) { // その人と一緒の予定（全期間・新しい順）
+  const out = [];
+  for (const e of db.events) {
+    if (e.repeat || !e.date) continue;
+    if ((e.who || []).includes(name)) out.push({ date: e.date, title: e.title });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+function renderPeopleSection(container, keys, periodLabel) {
+  const counts = peopleCountsInPeriod(keys);
+  const list = Object.entries(counts).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]);
+  if (!list.length) return;
+  const card = el('div', 'card chart-card');
+  card.append(el('p', 'section-label', `${periodLabel}よく会った人`));
+  for (const [name, c] of list) {
+    const row = el('button', 'person-row');
+    row.type = 'button';
+    const av = el('span', 'person-av', (name || '?').trim().slice(0, 1));
+    row.append(av);
+    row.append(el('span', 'person-name', name));
+    row.append(el('span', 'person-count mono', `${c}回`));
+    row.append(el('span', 'person-chev'));
+    row.addEventListener('click', () => openPerson(name));
+    card.append(row);
+  }
+  container.append(card);
+}
+function openPerson(name) {
+  ui.personName = name;
+  ui.prevScreen = ui.screen;
+  ui.screen = 'person';
+  renderAll();
+}
+function personProfile(name) {
+  db.peopleProfiles = db.peopleProfiles || {};
+  db.peopleProfiles[name] = db.peopleProfiles[name] || {};
+  return db.peopleProfiles[name];
+}
+function renderPerson() {
+  const name = ui.personName;
+  if (!name) { setScreen('insights'); return; }
+  $('#person-title').textContent = name;
+  const body = $('#person-body');
+  body.textContent = '';
+  const prof = personProfile(name);
+
+  // 一緒の予定（思い出）
+  const evs = personEventList(name);
+  const histCard = el('div', 'card');
+  histCard.append(el('p', 'section-label', `一緒の予定（${evs.length}件）`));
+  if (!evs.length) {
+    histCard.append(el('p', 'hint', 'まだ一緒の予定がありません。予定の「誰と」にこの名前を入れると、ここに思い出が並びます。'));
+  } else {
+    for (const e of evs.slice(0, 60)) {
+      const d = fromKey(e.date);
+      const r = el('button', 'person-ev');
+      r.type = 'button';
+      r.append(el('span', `person-ev-date mono${dayColorClass(d)}`, `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`));
+      r.append(el('span', 'person-ev-title', e.title));
+      r.addEventListener('click', () => { ui.cursor = fromKey(e.date); ui.view = 'day'; setScreen('cal'); });
+      histCard.append(r);
+    }
+  }
+  body.append(histCard);
+
+  // プロフィール帳
+  const profCard = el('div', 'card');
+  profCard.append(el('p', 'section-label', 'プロフィール帳'));
+  profCard.append(el('p', 'hint', 'この人のことを、思い出せるように書き残しておけます（自分だけのメモ）。'));
+  for (const f of PROFILE_FIELDS) {
+    const wrap = el('div', 'prof-field');
+    wrap.append(el('label', 'f-label', f.label));
+    const input = f.multi ? document.createElement('textarea') : document.createElement('input');
+    if (!f.multi) input.type = 'text';
+    if (f.multi) input.rows = 2;
+    input.className = 'prof-input';
+    input.placeholder = f.ph || '';
+    input.value = prof[f.key] || '';
+    input.maxLength = f.multi ? 2000 : 60;
+    input.addEventListener('input', () => {
+      const v = input.value;
+      if (v.trim()) personProfile(name)[f.key] = v; else delete personProfile(name)[f.key];
+      clearTimeout(input._t);
+      input._t = setTimeout(save, 400);
+    });
+    wrap.append(input);
+    profCard.append(wrap);
+  }
+  body.append(profCard);
 }
 
 /* ----- settings ----- */
@@ -5055,7 +5176,7 @@ function renderGcalCard() {
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
 const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules', 'packages'];
-const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs'];
+const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs', 'peopleProfiles'];
 const SH_PREFIX = 's:'; // 共有カレンダー所属の calendarId は 's:招待コード'
 function isSharedCal(id) { return typeof id === 'string' && id.startsWith(SH_PREFIX); }
 let fbReady = false;
