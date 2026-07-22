@@ -1459,6 +1459,36 @@ input, select, textarea { font: inherit; color: inherit; }
   font: inherit; font-size: 14px; color: var(--tc-ink4);
 }
 
+/* 詳細（サブ項目）: 編集シート内のエディタ */
+.f-subs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.f-sub-row { display: flex; align-items: center; gap: 8px; }
+.f-sub-chk {
+  flex: none; width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--tc-line);
+  background: var(--tc-surface); color: #fff; display: flex; align-items: center; justify-content: center;
+}
+.f-sub-chk.is-done { background: var(--tc-accent); border-color: var(--tc-accent); }
+.f-sub-chk .icon { width: 15px; height: 15px; }
+.f-sub-title { flex: 1; min-width: 0; border: none; border-bottom: 1px solid var(--tc-line); background: transparent; font: inherit; font-size: 14px; color: var(--tc-ink); padding: 4px 2px; }
+.f-sub-title:focus { outline: none; border-bottom-color: var(--tc-accent); }
+.f-sub-title.is-done { text-decoration: line-through; color: var(--tc-ink4); }
+.f-sub-del { flex: none; width: 30px; height: 30px; border: none; background: transparent; color: var(--tc-ink4); display: flex; align-items: center; justify-content: center; }
+.f-sub-del .icon { width: 17px; height: 17px; }
+.f-subadd { display: flex; gap: 8px; margin-bottom: 4px; }
+.f-subadd input { flex: 1; min-width: 0; }
+.f-subadd .cta { flex: none; padding: 8px 14px; }
+
+/* 詳細（サブ項目）: 日ビュー・詳細の表示 */
+.item-subs { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.item-sub { display: flex; align-items: center; gap: 7px; border: none; background: transparent; padding: 2px 0; text-align: left; }
+.item-sub-box {
+  flex: none; width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--tc-line);
+  background: var(--tc-surface); color: #fff; display: flex; align-items: center; justify-content: center;
+}
+.item-sub.is-done .item-sub-box { background: var(--tc-accent); border-color: var(--tc-accent); }
+.item-sub-box .icon { width: 12px; height: 12px; }
+.item-sub-title { font-size: 13px; color: var(--tc-ink2); }
+.item-sub.is-done .item-sub-title { text-decoration: line-through; color: var(--tc-ink4); }
+
 /* ---------- v32: パッケージ・タスク一覧 ---------- */
 /* ボトムナビ6項目に対応（アイコン背景をやや細く） */
 .bottomnav button .icon { padding: 3px 11px; }

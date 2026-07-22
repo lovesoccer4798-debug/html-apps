@@ -133,6 +133,7 @@ const ui = {
   insightsPeriod: 'week',   // 振り返りの期間: 'week' | 'month' | 'year'
   insightsOffset: 0,        // 振り返りの期間オフセット（0=今・-1=1つ前…横スライドで過去へ）
   dayLogEditKey: null,      // あのね。ノートを編集中の日付キー（null=プレビュー表示）
+  sheetSubs: [],            // 編集シートで編集中の詳細（サブ項目）[{id,title,done}]
   routineTab: 'routines',   // ルーティンタブ内: 'routines' | 'vision'
   vbFileTarget: null,       // 写真ピッカーの投入先
   vbSlotTarget: null,       // 差し替え/削除の対象アイテム
@@ -670,6 +671,20 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
       meta.append(pl);
     }
     main.append(meta);
+  }
+  // 詳細（サブ項目）: 大タスクの中身をチェックリストで表示。タップで完了を切り替え
+  if (!compact && (it.ref.subs || []).length) {
+    const subsEl = el('div', 'item-subs');
+    for (const s of it.ref.subs) {
+      const row = el('button', `item-sub${s.done ? ' is-done' : ''}`);
+      row.type = 'button';
+      const box = el('span', 'item-sub-box');
+      if (s.done) box.innerHTML = ICONS.check;
+      row.append(box, el('span', 'item-sub-title', s.title));
+      row.addEventListener('click', (e) => { e.stopPropagation(); s.done = !s.done; save(); renderAll(); });
+      subsEl.append(row);
+    }
+    main.append(subsEl);
   }
   card.append(main);
 
@@ -2809,6 +2824,23 @@ function openDetail(it) {
     row('場所', it.ref.place);
     const cal = db.calendars.find((c) => c.id === it.ref.calendarId);
     if (cal && cal.id !== 'c-default') row('カレンダー', cal.name);
+    if ((it.ref.subs || []).length) {
+      const blk = el('div', 'dt-block');
+      const doneN = it.ref.subs.filter((s) => s.done).length;
+      blk.append(el('span', 'dt-key', `詳細（${doneN}/${it.ref.subs.length}）`));
+      const list = el('div', 'item-subs');
+      for (const s of it.ref.subs) {
+        const r2 = el('button', `item-sub${s.done ? ' is-done' : ''}`);
+        r2.type = 'button';
+        const box = el('span', 'item-sub-box');
+        if (s.done) box.innerHTML = ICONS.check;
+        r2.append(box, el('span', 'item-sub-title', s.title));
+        r2.addEventListener('click', () => { s.done = !s.done; save(); openDetail(it); renderAll(); });
+        list.append(r2);
+      }
+      blk.append(list);
+      body.append(blk);
+    }
     const memo = memoFor(it);
     if (memo) { const r = el('div', 'dt-block'); r.append(el('span', 'dt-key', 'メモ')); r.append(el('p', 'dt-text', memo)); body.append(r); }
     const diary = diaryFor(it);
@@ -2878,6 +2910,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-invite').value = (r.attendees || []).join('、');
     $('#f-invite-note').value = r.inviteNote || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
+    ui.sheetSubs = (r.subs || []).map((s) => ({ ...s }));
   } else {
     sheetEls.fTitle.value = '';
     sheetEls.fDate.value = dateKey || (ui.view === 'month' ? (ui.selectedKey || todayKey()) : toKey(ui.cursor));
@@ -2897,7 +2930,10 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-invite').value = '';
     $('#f-invite-note').value = '';
     buildWhoChips([]);
+    ui.sheetSubs = [];
   }
+  $('#f-sub-input').value = '';
+  renderSheetSubs();
   $('#f-gcal-sync').hidden = !gcalCanWrite(); // Google連携中のみ表示
   buildSheetColors(item ? (item.ref.color || '') : '');
   const calSel = $('#f-cal');
@@ -2939,6 +2975,43 @@ function buildWhoChips(selected) {
   $('#f-who').value = selected.filter((n) => !db.people.includes(n)).join('、');
   $('#f-who-suggest').textContent = '';
 }
+
+/* 詳細（サブ項目）: 大きなタスクの中身を階層で持つ。編集中は ui.sheetSubs で管理 */
+function renderSheetSubs() {
+  const wrap = $('#f-subs');
+  wrap.textContent = '';
+  const subs = ui.sheetSubs || (ui.sheetSubs = []);
+  wrap.hidden = !subs.length;
+  subs.forEach((s, i) => {
+    const row = el('div', 'f-sub-row');
+    const chk = el('button', `f-sub-chk${s.done ? ' is-done' : ''}`);
+    chk.type = 'button';
+    chk.setAttribute('aria-label', s.done ? '未完了に戻す' : '完了にする');
+    if (s.done) chk.innerHTML = ICONS.check;
+    chk.addEventListener('click', () => { s.done = !s.done; renderSheetSubs(); });
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.maxLength = 80; inp.value = s.title; inp.className = `f-sub-title${s.done ? ' is-done' : ''}`;
+    inp.addEventListener('input', () => { s.title = inp.value; });
+    const del = el('button', 'f-sub-del');
+    del.type = 'button';
+    del.setAttribute('aria-label', '削除');
+    del.innerHTML = ICONS.trash || '×';
+    del.addEventListener('click', () => { subs.splice(i, 1); renderSheetSubs(); });
+    row.append(chk, inp, del);
+    wrap.append(row);
+  });
+}
+function addSheetSub() {
+  const inp = $('#f-sub-input');
+  const v = inp.value.trim();
+  if (!v) return;
+  (ui.sheetSubs = ui.sheetSubs || []).push({ id: newId('s'), title: v, done: false });
+  inp.value = '';
+  renderSheetSubs();
+  inp.focus();
+}
+$('#f-sub-add').addEventListener('click', addSheetSub);
+$('#f-sub-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addSheetSub(); } });
 
 /* 自由入力の名前補完: よく会う人＋過去の予定に登場した名前から候補を出す */
 function whoNameUniverse() {
@@ -3070,6 +3143,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
   const inviteNote = $('#f-invite-note').value.trim() || null;
   const color = $('#f-colors .accent-swatch.is-active')?.dataset.color || null;
+  const subs = (ui.sheetSubs || []).map((s) => ({ id: s.id || newId('s'), title: (s.title || '').trim(), done: !!s.done })).filter((s) => s.title);
   const hideMonth = !getOpt('#opt-month'); // 「月」カレンダーに表示しない
   const calSelV = $('#f-cal').value;
   const calendarId = calSelV && calSelV !== 'c-default' ? calSelV : null;
@@ -3078,7 +3152,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
 
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs });
     if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
@@ -3087,7 +3161,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -3095,11 +3169,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -3125,11 +3199,12 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
   }
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs }) {
   const r = item.ref;
   r.title = title;
   r.color = color;
   r.calendarId = calendarId;
+  if (subs && subs.length) r.subs = subs; else delete r.subs;
   if (item.kind === 'event') {
     r.place = place;
     r.who = who && who.length ? who : null;
@@ -5420,6 +5495,8 @@ function notionDayPayload(key) {
     if (dv) diaries.push(`【${it.title}】${dv}`);
     const mv = memoFor(it);
     if (mv) memos.push(`【${it.title}】${mv}`);
+    const subs = it.ref && it.ref.subs;
+    if (subs && subs.length) memos.push(`【${it.title}｜詳細】${subs.map((s) => `${s.done ? '✓' : '・'}${s.title}`).join(' ')}`);
   }
   const d = fromKey(key);
   const rec = db.sleep[key] || {};
