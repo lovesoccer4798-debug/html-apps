@@ -1,7 +1,7 @@
 {
-  "name": "Task Calendar",
-  "short_name": "タスクカレンダー",
-  "description": "日・週・月の3つの視点でタスクをこなし、積み上がった「できた」をながめる個人用タスクカレンダー",
+  "name": "TaskARE",
+  "short_name": "TaskARE",
+  "description": "TaskARE（たす彼。）— 日・週・月でタスクと予定をこなし、積み上がった「できた」をながめる、伴走してくれる個人用タスクカレンダー",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",

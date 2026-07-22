@@ -1847,6 +1847,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* ---------- v44: 予約リンク（スケジュール調整 第2弾） ---------- */
 .sched-hint2 { font-size: 11px; color: var(--tc-ink3); margin-top: 6px; }
 .sched-row + .sched-row { margin-top: 8px; }
+.sched-mt-label { font-size: 12px; font-weight: 700; color: var(--tc-ink2); flex: none; }
+.sched-mt { flex: none; }
+.sched-mt-input { width: 100%; margin-top: 8px; font: inherit; font-size: 13.5px; color: var(--tc-ink); background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 9px 11px; }
+.sched-mt-input:focus { outline: none; border-color: var(--tc-accent); }
+.sched-mt-input::placeholder { color: var(--tc-ink4); }
 .sched-offers { margin-top: 12px; border-top: 1px solid var(--tc-line); padding-top: 10px; }
 .sched-offers-h { font-size: 12px; font-weight: 700; color: var(--tc-ink2); margin-bottom: 8px; }
 .sched-offer { background: var(--tc-bg); border: 1px solid var(--tc-line); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
