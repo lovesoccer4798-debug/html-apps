@@ -5489,7 +5489,8 @@ function renderSharedCard() {
 /* ========== v15: ホーム表示のON/OFF（使わないビュー・タブを隠す） ========== */
 
 const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
-const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['routines', 'ルーティン']];
+const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['tasks', 'タスク'], ['routines', 'ルーティン']];
+const NAV_SCREEN = { tasks: 'tasklist' }; // data-nav と画面名が違うものだけ対応表
 // 日ビューに出るカード（後から追加された機能ぶんも隠せるように）
 function hideSections() { return [['sleep', '睡眠の記録'], ['daylog', dayLogName()]]; }
 function sectionHidden(key) { return !!(db.settings.hidden || {})[`section:${key}`]; }
@@ -5507,6 +5508,9 @@ function applyVisibility() {
   // 隠したビュー・画面を今開いていたら安全な場所へ退避
   if ((h[`view:${ui.view}`]) && ui.screen === 'cal') ui.view = 'day';
   if (h[`nav:${ui.screen}`]) { ui.screen = 'cal'; }
+  for (const [nav, scr] of Object.entries(NAV_SCREEN)) { // data-navと画面名が違うもの（タスク等）
+    if (h[`nav:${nav}`] && ui.screen === scr) ui.screen = 'cal';
+  }
 }
 
 function renderVisibilityCard() {

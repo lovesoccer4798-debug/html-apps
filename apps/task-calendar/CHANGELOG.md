@@ -2,6 +2,12 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.41.0] - 2026-07-22
+
+### Added
+
+- 「表示する項目」で下タブの「タスク」もON/OFFできるようにしました（使わなければ隠せます・データは消えません）
+
 ## [1.40.1] - 2026-07-22
 
 ### Fixed
