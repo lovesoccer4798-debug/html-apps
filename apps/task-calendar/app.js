@@ -777,7 +777,6 @@ function setScreen(screen) {
 
 document.querySelectorAll('[data-goto="settings"]').forEach((b) => b.addEventListener('click', () => setScreen('settings')));
 $('#settings-back').addEventListener('click', () => setScreen(ui.prevScreen));
-$('#settings-return').addEventListener('click', () => setScreen(ui.prevScreen)); // 下までスクロールしても閉じられる浮動ボタン
 $('#bottomnav').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-nav]');
   if (!btn) return;
@@ -2618,7 +2617,61 @@ function renderPeopleCard() {
   wrap.append(form);
 }
 
+/* 設定を「カテゴリ見出し＋折りたたみ項目」に一度だけ組み替える。
+   全項目はそのまま（IDやハンドラは維持）。既定は全部たたんだ状態＝短い一覧＋秘匿情報は一段奥に。 */
+let settingsAccordionDone = false;
+const SETTINGS_CATS = [
+  ['見た目・表示', ['テーマ', 'テーマ（配色）', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
+  ['カレンダー', ['マイカレンダー', 'よく会う人', 'スケジュール調整の定型文']],
+  ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知']],
+  ['連携・同期', ['アカウントと同期', '共有カレンダー', 'Googleカレンダー連携', 'Notion連携']],
+  ['アカウント・データ', ['あなたの名前', 'バックアップ', 'データ']],
+];
+function setupSettingsAccordion() {
+  if (settingsAccordionDone) return;
+  const body = document.querySelector('#scr-settings .body');
+  if (!body) return;
+  // いまの並びを「見出し→続く要素群」で束ねる
+  const sections = {};
+  let cur = null;
+  [...body.childNodes].forEach((node) => {
+    if (node.nodeType === 1 && node.classList.contains('section-label')) {
+      cur = node.textContent.trim();
+      sections[cur] = [];
+    } else if (cur) {
+      sections[cur].push(node);
+    }
+  });
+  body.textContent = '';
+  const placed = new Set();
+  const addSection = (label) => {
+    const nodes = sections[label];
+    if (!nodes) return;
+    placed.add(label);
+    const acc = el('div', 'acc');
+    const head = el('button', 'acc-head');
+    head.type = 'button';
+    head.append(el('span', 'acc-title', label));
+    head.append(el('span', 'acc-chev'));
+    const inner = el('div', 'acc-body');
+    nodes.forEach((n) => inner.append(n)); // 既存のカードをそのまま移動（ハンドラ維持）
+    head.addEventListener('click', () => acc.classList.toggle('is-open'));
+    acc.append(head, inner);
+    body.append(acc);
+  };
+  for (const [cat, labels] of SETTINGS_CATS) {
+    body.append(el('p', 'settings-cat', cat));
+    labels.forEach(addSection);
+  }
+  const leftovers = Object.keys(sections).filter((l) => !placed.has(l));
+  if (leftovers.length) {
+    body.append(el('p', 'settings-cat', 'その他'));
+    leftovers.forEach(addSection);
+  }
+  settingsAccordionDone = true;
+}
 function renderSettings() {
+  setupSettingsAccordion();
   renderCalManage();
   renderVisibilityCard();
   renderPeopleCard();

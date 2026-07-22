@@ -34,18 +34,27 @@ input, select, textarea { font: inherit; color: inherit; }
 
 .screen { padding: 0 20px; }
 
-/* 設定を下までスクロールしても、いつでも閉じられる浮動ボタン */
-.settings-return {
-  position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  z-index: 40;
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 10px 20px 10px 16px; border-radius: var(--tc-r-pill);
-  background: var(--tc-ink); color: var(--tc-bg);
-  font-size: 14px; font-weight: 700;
-  box-shadow: var(--tc-shadow);
+/* 設定: カテゴリ見出し＋折りたたみ項目（アコーディオン） */
+.settings-cat {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--tc-ink3);
+  text-transform: none; margin: 18px 2px 6px;
 }
-.settings-return .icon { width: 18px; height: 18px; }
+.settings-cat:first-child { margin-top: 4px; }
+.acc { border-radius: var(--tc-r-card); background: var(--tc-surface); box-shadow: var(--tc-shadow); margin-bottom: 8px; overflow: hidden; }
+.acc-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; font-size: 15px; font-weight: 600; color: var(--tc-ink); text-align: left;
+}
+.acc-chev {
+  width: 9px; height: 9px; flex: none; margin-left: 10px;
+  border-right: 2px solid var(--tc-ink3); border-bottom: 2px solid var(--tc-ink3);
+  transform: rotate(45deg); transition: transform .18s ease;
+}
+.acc.is-open .acc-chev { transform: rotate(-135deg); }
+.acc-body { display: none; padding: 0 14px 14px; }
+.acc.is-open .acc-body { display: block; }
+/* 折りたたみの中に入るカードは、二重の枠にならないよう素の見た目に */
+.acc-body > .card { background: transparent; box-shadow: none; padding: 0; }
 
 /* ---------- アプリバー ---------- */
 
