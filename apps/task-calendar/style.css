@@ -999,6 +999,7 @@ input, select, textarea { font: inherit; color: inherit; }
   height: auto;
   min-height: 92px;
   align-items: stretch; /* ラベルを左寄せの帯に */
+  padding-left: 2px; padding-right: 2px; /* 中身だけ少し内側に寄せ、隣の日のチップとの間に小さな横隙間を作る（セル自体は密着＝横線は連続） */
 }
 .mo-grid.timetree .mo-cell .dnum { align-self: center; } /* 日付は中央上（TimeTree準拠） */
 .mo-grid.timetree .mo-cell:hover { border-color: transparent; border-bottom-color: var(--tc-accent-line); }

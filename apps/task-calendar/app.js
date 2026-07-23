@@ -2251,7 +2251,9 @@ function renderMonth(body) {
         }
         const ec = itemEdgeColor(it);
         if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
-        const gapPx = styleMode === 'timetree' ? 0 : 2; // TimeTree風はセル間ギャップ0なので橋渡しの伸ばしも0（はみ出し防止）
+        // 連日バーの橋渡し量: 予定表はセル間ギャップ2px分、TimeTree風はセル内パディング2px分（どちらも2px）。
+        // これは複数日（何日〜何日）の予定だけを隙間なく繋げるためのもの。単日の予定・タスクは隣と小さな隙間が空く（TimeTree準拠）
+        const gapPx = 2;
         if (it.span) { // 隙間なく連日つながって見えるよう、セルのすき間ぶんだけ左右に伸ばす（週の端は伸ばさず角丸に）
           const roundL = it.span.isStart || isMon;
           const roundR = it.span.isEnd || isSun;
@@ -2263,11 +2265,6 @@ function renderMonth(body) {
           chip.style.borderBottomLeftRadius = roundL ? '' : '0';
           chip.style.borderTopRightRadius = roundR ? '' : '0';
           chip.style.borderBottomRightRadius = roundR ? '' : '0';
-        } else if (styleMode === 'timetree' && it.ref.repeat) { // 連日つづく繰り返し（平日=仕事・毎日 等）を一本の帯に見せる（隣と接する角の丸みを消してつなぐ）
-          const contL = !isMon && occursOn(it.ref, toKey(addDays(day, -1)));
-          const contR = !isSun && occursOn(it.ref, toKey(addDays(day, 1)));
-          if (contL) { chip.style.borderTopLeftRadius = '0'; chip.style.borderBottomLeftRadius = '0'; }
-          if (contR) { chip.style.borderTopRightRadius = '0'; chip.style.borderBottomRightRadius = '0'; }
         }
         cell.append(chip);
       }
