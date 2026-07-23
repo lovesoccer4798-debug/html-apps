@@ -71,7 +71,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -3012,6 +3012,9 @@ function renderSettings() {
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
   });
+  document.querySelectorAll('#startview-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.startview === (db.settings.startView || 'day'));
+  });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
     const missing = fontMissing(b.dataset.fontOpt);
@@ -3107,6 +3110,13 @@ document.querySelectorAll('#style-seg button').forEach((b) => {
   b.addEventListener('click', () => {
     db.settings.styleVariant = b.dataset.styleOpt;
     save(); applyStyle(); renderAll();
+  });
+});
+document.querySelectorAll('#startview-seg button').forEach((b) => {
+  b.addEventListener('click', () => { // 起動時に開くビューを選ぶ（保存のみ。次回起動から反映）
+    db.settings.startView = b.dataset.startview;
+    save();
+    document.querySelectorAll('#startview-seg button').forEach((x) => x.classList.toggle('is-active', x === b));
   });
 });
 $('#user-name').addEventListener('change', (e) => { db.settings.userName = e.target.value.trim(); save(); });
@@ -6263,4 +6273,6 @@ if (db.running) {
   startTick();
 }
 ui.selectedKey = todayKey();
+// 起動時に開くビュー（設定。既定は「日」。隠しているビューなら applyVisibility が安全に「日」へ退避）
+ui.view = db.settings.startView || 'day';
 renderAll();

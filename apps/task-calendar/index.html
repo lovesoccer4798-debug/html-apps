@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
-<link rel="stylesheet" href="tokens.css?v=70">
-<link rel="stylesheet" href="style.css?v=70">
+<link rel="stylesheet" href="tokens.css?v=71">
+<link rel="stylesheet" href="style.css?v=71">
 </head>
 <body>
 
@@ -156,6 +156,18 @@
         <label class="sync-toggle"><input type="checkbox" id="invert-events-toggle"> 予定の色を反転（フチ＋薄塗り）してタスクと見分ける</label>
         <div id="colorrule-body"></div>
         <p class="hint">名前や意味（例：「村山さん」「遊び」）に色を割り当てると、その言葉を含む予定・タスクの月表示に、その色のフチがつきます。予定のタイトルや「誰と」に一致で判定。共有カレンダーでも<strong>この色分けは自分の画面だけ</strong>で、共有相手には影響しません。相手は相手で自由に色分けできます。</p>
+      </div>
+
+      <p class="section-label">起動時に開く画面</p>
+      <div class="card">
+        <div class="theme-seg" id="startview-seg">
+          <button data-startview="day">日</button>
+          <button data-startview="week">週</button>
+          <button data-startview="grid">時間</button>
+          <button data-startview="month">月</button>
+          <button data-startview="year">年</button>
+        </div>
+        <p class="hint">アプリを開いたとき最初に表示するカレンダーの見方を選べます（既定は「日」）。次回の起動から反映されます。</p>
       </div>
 
       <p class="section-label">画面</p>
@@ -706,7 +718,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=70"></script>
-<script src="app.js?v=70"></script>
+<script src="firebase-config.js?v=71"></script>
+<script src="app.js?v=71"></script>
 </body>
 </html>
