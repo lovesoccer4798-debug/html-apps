@@ -185,17 +185,18 @@ function todayKey() { return toKey(new Date()); }
 /* ========== occurrences（繰り返しの展開） ========== */
 
 function occursOn(t, key) {
+  let start = t.startDate; // 繰り返しの起点（既定は作成日）
   if (t.routineId) { // 一時停止中のルーティンのタスクは pausedFrom 以降出さない
     const r = db.routines.find((x) => x.id === t.routineId);
     if (r && r.pausedFrom && key >= r.pausedFrom) return false;
-    if (r && r.periodStart && key < r.periodStart) return false; // プロジェクト期間の外は出さない
+    if (r && r.periodStart) { if (key < r.periodStart) return false; start = r.periodStart; } // 「期間はじめ」を起点に（過去日付でも過去分を出す・既存ルーティンにも遡って適用）
     if (r && r.periodEnd && key > r.periodEnd) return false;
   }
   if (!t.repeat) return t.date === key;
-  if (key < t.startDate || (t.exDates || []).includes(key)) return false;
+  if (key < start || (t.exDates || []).includes(key)) return false;
   if (t.repeatEnd && key > t.repeatEnd) return false; // 「今日以降を止める」ときの終了カットオフ（過去は残す）
   const d = fromKey(key);
-  const s = fromKey(t.startDate);
+  const s = fromKey(start);
   if (t.repeat === 'daily') return true;
   if (t.repeat === 'weekday') return d.getDay() >= 1 && d.getDay() <= 5 && !isJpHoliday(d); // 平日（土日祝を除く・祝日は自動）
   if (t.repeat === 'weekend') return d.getDay() === 0 || d.getDay() === 6 || isJpHoliday(d); // 土日祝（祝日は自動反映）
@@ -4234,15 +4235,18 @@ $('#r-form').addEventListener('submit', (e) => {
   let periodStart = $('#r-start').value || null;
   let periodEnd = $('#r-end').value || null;
   if (periodStart && periodEnd && periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
+  // 「期間はじめ」を指定したら、そこを繰り返しの起点にする（過去日付なら過去分もカレンダーに出す・週/月/年の周期もその日基準）
+  const routineStart = periodStart || todayKey();
 
   const hideMonth = !getOpt('#opt-r-month');
   const rtype = rSheetType === 'event' ? 'event' : 'task';
   let r = routineEditing;
   if (!r) {
-    r = { id: newId('r'), title, goal, color, type: rtype, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    r = { id: newId('r'), title, goal, color, type: rtype, targetPerWeek: target, active: true, pausedFrom: null, startDate: routineStart, periodStart, periodEnd, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.routines.push(r);
   } else {
     r.title = title; r.goal = goal; r.color = color; r.type = rtype; r.targetPerWeek = target; r.periodStart = periodStart; r.periodEnd = periodEnd;
+    if (periodStart) r.startDate = periodStart; // 期間はじめを指定/変更したら起点もそこに合わせる（過去分も出す）
     if (hideMonth) r.hideMonth = true; else delete r.hideMonth;
   }
 
@@ -4264,6 +4268,7 @@ $('#r-form').addEventListener('submit', (e) => {
       existing.title = t2; existing.time = time; existing.repeat = repeat;
       if (weekdays) existing.weekdays = weekdays; else delete existing.weekdays;
       if (rtype === 'event') delete existing.minutes; else existing.minutes = minutes;
+      if (periodStart) existing.startDate = periodStart; // 期間はじめに合わせて起点を更新（過去分の表示に反映）
       keptIds.add(existing.id);
     } else {
       const base = { id: newId(rtype === 'event' ? 'e' : 't'), routineId: r.id, title: t2, time, repeat, weekdays: weekdays || undefined, startDate: r.startDate || todayKey(), exDates: [], createdAt: Date.now() };
