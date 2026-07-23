@@ -988,6 +988,33 @@ input, select, textarea { font: inherit; color: inherit; }
 .mo-grid.schedule .mo-cell .dnum { padding: 0 3px; } /* 帯はセル幅いっぱい、日付だけ内側に */
 .mo-grid.schedule .mo-chip-more { margin: 0 3px; }
 
+/* ---------- TimeTree風: 横線だけ・縦の仕切り線なし・カードの枠/影なし ---------- */
+.mo-grid.timetree { gap: 0; } /* セルをくっつけて横線を連続させる（＝縦の隙間・仕切りをなくす） */
+.mo-grid.timetree .mo-cell {
+  border: none;
+  border-bottom: 1px solid var(--tc-line); /* 横線のみ（週の区切り） */
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  height: auto;
+  min-height: 92px;
+  align-items: stretch; /* ラベルを左寄せの帯に */
+}
+.mo-grid.timetree .mo-cell .dnum { align-self: center; } /* 日付は中央上（TimeTree準拠） */
+.mo-grid.timetree .mo-cell:hover { border-color: transparent; border-bottom-color: var(--tc-accent-line); }
+/* 今日: セル全体を塗らず、日付だけを丸く強調 */
+.mo-grid.timetree .mo-cell.is-today { background: transparent; }
+.mo-grid.timetree .mo-cell.is-today .dnum {
+  color: var(--tc-accent-ink);
+  background: var(--tc-accent);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-weight: 700;
+}
+/* 選択中: 枠がないので薄い塗りで示す */
+.mo-grid.timetree .mo-cell.is-selected { background: var(--tc-accent-soft); }
+.mo-grid.timetree .mo-cell.is-today.is-selected { background: transparent; }
+
 .mo-head span:nth-child(6) { color: var(--tc-sat); }
 .mo-head span:nth-child(7) { color: var(--tc-sun); }
 .mo-cell:not(.is-today) .dnum.sun { color: var(--tc-sun); }

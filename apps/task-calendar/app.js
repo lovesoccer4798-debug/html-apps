@@ -2184,12 +2184,13 @@ function renderTaskList() {
 
 function renderMonth(body) {
   const c = ui.cursor;
-  const schedule = db.settings.monthStyle === 'schedule';
+  const styleMode = db.settings.monthStyle || 'dots';
+  const schedule = styleMode === 'schedule' || styleMode === 'timetree'; // TimeTree風も色ラベル描画を流用（見た目だけCSSで変える）
 
-  // ドット（既定）⇄ 予定表（TimeTree風ラベル）の切替 — 既存のドット表示はそのまま
+  // ドット（既定）／予定表／TimeTree風 の切替 — 既存のドット表示はそのまま
   const styleRow = el('div', 'mo-style-seg');
   const styleSeg = el('div', 'seg');
-  [['dots', 'ドット'], ['schedule', '予定表']].forEach(([v, label]) => {
+  [['dots', 'ドット'], ['schedule', '予定表'], ['timetree', 'TimeTree風']].forEach(([v, label]) => {
     const b = el('button', `seg-btn${(db.settings.monthStyle || 'dots') === v ? ' is-active' : ''}`, label);
     b.type = 'button';
     b.addEventListener('click', () => { db.settings.monthStyle = v; save(); renderAll(); });
@@ -2212,7 +2213,7 @@ function renderMonth(body) {
   ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].forEach((w) => head.append(el('span', '', w)));
   body.append(head);
 
-  const grid = el('div', schedule ? 'mo-grid schedule' : 'mo-grid');
+  const grid = el('div', styleMode === 'timetree' ? 'mo-grid schedule timetree' : (schedule ? 'mo-grid schedule' : 'mo-grid'));
   const first = new Date(c.getFullYear(), c.getMonth(), 1);
   const gridStart = startOfWeekMon(first);
   for (let i = 0; i < 42; i += 1) {
