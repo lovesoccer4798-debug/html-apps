@@ -4234,15 +4234,18 @@ $('#r-form').addEventListener('submit', (e) => {
   let periodStart = $('#r-start').value || null;
   let periodEnd = $('#r-end').value || null;
   if (periodStart && periodEnd && periodEnd < periodStart) [periodStart, periodEnd] = [periodEnd, periodStart];
+  // 「期間はじめ」を指定したら、そこを繰り返しの起点にする（過去日付なら過去分もカレンダーに出す・週/月/年の周期もその日基準）
+  const routineStart = periodStart || todayKey();
 
   const hideMonth = !getOpt('#opt-r-month');
   const rtype = rSheetType === 'event' ? 'event' : 'task';
   let r = routineEditing;
   if (!r) {
-    r = { id: newId('r'), title, goal, color, type: rtype, targetPerWeek: target, active: true, pausedFrom: null, startDate: todayKey(), periodStart, periodEnd, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    r = { id: newId('r'), title, goal, color, type: rtype, targetPerWeek: target, active: true, pausedFrom: null, startDate: routineStart, periodStart, periodEnd, hideMonth: hideMonth || undefined, createdAt: Date.now() };
     db.routines.push(r);
   } else {
     r.title = title; r.goal = goal; r.color = color; r.type = rtype; r.targetPerWeek = target; r.periodStart = periodStart; r.periodEnd = periodEnd;
+    if (periodStart) r.startDate = periodStart; // 期間はじめを指定/変更したら起点もそこに合わせる（過去分も出す）
     if (hideMonth) r.hideMonth = true; else delete r.hideMonth;
   }
 
@@ -4264,6 +4267,7 @@ $('#r-form').addEventListener('submit', (e) => {
       existing.title = t2; existing.time = time; existing.repeat = repeat;
       if (weekdays) existing.weekdays = weekdays; else delete existing.weekdays;
       if (rtype === 'event') delete existing.minutes; else existing.minutes = minutes;
+      if (periodStart) existing.startDate = periodStart; // 期間はじめに合わせて起点を更新（過去分の表示に反映）
       keptIds.add(existing.id);
     } else {
       const base = { id: newId(rtype === 'event' ? 'e' : 't'), routineId: r.id, title: t2, time, repeat, weekdays: weekdays || undefined, startDate: r.startDate || todayKey(), exDates: [], createdAt: Date.now() };
