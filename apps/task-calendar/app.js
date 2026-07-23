@@ -71,7 +71,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -2213,7 +2213,8 @@ function renderMonth(body) {
   ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].forEach((w) => head.append(el('span', '', w)));
   body.append(head);
 
-  const grid = el('div', styleMode === 'timetree' ? 'mo-grid schedule timetree' : (schedule ? 'mo-grid schedule' : 'mo-grid'));
+  const gridBase = styleMode === 'timetree' ? 'mo-grid schedule timetree' : (schedule ? 'mo-grid schedule' : 'mo-grid');
+  const grid = el('div', gridBase + (db.settings.monthChipCenter ? ' mo-center' : '')); // 予定・タスクの文字を中央ぞろえ（設定）
   const first = new Date(c.getFullYear(), c.getMonth(), 1);
   const gridStart = startOfWeekMon(first);
   for (let i = 0; i < 42; i += 1) {
@@ -3002,6 +3003,8 @@ function renderSettings() {
   renderEdgeCals();
   const ie = $('#invert-events-toggle');
   if (ie) ie.checked = !!db.settings.invertEvents;
+  const cca = $('#chip-center-toggle');
+  if (cca) cca.checked = !!db.settings.monthChipCenter;
   const st = $('#sched-template');
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
   const sh = $('#sticky-toggle');
@@ -3180,6 +3183,12 @@ $('#sticky-toggle').addEventListener('change', (e) => {
 
 $('#invert-events-toggle').addEventListener('change', (e) => {
   db.settings.invertEvents = e.target.checked;
+  save();
+  renderAll();
+});
+
+$('#chip-center-toggle')?.addEventListener('change', (e) => {
+  db.settings.monthChipCenter = e.target.checked; // 「月」カレンダーの予定・タスクの文字を中央ぞろえ
   save();
   renderAll();
 });

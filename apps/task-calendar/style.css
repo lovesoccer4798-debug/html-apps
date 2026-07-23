@@ -1733,10 +1733,14 @@ input, select, textarea { font: inherit; color: inherit; }
 .item-span { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--tc-ink3); margin-top: 2px; }
 .item-span .icon { width: 13px; height: 13px; }
 /* 月ビュー（予定表）: 複数日は帯を繋げて見せる（開始/終了だけ角丸・中日は角なし） */
-.mo-chip-span { min-height: 13px; }
+/* 複数日バーは、文字ありの日（開始日）も文字なしの中日も必ず同じ高さ・同じ位置に揃える
+   （ラベル有無やフォント差で高さがブレて段差に見えるのを防ぐ＝一直線を保証） */
+.mo-chip-span { min-height: 13px; height: 13px; line-height: 13px; box-sizing: border-box; }
 .mo-chip-span.is-span-start:not(.is-span-end) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .mo-chip-span.is-span-end:not(.is-span-start) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .mo-chip-span.is-span-mid { border-radius: 0; }
+/* 設定「文字を中央ぞろえ」ON時: 月カレンダーの予定・タスクのラベルを中央に（既定は左ぞろえ） */
+.mo-grid.mo-center .mo-chip { text-align: center; }
 
 /* ---------- v36: 月グリッドを詰める・日付入力の左寄せ ---------- */
 /* iOSの日付入力は値が中央寄せになり右側が空いて見えるので左寄せに */
