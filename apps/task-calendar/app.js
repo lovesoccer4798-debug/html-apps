@@ -2251,14 +2251,15 @@ function renderMonth(body) {
         }
         const ec = itemEdgeColor(it);
         if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
-        // 連日バーの橋渡し量: 予定表はセル間ギャップ2px分、TimeTree風はセル内パディング2px分（どちらも2px）。
+        // 連日バーの橋渡し量: TimeTree風はセル内パディング(1px)分、予定表はセル間ギャップ(2px)分。
         // これは複数日（何日〜何日）の予定だけを隙間なく繋げるためのもの。単日の予定・タスクは隣と小さな隙間が空く（TimeTree準拠）
-        const gapPx = 2;
-        if (it.span) { // 隙間なく連日つながって見えるよう、セルのすき間ぶんだけ左右に伸ばす（週の端は伸ばさず角丸に）
-          const roundL = it.span.isStart || isMon;
-          const roundR = it.span.isEnd || isSun;
-          const extL = !it.span.isStart && !isMon ? gapPx : 0; // 前日と接続（セルのすき間ぶん）
-          const extR = !it.span.isEnd && !isSun ? gapPx : 0; // 翌日と接続
+        const isTT = styleMode === 'timetree';
+        const bridge = isTT ? 1 : 2; // ← TimeTree風のセル横パディング(style.css)と一致させること
+        if (it.span) { // 複数日は隙間なく一本の帯に。週をまたぐ折返しは角ばらせてセル端までflush（本当の開始/終了日だけ角丸）
+          const roundL = it.span.isStart; // 週頭(月)の折返しは丸めない＝連続して見せる
+          const roundR = it.span.isEnd;   // 週末(日)の折返しも丸めない
+          const extL = !it.span.isStart ? (isTT || !isMon ? bridge : 0) : 0; // 開始日以外は左へ伸ばす（月曜の折返しもセル端までflush）
+          const extR = !it.span.isEnd ? (isTT || !isSun ? bridge : 0) : 0;   // 終了日以外は右へ伸ばす（日曜の折返しもflush）
           chip.style.width = `calc(100% + ${extL + extR}px)`;
           chip.style.marginLeft = `-${extL}px`;
           chip.style.borderTopLeftRadius = roundL ? '' : '0';

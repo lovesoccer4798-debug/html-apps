@@ -999,17 +999,18 @@ input, select, textarea { font: inherit; color: inherit; }
   height: auto;
   min-height: 92px;
   align-items: stretch; /* ラベルを左寄せの帯に */
-  padding-left: 2px; padding-right: 2px; /* 中身だけ少し内側に寄せ、隣の日のチップとの間に小さな横隙間を作る（セル自体は密着＝横線は連続） */
+  padding-left: 1px; padding-right: 1px; /* 中身だけ少し内側に寄せ、隣の日のチップとの間に小さな横隙間を作る（セル自体は密着＝横線は連続） */
 }
-.mo-grid.timetree .mo-cell .dnum { align-self: center; } /* 日付は中央上（TimeTree準拠） */
+/* 日付は中央上。line-heightを固定して、今日の丸ピルが付いても高さが変わらない＝下のチップがずれないように */
+.mo-grid.timetree .mo-cell .dnum { align-self: center; line-height: 18px; }
 .mo-grid.timetree .mo-cell:hover { border-color: transparent; border-bottom-color: var(--tc-accent-line); }
-/* 今日: セル全体を塗らず、日付だけを丸く強調 */
+/* 今日: セル全体を塗らず、日付だけを丸く強調（縦パディング0＝高さは18pxのまま、下のチップを押し下げない） */
 .mo-grid.timetree .mo-cell.is-today { background: transparent; }
 .mo-grid.timetree .mo-cell.is-today .dnum {
   color: var(--tc-accent-ink);
   background: var(--tc-accent);
   border-radius: 999px;
-  padding: 1px 7px;
+  padding: 0 8px;
   font-weight: 700;
 }
 /* 選択中: 枠がないので薄い塗りで示す */
