@@ -185,17 +185,18 @@ function todayKey() { return toKey(new Date()); }
 /* ========== occurrences（繰り返しの展開） ========== */
 
 function occursOn(t, key) {
+  let start = t.startDate; // 繰り返しの起点（既定は作成日）
   if (t.routineId) { // 一時停止中のルーティンのタスクは pausedFrom 以降出さない
     const r = db.routines.find((x) => x.id === t.routineId);
     if (r && r.pausedFrom && key >= r.pausedFrom) return false;
-    if (r && r.periodStart && key < r.periodStart) return false; // プロジェクト期間の外は出さない
+    if (r && r.periodStart) { if (key < r.periodStart) return false; start = r.periodStart; } // 「期間はじめ」を起点に（過去日付でも過去分を出す・既存ルーティンにも遡って適用）
     if (r && r.periodEnd && key > r.periodEnd) return false;
   }
   if (!t.repeat) return t.date === key;
-  if (key < t.startDate || (t.exDates || []).includes(key)) return false;
+  if (key < start || (t.exDates || []).includes(key)) return false;
   if (t.repeatEnd && key > t.repeatEnd) return false; // 「今日以降を止める」ときの終了カットオフ（過去は残す）
   const d = fromKey(key);
-  const s = fromKey(t.startDate);
+  const s = fromKey(start);
   if (t.repeat === 'daily') return true;
   if (t.repeat === 'weekday') return d.getDay() >= 1 && d.getDay() <= 5 && !isJpHoliday(d); // 平日（土日祝を除く・祝日は自動）
   if (t.repeat === 'weekend') return d.getDay() === 0 || d.getDay() === 6 || isJpHoliday(d); // 土日祝（祝日は自動反映）
