@@ -2251,23 +2251,21 @@ function renderMonth(body) {
         }
         const ec = itemEdgeColor(it);
         if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
-        const gapPx = styleMode === 'timetree' ? 0 : 2; // TimeTree風はセル間ギャップ0なので橋渡しの伸ばしも0（はみ出し防止）
-        if (it.span) { // 隙間なく連日つながって見えるよう、セルのすき間ぶんだけ左右に伸ばす（週の端は伸ばさず角丸に）
-          const roundL = it.span.isStart || isMon;
-          const roundR = it.span.isEnd || isSun;
-          const extL = !it.span.isStart && !isMon ? gapPx : 0; // 前日と接続（セルのすき間ぶん）
-          const extR = !it.span.isEnd && !isSun ? gapPx : 0; // 翌日と接続
+        // 連日バーの橋渡し量: TimeTree風はセル内パディング(1px)分、予定表はセル間ギャップ(2px)分。
+        // これは複数日（何日〜何日）の予定だけを隙間なく繋げるためのもの。単日の予定・タスクは隣と小さな隙間が空く（TimeTree準拠）
+        const isTT = styleMode === 'timetree';
+        const bridge = isTT ? 1 : 2; // ← TimeTree風のセル横パディング(style.css)と一致させること
+        if (it.span) { // 複数日は隙間なく一本の帯に。週をまたぐ折返しは角ばらせてセル端までflush（本当の開始/終了日だけ角丸）
+          const roundL = it.span.isStart; // 週頭(月)の折返しは丸めない＝連続して見せる
+          const roundR = it.span.isEnd;   // 週末(日)の折返しも丸めない
+          const extL = !it.span.isStart ? (isTT || !isMon ? bridge : 0) : 0; // 開始日以外は左へ伸ばす（月曜の折返しもセル端までflush）
+          const extR = !it.span.isEnd ? (isTT || !isSun ? bridge : 0) : 0;   // 終了日以外は右へ伸ばす（日曜の折返しもflush）
           chip.style.width = `calc(100% + ${extL + extR}px)`;
           chip.style.marginLeft = `-${extL}px`;
           chip.style.borderTopLeftRadius = roundL ? '' : '0';
           chip.style.borderBottomLeftRadius = roundL ? '' : '0';
           chip.style.borderTopRightRadius = roundR ? '' : '0';
           chip.style.borderBottomRightRadius = roundR ? '' : '0';
-        } else if (styleMode === 'timetree' && it.ref.repeat) { // 連日つづく繰り返し（平日=仕事・毎日 等）を一本の帯に見せる（隣と接する角の丸みを消してつなぐ）
-          const contL = !isMon && occursOn(it.ref, toKey(addDays(day, -1)));
-          const contR = !isSun && occursOn(it.ref, toKey(addDays(day, 1)));
-          if (contL) { chip.style.borderTopLeftRadius = '0'; chip.style.borderBottomLeftRadius = '0'; }
-          if (contR) { chip.style.borderTopRightRadius = '0'; chip.style.borderBottomRightRadius = '0'; }
         }
         cell.append(chip);
       }
