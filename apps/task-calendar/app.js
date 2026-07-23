@@ -65,8 +65,12 @@ const ICONS = {
 
 /* ========== persistent data ========== */
 
+// 新しく入った人が最初に見る「デフォルト（そぎ落とし）」構成で隠す項目。
+// フル機能はそのまま全部残っていて、設定の「表示モード」でいつでも切替できる。
+const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
+
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -86,7 +90,11 @@ function loadDb() {
   } catch (err) {
     console.warn('Task Calendar: failed to load, starting empty', err);
   }
-  return defaultDb();
+  // まっさらな新規ユーザー（保存データなし）は、そぎ落とした「デフォルト」構成で開始する。
+  // 既存ユーザーは上の raw 分岐で自分の設定がそのまま読まれるので影響なし。
+  const fresh = defaultDb();
+  fresh.settings.hidden = { ...PRESET_DEFAULT };
+  return fresh;
 }
 
 let db = loadDb(); // バックアップ復元でまるごと入れ替えることがあるため let
@@ -126,7 +134,9 @@ const ui = {
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
   schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
   schedDur: 60,             // 候補1枠の長さ（分）
-  schedMeet: false,         // 確定時にMeet発行するか
+  schedMeet: false,         // （旧）確定時にMeet発行するか
+  schedMeetTool: 'none',    // 会議ツール: 'none' | 'meet'(Google Meet自動) | 'link'(Zoom等を貼る)
+  schedMeetLink: '',        // 'link'選択時に貼る会議URL
   schedEditCode: null,      // 変更中の予約リンクのコード（発行済みの再編集）
   editing: null,            // {ref, kind, key} while edit sheet is open
   confirmTarget: null,      // recurring occurrence pending delete
@@ -250,8 +260,19 @@ function itemColor(it) {
   }
   return null;
 }
-// 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）に一致すればその色、
-// なければ「フチをはっきり」ONのとき黒っぽい縁。ローカル設定なので共有相手の画面には出ない。
+// その予定・タスクを自分が入れたか（共有カレンダーで「相手の分だけ」等の判定に使う）
+function itemIsMine(it) {
+  const by = it.ref && it.ref.by;
+  return !by || (fbUser && by === fbUser.uid);
+}
+// カレンダーごとのフチ設定を返す（'all'|'others'|'mine'|null）。旧「くっきりフチ」は全カレンダー'all'として互換
+function edgeModeFor(calId) {
+  const map = db.settings.edgeCals;
+  if (map) return map[calId || 'c-default'] || null;
+  return db.settings.monthEdge ? 'all' : null;
+}
+// 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）優先、なければカレンダーごとのフチ設定。
+// ローカル設定なので共有相手の画面には出ない。
 function itemEdgeColor(it) {
   const rules = db.colorRules || [];
   if (rules.length) {
@@ -259,7 +280,13 @@ function itemEdgeColor(it) {
     const rule = rules.find((r) => r.label && hay.includes(r.label));
     if (rule) return (ACCENTS[rule.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
   }
-  if (db.settings.monthEdge) return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+  const mode = edgeModeFor(it.ref && it.ref.calendarId);
+  if (mode) {
+    const mine = itemIsMine(it);
+    if (mode === 'all' || (mode === 'others' && !mine) || (mode === 'mine' && mine)) {
+      return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+    }
+  }
   return null;
 }
 // 「月」カレンダーに表示するか（個別の予定・タスク、またはそのルーティンの設定で隠せる。一覧・他ビューには残る）
@@ -399,6 +426,22 @@ function applyStyle() { // スタイル変更（まる/カクカク/くっきり
   const s = db.settings.styleVariant;
   if (!s || s === 'round') delete document.documentElement.dataset.style;
   else document.documentElement.dataset.style = s;
+}
+// 配色テーマ（着せ替え）。未指定＝デフォルト（今のデザイン）。トークンの値だけ差し替える
+const PALETTES = [
+  { id: '', name: 'デフォルト', sub: '今のデザイン', bg: '#edf1f5', surface: '#ffffff', accent: '#2f9e6e', line: '#dde4eb' },
+  { id: 'deepink', name: '深海インク', sub: 'Deep Ink', bg: '#eef1f0', surface: '#ffffff', accent: '#0e7c6b', line: '#dce4e2' },
+  { id: 'apricot', name: 'サンセット', sub: 'Warm Apricot', bg: '#fbf3ea', surface: '#ffffff', accent: '#e4703a', line: '#efe1d2' },
+  { id: 'neon', name: 'ネオン', sub: 'Neon Focus', bg: '#f2f4f8', surface: '#ffffff', accent: '#5b57f0', line: '#e2e6ef' },
+  { id: 'night', name: 'ナイトターミナル', sub: 'Night Terminal', bg: '#0a0c10', surface: '#0d1016', accent: '#00e5ff', line: '#1e2530' },
+  { id: 'bounce', name: 'バウンスポップ', sub: 'Bounce Pop', bg: '#fff7ec', surface: '#ffffff', accent: '#ff5c5c', line: '#171310' },
+  { id: 'aurora', name: 'オーロラオービット', sub: 'Aurora Orbit', bg: '#101540', surface: '#252a52', accent: '#8e7cff', line: 'rgba(255,255,255,.25)' },
+];
+function applyPalette() {
+  const p = db.settings.palette;
+  if (!p || p === 'default') delete document.documentElement.dataset.palette;
+  else document.documentElement.dataset.palette = p;
+  applyAccent(); // 既定アクセント時はテーマ側の色を活かす（上書きを外す）
 }
 function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手なズームを止める
   const vp = document.getElementById('tc-viewport');
@@ -839,7 +882,9 @@ function renderAll() {
   $('#scr-routines').hidden = ui.screen !== 'routines';
   $('#scr-anniv').hidden = ui.screen !== 'anniv';
   $('#scr-tasklist').hidden = ui.screen !== 'tasklist';
-  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv';
+  $('#scr-help').hidden = ui.screen !== 'help';
+  $('#scr-person').hidden = ui.screen !== 'person';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -862,6 +907,8 @@ function renderAll() {
   if (ui.screen === 'settings') renderSettings();
   if (ui.screen === 'routines') renderRoutines();
   if (ui.screen === 'tasklist') renderTaskList();
+  if (ui.screen === 'help') { renderHelpChips(); renderHelp(($('#help-search') && $('#help-search').value) || ''); }
+  if (ui.screen === 'person') renderPerson();
 }
 
 function streakDays() {
@@ -1071,26 +1118,43 @@ function renderGrid(body) {
     exitBtn.addEventListener('click', () => { ui.schedMode = false; ui.schedSlots = []; renderAll(); });
     row.append(copyBtn, exitBtn);
     bar.append(row);
+    // 会議ツールの選択: なし / Google Meet（自動・連携時）/ リンクを貼る（Zoom等なんでも）
     const row2 = el('div', 'sched-row');
-    if (gcalCanWrite()) { // Meet自動発行（Google連携中のみ）
-      const mc = el('button', `mo-rt-chip${ui.schedMeet ? ' is-on' : ''}`);
-      mc.type = 'button';
-      mc.append(el('span', 'ccdot'), '確定時にMeet発行');
-      mc.addEventListener('click', () => { ui.schedMeet = !ui.schedMeet; renderAll(); });
-      row2.append(mc);
+    const mtSeg = el('div', 'seg sched-mt');
+    const mkMt = (val, label) => {
+      const b = el('button', `seg-btn${ui.schedMeetTool === val ? ' is-active' : ''}`, label);
+      b.type = 'button';
+      b.addEventListener('click', () => { ui.schedMeetTool = val; renderAll(); });
+      return b;
+    };
+    row2.append(el('span', 'sched-mt-label', '会議'));
+    mtSeg.append(mkMt('none', 'なし'));
+    if (gcalCanWrite()) mtSeg.append(mkMt('meet', 'Meet自動'));
+    mtSeg.append(mkMt('link', 'リンクを貼る'));
+    row2.append(mtSeg);
+    bar.append(row2);
+    if (ui.schedMeetTool === 'link') { // Zoom・Teams・Discord など何でも
+      const inp = document.createElement('input');
+      inp.type = 'url';
+      inp.className = 'sched-mt-input';
+      inp.placeholder = '会議リンクを貼る（例: ZoomのURL・Teams・Discord…）';
+      inp.value = ui.schedMeetLink || '';
+      inp.addEventListener('input', () => { ui.schedMeetLink = inp.value.trim(); });
+      bar.append(inp);
     }
+    const row3 = el('div', 'sched-row');
     const linkBtn = el('button', 'cta ghost sched-exit', ui.schedEditCode ? '変更を保存' : 'リンクを発行');
     linkBtn.type = 'button';
     linkBtn.disabled = !ui.schedSlots.length;
     linkBtn.addEventListener('click', schedIssueLink);
-    row2.append(linkBtn);
+    row3.append(linkBtn);
     if (ui.schedEditCode) {
       const cancelEdit = el('button', 'cta ghost sched-exit', '変更をやめる');
       cancelEdit.type = 'button';
       cancelEdit.addEventListener('click', () => { ui.schedEditCode = null; ui.schedSlots = []; renderAll(); });
-      row2.append(cancelEdit);
+      row3.append(cancelEdit);
     }
-    bar.append(row2);
+    bar.append(row3);
     bar.append(el('p', 'sched-hint2', 'リンク発行: 相手がリンクから日時を選ぶと、あなたのカレンダーに自動で予定が入ります（要ログイン）。'));
     const offerList = buildOfferList();
     if (offerList) bar.append(offerList);
@@ -1266,6 +1330,17 @@ function slotBusy(s) {
 }
 
 function meetUrl(code) { return `${location.origin}${location.pathname}?meet=${code}`; }
+// 貼られた会議URLから会議ツール名を推測（ラベル用）
+function meetLinkName(url) {
+  const u = (url || '').toLowerCase();
+  if (u.includes('zoom.')) return 'Zoom';
+  if (u.includes('teams.microsoft') || u.includes('teams.live')) return 'Teams';
+  if (u.includes('meet.google')) return 'Google Meet';
+  if (u.includes('discord')) return 'Discord';
+  if (u.includes('webex')) return 'Webex';
+  if (u.includes('whereby')) return 'Whereby';
+  return '会議';
+}
 
 async function schedIssueLink() {
   if (!ui.schedSlots.length) return;
@@ -1273,26 +1348,30 @@ async function schedIssueLink() {
   const editing = ui.schedEditCode ? (db.settings.meetOffers || []).find((o) => o.code === ui.schedEditCode) : null;
   const code = editing ? editing.code : Math.random().toString(36).slice(2, 10);
   const slots = ui.schedSlots.map((s) => ({ ...s }));
-  const meet = Boolean(ui.schedMeet && gcalCanWrite());
+  const tool = ui.schedMeetTool || 'none';
+  const meet = tool === 'meet' && gcalCanWrite();       // Google Meet自動発行
+  const pastedLink = tool === 'link' ? (ui.schedMeetLink || '').trim() : ''; // Zoom等を貼る
   const offerDoc = {
     v: 1,
     ownerUid: fbUser.uid,
     owner: (db.settings.userName || '').trim() || null,
     slots,
     meet,
+    meetTool: tool,
     status: 'open',
     picked: null,
-    meetLink: null,
+    meetLink: pastedLink || null, // 貼ったリンクは最初から持たせる（Meet自動は確定時に入る）
     updatedAt: Date.now(),
   };
   try {
     await meetDocRef(code).set(offerDoc); // 変更時も丸ごと上書き（open に戻す）
     db.settings.meetOffers = db.settings.meetOffers || [];
+    const local = { done: false, slots, owner: offerDoc.owner, meet, meetTool: tool, status: 'open', picked: null, meetLink: pastedLink || null, createdAt: (editing && editing.createdAt) || Date.now(), url: meetUrl(code) };
     if (editing) {
       removeMeetEvent(code); // 前に自動で入った予定があれば取り消して募集に戻す
-      Object.assign(editing, { done: false, slots, owner: offerDoc.owner, meet, status: 'open', picked: null, meetLink: null, createdAt: editing.createdAt || Date.now(), url: meetUrl(code) });
+      Object.assign(editing, local);
     } else {
-      db.settings.meetOffers.push({ code, done: false, slots, owner: offerDoc.owner, meet, status: 'open', picked: null, meetLink: null, createdAt: Date.now(), url: meetUrl(code) });
+      db.settings.meetOffers.push({ code, ...local });
     }
     ui.schedEditCode = null;
     persistLocal();
@@ -1347,7 +1426,8 @@ function schedEditOffer(o) {
   ui.schedEditCode = o.code;
   ui.schedSlots = (o.slots || []).map((s) => ({ ...s }));
   if (o.slots && o.slots[0]) ui.schedDur = o.slots[0].durMin;
-  ui.schedMeet = Boolean(o.meet);
+  ui.schedMeetTool = o.meetTool || (o.meet ? 'meet' : (o.meetLink ? 'link' : 'none'));
+  ui.schedMeetLink = ui.schedMeetTool === 'link' ? (o.meetLink || '') : '';
   flashToast('候補を読み込みました。変更して「変更を保存」を押してね');
   renderAll();
 }
@@ -1369,7 +1449,7 @@ function buildOfferList() {
     const mkBtn = (label, cls, fn) => { const b = el('button', `sched-mini${cls ? ` ${cls}` : ''}`, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
     acts.append(mkBtn('リンクをコピー', '', () => copyText(o.url || meetUrl(o.code), 'リンクをコピーしました')));
     acts.append(mkBtn('定型文をコピー', '', () => copyText(`${schedText(o.slots || [])}\n\n下のリンクから、都合の良い日時を選んでもらえます:\n${o.url || meetUrl(o.code)}`, '定型文をコピーしました。送り直してね')));
-    if (o.meetLink) acts.append(mkBtn('会議リンクをコピー', 'sched-mini-meet', () => copyText(o.meetLink, 'Google Meetのリンクをコピーしました')));
+    if (o.meetLink) acts.append(mkBtn('会議リンクをコピー', 'sched-mini-meet', () => copyText(o.meetLink, `${meetLinkName(o.meetLink)}のリンクをコピーしました`)));
     acts.append(mkBtn(ui.schedEditCode === o.code ? '変更中' : '変更', '', () => schedEditOffer(o)));
     acts.append(mkBtn('取り消し', 'sched-mini-del', () => { if (confirm('この予約リンクを取り消しますか？（相手は選べなくなり、入っていた予定も消えます）')) schedCancelOffer(o.code); }));
     card.append(acts);
@@ -1397,6 +1477,7 @@ function meetWatch(code) {
     offer.done = true;
     const s = d.picked;
     const ev = { id: newId('e'), title: '打ち合わせ', date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin), calendarId: null, pushGoogle: d.meet, meetCode: code, createdAt: Date.now() };
+    if (d.meetLink && !d.meet) ev.meetUrl = d.meetLink; // 貼ったZoom等のリンクを予定に添える
     db.events.push(ev);
     save(); renderAll();
     const dd = fromKey(s.key);
@@ -1473,11 +1554,11 @@ setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter
         if (s) bodyEl.append(el('p', 'meet-done mono', fmt(s)));
         if (d.meetLink) {
           const a = document.createElement('a');
-          a.href = d.meetLink; a.target = '_blank'; a.rel = 'noopener'; a.className = 'cta meet-slot'; a.textContent = '会議リンクを開く（Google Meet）';
+          a.href = d.meetLink; a.target = '_blank'; a.rel = 'noopener'; a.className = 'cta meet-slot'; a.textContent = `会議リンクを開く（${meetLinkName(d.meetLink)}）`;
           bodyEl.append(a);
           const cp = el('button', 'cta ghost meet-slot', '会議リンクをコピー');
           cp.type = 'button';
-          cp.addEventListener('click', () => copyText(d.meetLink, 'Google Meetのリンクをコピーしました'));
+          cp.addEventListener('click', () => copyText(d.meetLink, `${meetLinkName(d.meetLink)}のリンクをコピーしました`));
           bodyEl.append(cp);
         } else if (d.meet && d.status === 'picked') {
           bodyEl.append(el('p', 'hint', '会議リンクを準備中です。少し待ってからもう一度開いてください。'));
@@ -1504,9 +1585,134 @@ $('#side-sched').addEventListener('click', () => {
   ui.schedMode = true; ui.schedSlots = [];
   renderAll();
 });
-$('#side-help').addEventListener('click', () => { closeSidebar(); $('#help-scrim').hidden = false; });
-$('#help-close').addEventListener('click', () => { $('#help-scrim').hidden = true; });
-$('#help-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+function openHelp() {
+  if (ui.screen !== 'help') ui.prevScreen = ui.screen;
+  const s = $('#help-search');
+  if (s) s.value = '';
+  $('#help-search-clear').hidden = true;
+  ui.screen = 'help';
+  renderAll(); // renderHelp / チップの描画は renderAll 経由
+}
+const HELP_CHIPS = ['保存', '消える', '共有', 'バックアップ', 'タイマー', 'Notion', '無料'];
+function renderHelpChips() {
+  const wrap = $('#help-chips');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const cur = ($('#help-search').value || '').trim();
+  if (cur) { wrap.hidden = true; return; } // 検索中はチップを隠す
+  wrap.hidden = false;
+  wrap.append(el('span', 'help-chips-label', 'よく見られる:'));
+  for (const w of HELP_CHIPS) {
+    const b = el('button', 'help-chip', w);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      $('#help-search').value = w;
+      $('#help-search-clear').hidden = false;
+      renderHelp(w);
+      renderHelpChips();
+    });
+    wrap.append(b);
+  }
+}
+$('#side-help').addEventListener('click', () => { closeSidebar(); openHelp(); });
+$('#help-back').addEventListener('click', () => setScreen(ui.prevScreen || 'cal'));
+$('#person-back').addEventListener('click', () => setScreen(ui.prevScreen === 'person' ? 'insights' : (ui.prevScreen || 'insights')));
+$('#help-search').addEventListener('input', (e) => {
+  $('#help-search-clear').hidden = !e.target.value;
+  renderHelpChips();
+  renderHelp(e.target.value);
+});
+$('#help-search-clear').addEventListener('click', () => {
+  $('#help-search').value = '';
+  $('#help-search-clear').hidden = true;
+  renderHelpChips();
+  renderHelp('');
+  $('#help-search').focus();
+});
+
+/* ヘルプ（使い方・FAQ）: カテゴリ別Q&A。各項目は「短い答え」＋必要なら「もっと詳しく」。
+   検索は質問・答え・詳細・カテゴリを対象にキーワードで絞り込む。 */
+const HELP_FAQ = [
+  ['はじめかた', [
+    { q: 'このアプリは何ができる？', a: '日・週・時間・月・年の5つの見方でタスクと予定を管理して、こなした「できた」を積み上げて振り返るアプリです。タイマー・習慣（ルーティン）・日記・睡眠記録・スケジュール調整・カレンダー共有・Google/Notion連携まで入っています。', more: 'まずは右下の「＋」からタスクや予定を1つ追加してみてください。チェックで完了、下の「振り返り」で達成が見えます。' },
+    { q: 'アカウント登録は必要？', a: 'いりません。開いたその場ですぐ使えます。データはこの端末に保存されます。', more: '複数の端末で同じデータを見たいときや、機種変更に備えたいときだけ、設定 →「アカウントと同期」でGoogleログインするとクラウド同期できます（無料）。' },
+    { q: 'お金はかかる？', a: '完全無料です。課金要素はありません。', more: '同期やNotion連携などは無料枠（Firebase・Cloudflare・GitHub）の中で動く設計です。クレジットカード登録も不要です。' },
+  ]],
+  ['記録とデータ（保存・消える？）', [
+    { q: '書いた内容は保存される？', a: '自動で保存されます。入力するたびにこの端末（ブラウザ）へ即保存されるので、「保存ボタン」を押し忘れて消える心配はありません。', more: 'タスク・予定・日記・睡眠・設定など、ほぼすべて自動保存です。編集シートの内容は「保存」を押した時点で確定します。' },
+    { q: 'データが消えることはある？', a: 'アプリを閉じても消えません。ただし「ブラウザの履歴・サイトデータを消去」するとこの端末のデータは消えます。', more: '心配な場合の対策は2つ。①設定 →「アカウントと同期」でGoogleログイン（クラウドに自動バックアップ）。②設定 →「バックアップ」で書き出し（ファイル保存）。どちらかをしておくと安心です。' },
+    { q: 'バックアップの取り方は？', a: '設定 →「アカウント・データ」→「バックアップ」→「バックアップを書き出す」。全データが1つのファイルで保存できます。', more: '戻すときは同じ場所から「復元」。復元の前に、今のデータも自動で書き出される安全弁つきです。ファイルを書き出すだけなので容量は使いません。' },
+    { q: '機種変更・別の端末に移すには？', a: 'いちばん簡単なのはGoogleログイン。新しい端末で同じGoogleでログインすれば、データがそのまま出てきます。', more: 'ログインを使わない場合は、バックアップファイルを書き出して新端末で「復元」でもOKです。' },
+    { q: 'ホーム画面に置ける？（アプリみたいに）', a: 'できます。ブラウザの「ホーム画面に追加」で、アプリのように全画面で開けます。', more: 'iPhoneはSafariの共有ボタン →「ホーム画面に追加」。Androidはメニュー →「ホーム画面に追加」。' },
+  ]],
+  ['基本の使い方', [
+    { q: 'タスクと予定の違いは？', a: 'タスクはチェックで「完了」にできるやること。予定は時間の入った出来事です。', more: 'タスクには所要時間を入れてタイマーで実行できます。予定は終了日を入れると、旅行など複数日にまたぐ帯で表示できます。' },
+    { q: '5つのビュー（日・週・時間・月・年）の使い分けは？', a: '「日」は今日に集中、「週」は1週間の消化、「時間」は時間割で空きを見る、「月」は全体、「年」はざっくり。上のタブで切り替えます。', more: '使わないビューは設定 →「見た目・表示」→「表示する項目」で隠せます（データは消えません）。' },
+    { q: 'タイマーの使い方は？', a: 'タスクに所要時間を入れて▶を押すと集中タイマーが始まります。完了すると、実際にかかった時間で開始・終了時刻を自動で記録します。', more: '同時に動かせるタイマーは1つ。アプリを閉じても続き、開き直すと残り時間が復元されます。' },
+    { q: 'サブ項目（詳細）って何？', a: '大きなタスクの中に小さな項目をぶら下げられます。例：「読書」の中に本の名前。作成・編集画面で追加でき、チェックで1つずつ完了できます。', more: 'サブ項目はNotion連携にも反映されます（メモ欄に「【タスク名｜詳細】」の形で）。' },
+    { q: 'ルーティン（習慣）は？', a: '毎日・平日・曜日ごとなど、繰り返すことをまとめて管理できます。達成を続けると連続記録が伸びます。', more: '「タスク型」（歯みがき等の習慣）と「予定型」（出勤・休み等）があります。やめるときは「今日以降だけやめる（過去は残す）」も選べます。' },
+  ]],
+  ['スケジュール調整（予約リンク）', [
+    { q: 'スケジュール調整って何？', a: 'メニュー →「スケジュール調整」で、空いている時間を選んで相手に共有できます。相手はリンクから都合の良い日時をワンタップで選べます。', more: '相手が選ぶと、あなたのカレンダーに自動で「打ち合わせ」が入ります。「確定時にMeet発行」をONにすると（Google連携中）Google Meetのリンクも自動で作られます。' },
+    { q: '相手はアプリやログインが必要？', a: 'いりません。相手はリンクを開いて日時を選ぶだけ。アプリのインストールもログインも不要です。', more: '予約リンクを使うには、あなた側がGoogleログインしている必要があります（発行するため）。' },
+    { q: '発行したリンクは後から確認できる？', a: 'できます。「スケジュール調整」を開くと発行済みリンクが一覧で並び、状態（募集中／確定）や、リンク・定型文の再コピー、変更、取り消しができます。', more: '「終了」を押しても発行済みのリンクは生き続けます（画面の選択が消えるだけ）。' },
+  ]],
+  ['共有・同期（家族や友達と）', [
+    { q: '家族や友達と一緒に使える？', a: '使えます。アプリのURLを教えれば、相手も自分のデータで独立して使えます。', more: '予定を「一緒に見る」には共有カレンダー機能を使います（設定 →「連携・同期」→「共有カレンダー」で作成し、招待コードを渡す）。' },
+    { q: 'リンクを共有したら個人情報は漏れない？', a: '漏れません。アプリURLや予約リンクにメールアドレスなどの個人情報は含まれません。予約リンクで相手が見られるのは候補の日時とあなたのニックネームだけです。', more: '共有カレンダーは、招待コードを渡した相手だけがその予定（タイトル・時間など）を見られます。あなたの他のカレンダーやアプリ全体のデータは相手に見えません。' },
+    { q: '無料のまま何人まで使える？', a: '家族・友達〜小規模グループ（数人〜数十人の軽い利用）なら余裕で無料の範囲です。', more: 'みんなが1つの無料枠（作者のFirebase）を共有する仕組みのため、共有カレンダーやリアルタイム同期を多用するほど使用量が増えます。数百人規模に広く公開すると無料枠を超える可能性があります。' },
+    { q: 'クラウド同期は安全？', a: 'ログインはGoogleの仕組みを使い、パスワードはアプリ側で保持しません。自分のデータは自分だけが読み書きできるよう、サーバー側のルールで守られています。', more: 'Notionのトークンなどの秘密情報は、ブラウザではなくサーバー（Cloudflare Worker）にだけ保存され、外に出ません。' },
+  ]],
+  ['連携（Google・Notion）', [
+    { q: 'Googleカレンダーと連携できる？', a: 'できます。設定 →「連携・同期」→「Googleカレンダー連携」から。予定の読み込み・書き込み、Google Meetの自動発行に対応します。', more: '「その場連携」はすぐ使えますが約1時間で切れます。「常時連携」にすると自動更新で切れにくくなります（無料のCloudflare Worker設定が必要）。' },
+    { q: 'Notionに記録を残せる？', a: '残せます。設定 →「連携・同期」→「Notion連携」から、日記・メモ・できたこと・睡眠を1日1ページで自動保存できます。', more: 'Notion連携には各自のNotionデータベースと、中継用の無料Cloudflare Workerの用意が必要です。手順はアプリ内の案内とリポジトリの notion-worker.js に書いてあります。' },
+    { q: 'Notion連携は友達も同じ設定が必要？', a: 'はい。Notion連携は一人ひとりが自分のNotionと自分のWorkerを用意する必要があります。', more: 'あなたのWorkerを他の人が使うと、あなたのNotionに書き込まれてしまうため、各自が自分の分をセットアップします。' },
+  ]],
+  ['見た目・こまったとき', [
+    { q: '色やデザインを変えたい', a: '設定 →「見た目・表示」から、テーマ（自動/ライト/ダーク）、配色テーマ（7種の着せ替え）、アクセントカラー、フォント、文字サイズを変えられます。', more: '配色テーマの「デフォルト」はいつでも元のデザインに戻せます。' },
+    { q: '設定が多くて目的の項目が見つからない', a: '設定はカテゴリ別に折りたたまれています。見出しをタップで開閉。目的のカテゴリだけ開いて使ってください。', more: '' },
+    { q: '同期やNotionがうまくいかない', a: 'まず通信環境を確認し、設定から一度ログインし直す・再連携すると直ることが多いです。', more: 'Notion/Googleの常時連携はWorkerの設定（貼り替え・環境変数）が最新か確認してください。予約リンクが相手側で開かないときは、Firebaseのセキュリティルールが公開済みかを確認します。' },
+  ]],
+];
+function helpMatches(item, cat, q) {
+  const hay = `${cat} ${item.q} ${item.a} ${item.more || ''}`.toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every((w) => hay.includes(w.toLowerCase()));
+}
+function renderHelp(query) {
+  const list = $('#help-list');
+  if (!list) return;
+  list.textContent = '';
+  const q = (query || '').trim();
+  let shown = 0;
+  for (const [cat, items] of HELP_FAQ) {
+    const hits = q ? items.filter((it) => helpMatches(it, cat, q)) : items;
+    if (!hits.length) continue;
+    list.append(el('p', 'help-cat', cat));
+    for (const it of hits) {
+      shown += 1;
+      const card = el('div', 'help-q');
+      const head = el('button', 'help-q-head');
+      head.type = 'button';
+      head.append(el('span', 'help-q-t', it.q));
+      head.append(el('span', 'acc-chev'));
+      const body = el('div', 'help-q-body');
+      body.append(el('p', 'help-a', it.a));
+      if (it.more) {
+        const moreBtn = el('button', 'help-more', 'もっと詳しく');
+        moreBtn.type = 'button';
+        const moreP = el('p', 'help-a help-more-text', it.more);
+        moreP.hidden = true;
+        moreBtn.addEventListener('click', () => { moreP.hidden = !moreP.hidden; moreBtn.textContent = moreP.hidden ? 'もっと詳しく' : '閉じる'; });
+        body.append(moreBtn, moreP);
+      }
+      head.addEventListener('click', () => card.classList.toggle('is-open'));
+      if (q) card.classList.add('is-open'); // 検索中は開いて見せる
+      card.append(head, body);
+      list.append(card);
+    }
+  }
+  if (!shown) list.append(el('p', 'help-empty', '見つかりませんでした。別のことばで探してみてください（例：保存・共有・タイマー）。'));
+}
 $('#side-backup').addEventListener('click', () => { closeSidebar(); downloadBackup(); flashToast('バックアップを書き出しました（ファイル）'); });
 $('#side-settings').addEventListener('click', () => { closeSidebar(); setScreen('settings'); });
 
@@ -2425,6 +2631,9 @@ function renderInsights() {
   }
   body.append(doneCard);
 
+  // よく会った人（期間内・2回以上・回数つき）→ タップでその人のページへ
+  renderPeopleSection(body, keys, periodLabel);
+
   // 「1年前の今日」— 過去のひとことをそっと思い出す（ビジョンボード仕様・今の期間のときだけ）
   const mem = isNow && [[365, '1年前'], [182, '半年前'], [30, '1ヶ月前']]
     .map(([days, label]) => ({ key: toKey(addDays(new Date(), -days)), label }))
@@ -2485,6 +2694,121 @@ function renderInsights() {
     }
     body.append(rCard);
   }
+}
+
+/* ========== 人ごとの振り返り（プロフィール帳・思い出） ==========
+   予定の「誰と」を集計。期間内に2回以上会った人を回数つきで表示し、
+   タップでその人の履歴＋プロフィール帳（自由記入）を開く。 */
+const PROFILE_FIELDS = [
+  { key: 'nick', label: '呼び方（ニックネーム）', ph: '例：むらやん' },
+  { key: 'relation', label: '関係性', ph: '例：大学の友だち・同僚・家族' },
+  { key: 'age', label: '年齢', ph: '例：28' },
+  { key: 'birthday', label: '誕生日', ph: '例：5/12' },
+  { key: 'personality', label: '性格', ph: '例：明るい・聞き上手', multi: true },
+  { key: 'likes', label: '好きなところ', ph: '一緒にいて落ち着く、話が面白い…', multi: true },
+  { key: 'met', label: '出会ったきっかけ', ph: 'いつ・どこで・どうやって出会った？', multi: true },
+  { key: 'next', label: '次に会ったらしたいこと', ph: '例：あの店に行く・旅行の話をする', multi: true },
+  { key: 'memory', label: '思い出・エピソード', ph: '一緒に過ごした思い出を自由に書けます', multi: true },
+];
+function peopleCountsInPeriod(keys) {
+  const set = new Set(keys);
+  const counts = {};
+  for (const e of db.events) {
+    const day = e.repeat ? null : e.date;
+    if (!day || !set.has(day)) continue;
+    for (const n of (e.who || [])) counts[n] = (counts[n] || 0) + 1;
+  }
+  return counts;
+}
+function personEventList(name) { // その人と一緒の予定（全期間・新しい順）
+  const out = [];
+  for (const e of db.events) {
+    if (e.repeat || !e.date) continue;
+    if ((e.who || []).includes(name)) out.push({ date: e.date, title: e.title });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+function renderPeopleSection(container, keys, periodLabel) {
+  const counts = peopleCountsInPeriod(keys);
+  const list = Object.entries(counts).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]);
+  if (!list.length) return;
+  const card = el('div', 'card chart-card');
+  card.append(el('p', 'section-label', `${periodLabel}よく会った人`));
+  for (const [name, c] of list) {
+    const row = el('button', 'person-row');
+    row.type = 'button';
+    const av = el('span', 'person-av', (name || '?').trim().slice(0, 1));
+    row.append(av);
+    row.append(el('span', 'person-name', name));
+    row.append(el('span', 'person-count mono', `${c}回`));
+    row.append(el('span', 'person-chev'));
+    row.addEventListener('click', () => openPerson(name));
+    card.append(row);
+  }
+  container.append(card);
+}
+function openPerson(name) {
+  ui.personName = name;
+  ui.prevScreen = ui.screen;
+  ui.screen = 'person';
+  renderAll();
+}
+function personProfile(name) {
+  db.peopleProfiles = db.peopleProfiles || {};
+  db.peopleProfiles[name] = db.peopleProfiles[name] || {};
+  return db.peopleProfiles[name];
+}
+function renderPerson() {
+  const name = ui.personName;
+  if (!name) { setScreen('insights'); return; }
+  $('#person-title').textContent = name;
+  const body = $('#person-body');
+  body.textContent = '';
+  const prof = personProfile(name);
+
+  // 一緒の予定（思い出）
+  const evs = personEventList(name);
+  const histCard = el('div', 'card');
+  histCard.append(el('p', 'section-label', `一緒の予定（${evs.length}件）`));
+  if (!evs.length) {
+    histCard.append(el('p', 'hint', 'まだ一緒の予定がありません。予定の「誰と」にこの名前を入れると、ここに思い出が並びます。'));
+  } else {
+    for (const e of evs.slice(0, 60)) {
+      const d = fromKey(e.date);
+      const r = el('button', 'person-ev');
+      r.type = 'button';
+      r.append(el('span', `person-ev-date mono${dayColorClass(d)}`, `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`));
+      r.append(el('span', 'person-ev-title', e.title));
+      r.addEventListener('click', () => { ui.cursor = fromKey(e.date); ui.view = 'day'; setScreen('cal'); });
+      histCard.append(r);
+    }
+  }
+  body.append(histCard);
+
+  // プロフィール帳
+  const profCard = el('div', 'card');
+  profCard.append(el('p', 'section-label', 'プロフィール帳'));
+  profCard.append(el('p', 'hint', 'この人のことを、思い出せるように書き残しておけます（自分だけのメモ）。'));
+  for (const f of PROFILE_FIELDS) {
+    const wrap = el('div', 'prof-field');
+    wrap.append(el('label', 'f-label', f.label));
+    const input = f.multi ? document.createElement('textarea') : document.createElement('input');
+    if (!f.multi) input.type = 'text';
+    if (f.multi) input.rows = 2;
+    input.className = 'prof-input';
+    input.placeholder = f.ph || '';
+    input.value = prof[f.key] || '';
+    input.maxLength = f.multi ? 2000 : 60;
+    input.addEventListener('input', () => {
+      const v = input.value;
+      if (v.trim()) personProfile(name)[f.key] = v; else delete personProfile(name)[f.key];
+      clearTimeout(input._t);
+      input._t = setTimeout(save, 400);
+    });
+    wrap.append(input);
+    profCard.append(wrap);
+  }
+  body.append(profCard);
 }
 
 /* ----- settings ----- */
@@ -2584,7 +2908,61 @@ function renderPeopleCard() {
   wrap.append(form);
 }
 
+/* 設定を「カテゴリ見出し＋折りたたみ項目」に一度だけ組み替える。
+   全項目はそのまま（IDやハンドラは維持）。既定は全部たたんだ状態＝短い一覧＋秘匿情報は一段奥に。 */
+let settingsAccordionDone = false;
+const SETTINGS_CATS = [
+  ['見た目・表示', ['テーマ', 'テーマ（配色）', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
+  ['カレンダー', ['マイカレンダー', 'よく会う人', 'スケジュール調整の定型文']],
+  ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知']],
+  ['連携・同期', ['アカウントと同期', '共有カレンダー', 'Googleカレンダー連携', 'Notion連携']],
+  ['アカウント・データ', ['あなたの名前', 'バックアップ', 'データ']],
+];
+function setupSettingsAccordion() {
+  if (settingsAccordionDone) return;
+  const body = document.querySelector('#scr-settings .body');
+  if (!body) return;
+  // いまの並びを「見出し→続く要素群」で束ねる
+  const sections = {};
+  let cur = null;
+  [...body.childNodes].forEach((node) => {
+    if (node.nodeType === 1 && node.classList.contains('section-label')) {
+      cur = node.textContent.trim();
+      sections[cur] = [];
+    } else if (cur) {
+      sections[cur].push(node);
+    }
+  });
+  body.textContent = '';
+  const placed = new Set();
+  const addSection = (label) => {
+    const nodes = sections[label];
+    if (!nodes) return;
+    placed.add(label);
+    const acc = el('div', 'acc');
+    const head = el('button', 'acc-head');
+    head.type = 'button';
+    head.append(el('span', 'acc-title', label));
+    head.append(el('span', 'acc-chev'));
+    const inner = el('div', 'acc-body');
+    nodes.forEach((n) => inner.append(n)); // 既存のカードをそのまま移動（ハンドラ維持）
+    head.addEventListener('click', () => acc.classList.toggle('is-open'));
+    acc.append(head, inner);
+    body.append(acc);
+  };
+  for (const [cat, labels] of SETTINGS_CATS) {
+    body.append(el('p', 'settings-cat', cat));
+    labels.forEach(addSection);
+  }
+  const leftovers = Object.keys(sections).filter((l) => !placed.has(l));
+  if (leftovers.length) {
+    body.append(el('p', 'settings-cat', 'その他'));
+    leftovers.forEach(addSection);
+  }
+  settingsAccordionDone = true;
+}
 function renderSettings() {
+  setupSettingsAccordion();
   renderCalManage();
   renderVisibilityCard();
   renderPeopleCard();
@@ -2613,8 +2991,7 @@ function renderSettings() {
   if (dln) dln.value = db.settings.dayLogName || '';
   const tn = $('#timer-notify');
   if (tn) tn.checked = !!db.settings.timerNotify;
-  const me = $('#month-edge-toggle');
-  if (me) me.checked = !!db.settings.monthEdge;
+  renderEdgeCals();
   const ie = $('#invert-events-toggle');
   if (ie) ie.checked = !!db.settings.invertEvents;
   const st = $('#sched-template');
@@ -2650,10 +3027,40 @@ function renderSettings() {
     });
     grid.append(sw);
   }
+  renderPaletteGrid();
   const repeats = db.tasks.filter((t) => t.repeat).length;
   let doneCount = 0;
   for (const t of db.tasks) doneCount += t.repeat ? Object.keys(t.doneDates || {}).length : (t.done ? 1 : 0);
   $('#data-summary').textContent = `タスク ${db.tasks.length}件（うち繰り返し ${repeats}）・予定 ${db.events.length}件・これまでの完了 ${doneCount}回`;
+}
+function renderPaletteGrid() {
+  const grid = $('#palette-grid');
+  if (!grid) return;
+  grid.textContent = '';
+  const cur = db.settings.palette || '';
+  for (const p of PALETTES) {
+    const card = el('button', `palette-card${cur === p.id ? ' is-active' : ''}`);
+    card.type = 'button';
+    const sw = el('span', 'palette-sw');
+    sw.style.background = p.bg;
+    sw.style.borderColor = p.line;
+    const surf = el('span', 'palette-sw-card');
+    surf.style.background = p.surface;
+    const dot = el('span', 'palette-sw-dot');
+    dot.style.background = p.accent;
+    surf.append(dot);
+    sw.append(surf);
+    card.append(sw);
+    const nm = el('span', 'palette-name', p.name);
+    card.append(nm);
+    card.append(el('span', 'palette-sub', p.sub));
+    if (cur === p.id) card.append(el('span', 'palette-check', '✓'));
+    card.addEventListener('click', () => {
+      db.settings.palette = p.id || undefined;
+      save(); applyPalette(); renderAll();
+    });
+    grid.append(card);
+  }
 }
 document.querySelectorAll('#theme-seg button').forEach((b) => {
   b.addEventListener('click', () => {
@@ -2705,11 +3112,57 @@ $('#timer-notify').addEventListener('change', async (e) => {
   save();
 });
 
-$('#month-edge-toggle').addEventListener('change', (e) => {
-  db.settings.monthEdge = e.target.checked;
-  save();
-  renderAll();
-});
+// カレンダーごとの「くっきりフチ」設定。旧 monthEdge から edgeCals へ移行しつつ描画
+function edgeCalsMap() {
+  if (!db.settings.edgeCals) { // 旧設定からの移行（初回のみ）
+    const map = {};
+    if (db.settings.monthEdge) {
+      map['c-default'] = 'all';
+      db.calendars.forEach((c) => { map[c.id] = 'all'; });
+      db.sharedJoined.forEach((code) => { map[SH_PREFIX + code] = 'all'; });
+    }
+    db.settings.edgeCals = map;
+    delete db.settings.monthEdge;
+  }
+  return db.settings.edgeCals;
+}
+function renderEdgeCals() {
+  const wrap = $('#edge-cals');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const map = edgeCalsMap();
+  const setMode = (id, mode) => { if (mode) map[id] = mode; else delete map[id]; save(); renderAll(); };
+  // 自分のカレンダー: なし / つける の2択トグル
+  const ownRow = (id, name) => {
+    const row = el('div', 'edge-row');
+    row.append(el('span', 'edge-name', name));
+    const btn = el('button', `edge-mini${map[id] === 'all' ? ' is-on' : ''}`, map[id] === 'all' ? 'フチあり' : 'フチなし');
+    btn.type = 'button';
+    btn.addEventListener('click', () => setMode(id, map[id] === 'all' ? null : 'all'));
+    row.append(btn);
+    wrap.append(row);
+  };
+  // 共有カレンダー: なし / 全部 / 相手の分だけ / 自分の分だけ の4択
+  const shRow = (id, name) => {
+    const row = el('div', 'edge-row');
+    row.append(el('span', 'edge-name', name));
+    const seg = el('div', 'edge-seg');
+    [['', 'なし'], ['all', '全部'], ['others', '相手'], ['mine', '自分']].forEach(([v, label]) => {
+      const b = el('button', `edge-seg-btn${(map[id] || '') === v ? ' is-active' : ''}`, label);
+      b.type = 'button';
+      b.addEventListener('click', () => setMode(id, v || null));
+      seg.append(b);
+    });
+    row.append(seg);
+    wrap.append(row);
+  };
+  ownRow('c-default', (db.calendars.find((c) => c.id === 'c-default') || {}).name || 'マイカレンダー');
+  db.calendars.filter((c) => c.id !== 'c-default').forEach((c) => ownRow(c.id, c.name));
+  for (const code of db.sharedJoined) {
+    const c = db.sharedCache[code];
+    shRow(SH_PREFIX + code, `${(c && c.title) || code}（共有）`);
+  }
+}
 
 $('#sticky-toggle').addEventListener('change', (e) => {
   db.settings.stickyHeader = e.target.checked;
@@ -2755,7 +3208,7 @@ $('#backup-file').addEventListener('change', async (e) => {
     downloadBackup(); // 安全弁: 復元前に現在のデータも書き出しておく
     db = { ...defaultDb(), ...incoming, settings: { ...defaultDb().settings, ...(incoming.settings || {}) } };
     save();
-    applyTheme(); applyFont(); applySize(); applyStyle(); applyZoomLock(); applyStickyHeader();
+    applyTheme(); applyFont(); applySize(); applyStyle(); applyPalette(); applyZoomLock(); applyStickyHeader();
     renderAll();
     flashToast('バックアップから復元しました');
   } catch (err) {
@@ -3161,7 +3614,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -3169,11 +3622,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -4389,9 +4842,76 @@ $('#search-open').addEventListener('click', () => {
   $('#search-results').textContent = '';
   $('#search-input').focus();
 });
-$('#search-close').addEventListener('click', () => { $('#search-scrim').hidden = true; });
-$('#search-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.hidden = true; });
+$('#search-close').addEventListener('click', () => { $('#search-scrim').hidden = true; stopVoice(); });
+$('#search-scrim').addEventListener('click', (e) => { if (e.target === e.currentTarget) { e.currentTarget.hidden = true; stopVoice(); } });
 $('#search-input').addEventListener('input', renderSearchResults);
+
+/* ========== 音声で検索（Web Speech API・対応端末のみ・候補はリスト表示）==========
+   話した言葉を検索ボックスに入れて、既存の検索でマッチする予定を一覧表示する。
+   iOSのホーム画面アプリ等・非対応環境ではマイクを自動で隠す（邪魔にならない）。 */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let voiceRec = null;
+let voiceActive = false;
+function voiceSupported() { return Boolean(SpeechRec); }
+function setVoiceStatus(msg, on) {
+  const el2 = $('#voice-status');
+  if (!el2) return;
+  el2.textContent = msg || '';
+  el2.hidden = !msg;
+  const mic = $('#search-mic');
+  if (mic) mic.classList.toggle('is-listening', !!on);
+}
+function stopVoice() {
+  voiceActive = false;
+  try { if (voiceRec) voiceRec.stop(); } catch (e) { /* noop */ }
+  setVoiceStatus('', false);
+}
+function startVoice() {
+  if (!voiceSupported()) { flashToast('この端末では音声入力が使えません'); return; }
+  if (voiceActive) { stopVoice(); return; }
+  try {
+    voiceRec = new SpeechRec();
+    voiceRec.lang = 'ja-JP';
+    voiceRec.interimResults = true;
+    voiceRec.maxAlternatives = 1;
+    voiceRec.continuous = false;
+    voiceActive = true;
+    setVoiceStatus('聞き取り中… 話してください', true);
+    voiceRec.onresult = (ev) => {
+      let text = '';
+      for (let i = 0; i < ev.results.length; i += 1) text += ev.results[i][0].transcript;
+      text = text.replace(/[。、.\s]+$/, '').trim();
+      $('#search-input').value = text;
+      renderSearchResults();
+      if (ev.results[ev.results.length - 1].isFinal) setVoiceStatus(`「${text}」で検索中`, false);
+    };
+    voiceRec.onerror = (ev) => {
+      voiceActive = false;
+      const code = ev && ev.error;
+      if (code === 'not-allowed' || code === 'service-not-allowed') setVoiceStatus('マイクの使用が許可されていません（設定を確認してね）', false);
+      else if (code === 'no-speech') setVoiceStatus('うまく聞き取れませんでした。もう一度どうぞ', false);
+      else setVoiceStatus('音声入力を使えませんでした', false);
+    };
+    voiceRec.onend = () => { voiceActive = false; const mic = $('#search-mic'); if (mic) mic.classList.remove('is-listening'); };
+    voiceRec.start();
+  } catch (e) {
+    voiceActive = false;
+    setVoiceStatus('音声入力を開始できませんでした', false);
+  }
+}
+function openSearch(voice) {
+  $('#search-scrim').hidden = false;
+  $('#search-input').value = '';
+  $('#search-results').textContent = '';
+  setVoiceStatus('', false);
+  if (voice && voiceSupported()) startVoice(); else $('#search-input').focus();
+}
+if (voiceSupported()) { // 対応端末だけマイクを出す
+  $('#voice-open').hidden = false;
+  $('#search-mic').hidden = false;
+  $('#voice-open').addEventListener('click', () => openSearch(true));
+  $('#search-mic').addEventListener('click', startVoice);
+}
 
 /* ========== v13: Googleカレンダー連携（第1弾: メインカレンダーの読み込み・表示）==========
    OAuthはライブラリ不要のリダイレクト方式（インプリシットフロー）— CDN禁止方針と両立。
@@ -4700,7 +5220,7 @@ function renderGcalCard() {
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
 const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules', 'packages'];
-const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs'];
+const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs', 'peopleProfiles'];
 const SH_PREFIX = 's:'; // 共有カレンダー所属の calendarId は 's:招待コード'
 function isSharedCal(id) { return typeof id === 'string' && id.startsWith(SH_PREFIX); }
 let fbReady = false;
@@ -4982,6 +5502,10 @@ function shItemsFor(code) { // 共有ドキュメントに入れる形（calenda
 function shApplyRemote(code, data) {
   const isOwner = fbUser && data.ownerUid === fbUser.uid;
   const me = fbUser && (data.members || {})[fbUser.uid];
+  // 過去に保存されていたメールアドレスは使わないので、オーナーが開いたら削除しておく（プライバシー）
+  if (isOwner && Object.prototype.hasOwnProperty.call(data, 'ownerEmail')) {
+    try { shDocRef(code).update({ ownerEmail: window.firebase.firestore.FieldValue.delete() }); } catch (e) { /* 次回でよい */ }
+  }
   if (fbUser && !isOwner && !me) { // オーナーに共有を解除された
     shLeaveLocal(code);
     flashToast(`「${data.title || code}」の共有が解除されました`);
@@ -5056,7 +5580,7 @@ async function shCreate(title) {
   if (!navigator.onLine) { flashToast('オフラインです'); return; }
   if (!(await ensureFirebase()) || !fbUser) { flashToast('先にGoogleでログインしてね'); return; }
   const code = shNewCode();
-  const data = { title, color: 'blue', ownerUid: fbUser.uid, ownerEmail: fbUser.email || '', members: {}, updatedAt: Date.now(), tasks: [], events: [] };
+  const data = { title, color: 'blue', ownerUid: fbUser.uid, members: {}, updatedAt: Date.now(), tasks: [], events: [] };
   try {
     await shDocRef(code).set(data);
     db.sharedJoined.push(code);
@@ -5197,7 +5721,8 @@ function renderSharedCard() {
 /* ========== v15: ホーム表示のON/OFF（使わないビュー・タブを隠す） ========== */
 
 const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
-const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['routines', 'ルーティン']];
+const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['tasks', 'タスク'], ['routines', 'ルーティン']];
+const NAV_SCREEN = { tasks: 'tasklist' }; // data-nav と画面名が違うものだけ対応表
 // 日ビューに出るカード（後から追加された機能ぶんも隠せるように）
 function hideSections() { return [['sleep', '睡眠の記録'], ['daylog', dayLogName()]]; }
 function sectionHidden(key) { return !!(db.settings.hidden || {})[`section:${key}`]; }
@@ -5215,13 +5740,82 @@ function applyVisibility() {
   // 隠したビュー・画面を今開いていたら安全な場所へ退避
   if ((h[`view:${ui.view}`]) && ui.screen === 'cal') ui.view = 'day';
   if (h[`nav:${ui.screen}`]) { ui.screen = 'cal'; }
+  for (const [nav, scr] of Object.entries(NAV_SCREEN)) { // data-navと画面名が違うもの（タスク等）
+    if (h[`nav:${nav}`] && ui.screen === scr) ui.screen = 'cal';
+  }
 }
 
+/* 表示モード（プリセット）: 表示する項目のON/OFFをまとめて切り替え・保存できる。
+   デフォルト＝新しく入った人が最初に見る、そぎ落とした構成。フルカスタム＝全部表示。
+   お気に入り＝自分の構成を2つまで保存。PRESET_DEFAULTはファイル冒頭で定義（loadDbより前）。 */
+function hiddenSig(map) { return Object.keys(map || {}).filter((k) => (map || {})[k]).sort().join('|'); }
+function currentPresetId() {
+  const cur = hiddenSig(db.settings.hidden);
+  if (cur === hiddenSig({})) return 'full';
+  if (cur === hiddenSig(PRESET_DEFAULT)) return 'default';
+  const favs = db.settings.favPresets || [];
+  for (let i = 0; i < favs.length; i += 1) { if (favs[i] && hiddenSig(favs[i].hidden) === cur) return `fav${i}`; }
+  return 'custom';
+}
+function applyHiddenPreset(map) {
+  db.settings.hidden = { ...(map || {}) };
+  save();
+  applyVisibility();
+  renderAll();
+}
+function saveFavPreset() {
+  const favs = db.settings.favPresets = db.settings.favPresets || [];
+  if (favs.filter(Boolean).length >= 2) { flashToast('お気に入りは2つまで。不要なものを削除してね'); return; }
+  const title = (prompt('お気に入りの名前を決めてね（例：仕事用・週末用）', '') || '').trim();
+  if (!title) return;
+  const snap = { title: title.slice(0, 16), hidden: { ...(db.settings.hidden || {}) } };
+  const empty = favs.findIndex((f) => !f);
+  if (empty >= 0) favs[empty] = snap; else favs.push(snap);
+  save();
+  renderAll();
+  flashToast(`「${snap.title}」を保存しました`);
+}
+function deleteFavPreset(i) {
+  const favs = db.settings.favPresets || [];
+  favs[i] = null;
+  if (!favs.some(Boolean)) db.settings.favPresets = [];
+  save();
+  renderAll();
+}
+function renderModePicker(wrap) {
+  const cur = currentPresetId();
+  wrap.append(el('p', 'vis-group', '表示モード'));
+  const row = el('div', 'mode-row');
+  const mk = (id, label, apply, delFn) => {
+    const chip = el('button', `mode-chip${cur === id ? ' is-on' : ''}`);
+    chip.type = 'button';
+    chip.append(el('span', 'mode-chip-t', label));
+    chip.addEventListener('click', apply);
+    if (delFn) {
+      const x = el('span', 'mode-del', '×');
+      x.addEventListener('click', (e) => { e.stopPropagation(); delFn(); });
+      chip.append(x);
+    }
+    row.append(chip);
+  };
+  mk('full', 'フルカスタム', () => applyHiddenPreset({}));
+  mk('default', 'デフォルト', () => applyHiddenPreset(PRESET_DEFAULT));
+  (db.settings.favPresets || []).forEach((f, i) => { if (f) mk(`fav${i}`, f.title, () => applyHiddenPreset(f.hidden), () => deleteFavPreset(i)); });
+  wrap.append(row);
+  if ((db.settings.favPresets || []).filter(Boolean).length < 2) {
+    const saveBtn = el('button', 'mode-save', '＋ 今の表示をお気に入りに保存');
+    saveBtn.type = 'button';
+    saveBtn.addEventListener('click', saveFavPreset);
+    wrap.append(saveBtn);
+  }
+  wrap.append(el('p', 'hint', cur === 'custom' ? '今は「カスタム」表示です。お気に入りに保存できます。' : 'フルカスタム＝全機能／デフォルト＝おすすめの最小構成。下のチェックで個別にも調整できます。'));
+}
 function renderVisibilityCard() {
   const wrap = $('#visibility-body');
   if (!wrap) return;
   wrap.textContent = '';
   const h = db.settings.hidden = db.settings.hidden || {};
+  renderModePicker(wrap);
   const mk = (k, label) => {
     const row = el('label', 'vis-row');
     const cb = document.createElement('input');
@@ -5596,6 +6190,7 @@ applyTheme();
 applyFont();
 applySize();
 applyStyle();
+applyPalette();
 applyZoomLock();
 applyStickyHeader();
 // 実行中タイマーの復元（リロード・再起動後）
