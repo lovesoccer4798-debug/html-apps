@@ -2251,17 +2251,23 @@ function renderMonth(body) {
         }
         const ec = itemEdgeColor(it);
         if (ec) chip.style.boxShadow = `inset 0 0 0 1.5px ${ec}`;
+        const gapPx = styleMode === 'timetree' ? 0 : 2; // TimeTree風はセル間ギャップ0なので橋渡しの伸ばしも0（はみ出し防止）
         if (it.span) { // 隙間なく連日つながって見えるよう、セルのすき間ぶんだけ左右に伸ばす（週の端は伸ばさず角丸に）
           const roundL = it.span.isStart || isMon;
           const roundR = it.span.isEnd || isSun;
-          const extL = !it.span.isStart && !isMon ? 2 : 0; // 前日と接続（セルのすき間ぶん）
-          const extR = !it.span.isEnd && !isSun ? 2 : 0; // 翌日と接続
+          const extL = !it.span.isStart && !isMon ? gapPx : 0; // 前日と接続（セルのすき間ぶん）
+          const extR = !it.span.isEnd && !isSun ? gapPx : 0; // 翌日と接続
           chip.style.width = `calc(100% + ${extL + extR}px)`;
           chip.style.marginLeft = `-${extL}px`;
           chip.style.borderTopLeftRadius = roundL ? '' : '0';
           chip.style.borderBottomLeftRadius = roundL ? '' : '0';
           chip.style.borderTopRightRadius = roundR ? '' : '0';
           chip.style.borderBottomRightRadius = roundR ? '' : '0';
+        } else if (styleMode === 'timetree' && it.ref.repeat) { // 連日つづく繰り返し（平日=仕事・毎日 等）を一本の帯に見せる（隣と接する角の丸みを消してつなぐ）
+          const contL = !isMon && occursOn(it.ref, toKey(addDays(day, -1)));
+          const contR = !isSun && occursOn(it.ref, toKey(addDays(day, 1)));
+          if (contL) { chip.style.borderTopLeftRadius = '0'; chip.style.borderBottomLeftRadius = '0'; }
+          if (contR) { chip.style.borderTopRightRadius = '0'; chip.style.borderBottomRightRadius = '0'; }
         }
         cell.append(chip);
       }
