@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v75';
+const APP_VERSION = 'v76';
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -675,7 +675,7 @@ function checkButton(it) {
 }
 
 function buildItemCard(it, { compact = false, showTime = false } = {}) {
-  const card = el('div', `item is-${it.kind}${it.done ? ' is-done' : ''}${ui.selectedItemId === it.id ? ' is-selected' : ''}`);
+  const card = el('div', `item is-${it.kind}${it.done ? ' is-done' : ''}${ui.selectedItemId === it.id ? ' is-selected' : ''}${compact ? ' is-compact' : ''}`);
   if (it.id === ui.justAddedId) card.classList.add('rise');
 
   if (it.kind === 'task') {
@@ -736,7 +736,7 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     dot.style.background = ownColor;
     card.append(dot);
   }
-  if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
+  if (it.kind === 'event' && !compact) card.append(el('span', 'chip', '予定')); // compactでは左のカレンダーアイコンで予定と分かるので省略（タイトルの幅を確保）
   if (it.kind === 'gcal') card.append(el('span', 'chip', 'Google'));
   if ((it.ref.who || []).length) { // 「誰と」の人タグ（月の日付下リスト等のcompactでも出す。長い場合は省略＝レイアウトを崩さない）
     const names = it.ref.who;

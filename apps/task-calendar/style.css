@@ -294,6 +294,9 @@ input, select, textarea { font: inherit; color: inherit; }
 @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
 .item-title { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+/* compact（週・月の日付下リスト）は、長いタイトルがタグに押されて1文字ずつ縦に折り返り、
+   カードが極端に縦長になるのを防ぐため、1行で省略（…）表示にする */
+.item.is-compact .item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 /* .rise は追加された行だけに付く（app.js）— 再描画のたびに全行が瞬くのを避ける */
 .item.rise { animation: rise-plain .3s ease; }
 
