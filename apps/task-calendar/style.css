@@ -573,7 +573,7 @@ input, select, textarea { font: inherit; color: inherit; }
   border: 1.5px solid var(--tc-line);
   border-radius: 12px;
   padding: 11px 13px;
-  font-size: 15px;
+  font-size: 16px; /* iOS Safariは16px未満の入力欄をタップすると勝手にズームする→揺れ/横ずれの原因。16px以上で防ぐ */
   color: var(--tc-ink);
   appearance: none;
   -webkit-appearance: none;
@@ -816,10 +816,18 @@ input, select, textarea { font: inherit; color: inherit; }
   border: 1.5px solid var(--tc-line);
   border-radius: 12px;
   padding: 11px 13px;
-  font-size: 14px;
+  font-size: 16px; /* 同上: iOSの入力ズーム防止に16px以上 */
   color: var(--tc-ink);
   resize: vertical;
 }
+/* 文字サイズ設定で body を zoom 縮小しても、シートの入力欄は実効16px以上を保つ（iOSの自動ズーム＝揺れを防ぐ）。
+   medium=zoom .92 → 16/.92≈17.4 / small=zoom .84 → 16/.84≈19.1 */
+:root[data-fontsize="medium"] .sheet input,
+:root[data-fontsize="medium"] .sheet select,
+:root[data-fontsize="medium"] .sheet textarea { font-size: 17.4px; }
+:root[data-fontsize="small"] .sheet input,
+:root[data-fontsize="small"] .sheet select,
+:root[data-fontsize="small"] .sheet textarea { font-size: 19.1px; }
 .sheet textarea::placeholder { color: var(--tc-ink4); }
 .sheet textarea:focus { outline: none; border-color: var(--tc-accent); box-shadow: 0 0 0 3px var(--tc-accent-soft); }
 
@@ -977,6 +985,7 @@ input, select, textarea { font: inherit; color: inherit; }
   background: transparent;
   border: none;
   font: inherit;
+  font-size: 16px; /* iOS入力ズーム防止（タップ時に画面が揺れないように） */
   color: var(--tc-ink);
 }
 .goal-input:focus { outline: none; }
@@ -1277,7 +1286,7 @@ input, select, textarea { font: inherit; color: inherit; }
 /* ---------- v11: 検索 ---------- */
 
 .sheet-search #search-input {
-  width: 100%; font: inherit; font-size: 15px; color: var(--tc-ink);
+  width: 100%; font: inherit; font-size: 16px; color: var(--tc-ink); /* iOS入力ズーム防止 */
   background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 11px 13px;
 }
 .sheet-search #search-input:focus { outline: none; border-color: var(--tc-accent); }
@@ -1554,7 +1563,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .daylog-title { font-size: 13px; font-weight: 700; color: var(--tc-ink2); margin-bottom: 6px; }
 .daylog-input {
   width: 100%; border: none; background: transparent; resize: vertical;
-  font: inherit; font-size: 14px; color: var(--tc-ink); min-height: 62px; line-height: 1.6;
+  font: inherit; font-size: 16px; color: var(--tc-ink); min-height: 62px; line-height: 1.6; /* iOS入力ズーム防止 */
 }
 .daylog-input:focus { outline: none; }
 .daylog-input::placeholder { color: var(--tc-ink4); }
