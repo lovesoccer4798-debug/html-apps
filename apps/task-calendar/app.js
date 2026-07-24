@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v76';
+const APP_VERSION = 'v77';
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -314,6 +314,12 @@ function diaryFor(it) {
   if (r.repeat) return (r.diaryDates || {})[it.key] ?? r.diary ?? null;
   return r.diary || null;
 }
+// 繰り返しの「この日だけ」タイトル上書き（カレンダー＝日/週/時間/月から編集すると作られる）。
+// 上書きがあればそれを優先し、無ければベースのタイトル（ルーティンタブでの変更に自動追従）。
+function titleForKey(r, key) {
+  if (r && r.repeat) return (r.titleDates || {})[key] ?? r.title;
+  return r ? r.title : '';
+}
 
 // 複数日にまたがる予定（旅行・帰省など。endDate指定・繰り返しなし）が key を含むか
 function eventCoversDay(e, key) {
@@ -333,14 +339,14 @@ function itemsFor(key) {
   const items = [];
   for (const t of db.tasks) {
     if (!occursOn(t, key)) continue;
-    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: t.title, time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: minutesOn(t, key), repeat: t.repeat || null, done: taskDoneOn(t, key) });
+    items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: titleForKey(t, key), time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: minutesOn(t, key), repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
     const multi = eventCoversDay(e, key);
     if (!multi && !occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate、複数日は date〜endDate）
     const span = multi ? eventSpan(e, key) : null;
     const showTime = !span || span.isStart; // 複数日は開始日だけ時刻を表示（TimeTree風）
-    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: e.title, time: showTime ? timeOn(e, key) : '', timeEnd: showTime ? timeEndOn(e, key) : null, minutes: null, repeat: e.repeat || null, done: false, span });
+    items.push({ kind: 'event', id: `${e.id}@${key}`, ref: e, key, title: titleForKey(e, key), time: showTime ? timeOn(e, key) : '', timeEnd: showTime ? timeEndOn(e, key) : null, minutes: null, repeat: e.repeat || null, done: false, span });
   }
   items.push(...gcalItemsFor(key)); // Googleカレンダーの予定（連携ON時のみ・読み取り専用）
   return items.sort((a, b) => {
@@ -3377,7 +3383,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
 
   if (item) {
     const r = item.ref;
-    sheetEls.fTitle.value = r.title;
+    sheetEls.fTitle.value = titleForKey(r, item.key); // 繰り返しは「この日」の実効タイトル（上書きがあればそれ）
     sheetEls.fDate.value = r.repeat ? r.startDate : r.date;
     sheetEls.fTime.value = timeOn(r, item.key) || ''; // 繰り返しは「この日」の時刻を表示
     sheetEls.fMinutes.value = r.minutes || '';
@@ -3686,7 +3692,15 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
 
 function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs }) {
   const r = item.ref;
-  r.title = title;
+  // タイトル: 繰り返し中はカレンダー（日/週/時間/月）編集を「この日だけ」の上書きにする。
+  // ベースと同じ内容に戻したら上書きを消す＝クリーンに戻す（以降はルーティンタブでの変更に自動追従）。
+  if (Boolean(r.repeat) && Boolean(repeat)) {
+    r.titleDates = r.titleDates || {};
+    if (title && title !== r.title) r.titleDates[item.key] = title;
+    else delete r.titleDates[item.key];
+  } else {
+    r.title = title;
+  }
   r.color = color;
   r.calendarId = calendarId;
   if (subs && subs.length) r.subs = subs; else delete r.subs;
@@ -3723,7 +3737,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
         r.doneAt = (r.doneDates || {})[dateKey] || null;
         delete r.doneDates;
       }
-      delete r.repeat; delete r.startDate; delete r.exDates;
+      delete r.repeat; delete r.startDate; delete r.exDates; delete r.titleDates;
     }
   }
 }
@@ -4858,19 +4872,23 @@ function searchAll(qRaw) {
   const out = [];
   for (const t of db.tasks) {
     const memoDayHit = Object.entries(t.memoDates || {}).find(([, v]) => hit(v));
-    if (!hit(t.title) && !hit(t.memo) && !memoDayHit) continue;
+    const titleDayHit = Object.entries(t.titleDates || {}).find(([, v]) => hit(v)); // 「この日だけ」タイトル
+    if (!hit(t.title) && !hit(t.memo) && !memoDayHit && !titleDayHit) continue;
     let key = t.date || t.startDate;
     if (t.repeat) {
-      if (memoDayHit && !hit(t.title)) key = memoDayHit[0]; // 日記（日ごとメモ）がヒット → その日へ
+      if (titleDayHit && !hit(t.title)) key = titleDayHit[0]; // その日だけのタイトルがヒット → その日へ
+      else if (memoDayHit && !hit(t.title)) key = memoDayHit[0]; // 日記（日ごとメモ）がヒット → その日へ
       else { // 直近の出現日へ（今日から1年以内・なければ開始日）
         for (let i = 0; i < 366; i += 1) { const k = toKey(addDays(new Date(), i)); if (occursOn(t, k)) { key = k; break; } }
       }
     }
-    out.push({ kind: 'task', ref: t, key, title: t.title, repeat: t.repeat || null });
+    out.push({ kind: 'task', ref: t, key, title: (titleDayHit && !hit(t.title)) ? titleDayHit[1] : t.title, repeat: t.repeat || null });
   }
   for (const e of db.events) {
-    if (!hit(e.title) && !hit(e.memo) && !hit(e.place) && !(e.who || []).some(hit)) continue;
-    out.push({ kind: 'event', ref: e, key: e.date, title: e.title, repeat: null });
+    const titleDayHit = Object.entries(e.titleDates || {}).find(([, v]) => hit(v)); // 「この日だけ」タイトル
+    if (!hit(e.title) && !hit(e.memo) && !hit(e.place) && !(e.who || []).some(hit) && !titleDayHit) continue;
+    const key = (titleDayHit && !hit(e.title)) ? titleDayHit[0] : (e.date || e.startDate);
+    out.push({ kind: 'event', ref: e, key, title: (titleDayHit && !hit(e.title)) ? titleDayHit[1] : e.title, repeat: e.repeat || null });
   }
   return out.sort((a, b) => (b.key || '').localeCompare(a.key || '')).slice(0, 50);
 }
