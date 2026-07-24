@@ -37,6 +37,9 @@ const ACCENTS = {
 
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
+// アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
+const APP_VERSION = 'v73';
+
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
   plus: `<svg ${ICON_ATTRS}><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
@@ -695,19 +698,13 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   }
   const memo = memoFor(it);
   if (memo && !compact) main.append(el('span', 'item-memo', memo));
-  if (it.kind === 'event' && !compact && (it.ref.place || (it.ref.who || []).length || (it.time && it.timeEnd))) {
-    const meta = el('span', 'item-meta'); // 時間・誰と・どこで（日記的な記録）
+  if (it.kind === 'event' && !compact && (it.ref.place || (it.time && it.timeEnd))) {
+    const meta = el('span', 'item-meta'); // 時間・どこで（誰とは右側の人タグで表示）
     if (it.time && it.timeEnd) {
       const tm = el('span', 'meta-bit mono');
       tm.innerHTML = ICONS.clock;
       tm.append(` ${it.time}〜${it.timeEnd}`);
       meta.append(tm);
-    }
-    if ((it.ref.who || []).length) {
-      const w = el('span', 'meta-bit');
-      w.innerHTML = ICONS.users;
-      w.append(` ${it.ref.who.join('、')}`);
-      meta.append(w);
     }
     if (it.ref.place) {
       const pl = el('span', 'meta-bit');
@@ -741,6 +738,14 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   }
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
   if (it.kind === 'gcal') card.append(el('span', 'chip', 'Google'));
+  if (!compact && (it.ref.who || []).length) { // 「誰と」の人タグ（長い場合は省略＝レイアウトを崩さない）
+    const names = it.ref.who;
+    const c = el('span', 'chip chip-who');
+    c.innerHTML = ICONS.users;
+    c.append(el('span', 'chip-who-name', names.length > 1 ? `${names[0]} 他${names.length - 1}` : names[0]));
+    c.title = names.join('、');
+    card.append(c);
+  }
   if (showTime && it.time) {
     const c = el('span', 'chip mono');
     c.innerHTML = ICONS.clock;
@@ -6275,4 +6280,6 @@ if (db.running) {
 ui.selectedKey = todayKey();
 // 起動時に開くビュー（設定。既定は「日」。隠しているビューなら applyVisibility が安全に「日」へ退避）
 ui.view = db.settings.startView || 'day';
+const verEl = document.getElementById('app-version');
+if (verEl) verEl.textContent = `TaskARE ${APP_VERSION}`;
 renderAll();
