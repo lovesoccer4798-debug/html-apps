@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220">
+  <rect width="220" height="220" rx="48" fill="#faf6ef"/>
+  <circle cx="110" cy="110" r="76" fill="none" stroke="#2be6a5" stroke-width="7"/>
+  <circle cx="110" cy="110" r="63" fill="none" stroke="#2be6a5" stroke-width="2.5"/>
+  <text x="110" y="113" text-anchor="middle" dominant-baseline="central" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="54" fill="#2b2e3d" letter-spacing="-1.5">TA</text>
+  <circle cx="163" cy="163" r="29" fill="#faf6ef"/>
+  <circle cx="163" cy="163" r="24" fill="#2be6a5"/>
+  <path d="M153 163 L160 170 L174 155" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
