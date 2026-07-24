@@ -561,6 +561,9 @@ input, select, textarea { font: inherit; color: inherit; }
   animation: sheet-up .28s cubic-bezier(.22, 1, .36, 1);
   max-height: 88dvh;
   overflow-y: auto;
+  overflow-x: hidden;              /* 横スクロールを禁止（横ずれ防止） */
+  overscroll-behavior: contain;    /* シートのスクロールが背面カレンダーへ伝播しない（縦のブレ防止） */
+  touch-action: pan-y;             /* 指の操作は縦スクロールのみ許可＝横に動かない・ピンチで動かない（揺れ防止） */
 }
 @keyframes sheet-up { from { transform: translate(-50%, 40px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 .sheet-grip { width: 40px; height: 4px; border-radius: var(--tc-r-pill); background: var(--tc-surface2); margin: 4px auto 14px; }
