@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
-<link rel="stylesheet" href="tokens.css?v=69">
-<link rel="stylesheet" href="style.css?v=69">
+<link rel="stylesheet" href="tokens.css?v=71">
+<link rel="stylesheet" href="style.css?v=71">
 </head>
 <body>
 
@@ -158,6 +158,18 @@
         <p class="hint">名前や意味（例：「村山さん」「遊び」）に色を割り当てると、その言葉を含む予定・タスクの月表示に、その色のフチがつきます。予定のタイトルや「誰と」に一致で判定。共有カレンダーでも<strong>この色分けは自分の画面だけ</strong>で、共有相手には影響しません。相手は相手で自由に色分けできます。</p>
       </div>
 
+      <p class="section-label">起動時に開く画面</p>
+      <div class="card">
+        <div class="theme-seg" id="startview-seg">
+          <button data-startview="day">日</button>
+          <button data-startview="week">週</button>
+          <button data-startview="grid">時間</button>
+          <button data-startview="month">月</button>
+          <button data-startview="year">年</button>
+        </div>
+        <p class="hint">アプリを開いたとき最初に表示するカレンダーの見方を選べます（既定は「日」）。次回の起動から反映されます。</p>
+      </div>
+
       <p class="section-label">画面</p>
       <div class="card">
         <div class="theme-seg" id="zoom-seg">
@@ -167,6 +179,8 @@
         <p class="hint">「固定」にすると、iPhoneでうっかり画面が拡大されて表示がブレるのを防げます（入力欄を開いたときの勝手なズームも止まります）。文字を大きくしたいときは上の「文字サイズ」をどうぞ。</p>
         <label class="vis-row" style="margin-top:10px"><input type="checkbox" id="sticky-toggle"> カレンダー上部（日付・タブ・フィルタ）を固定する</label>
         <p class="hint">オンにすると、スクロールしても日付・ビュータブ・フィルタが上部に固定されます。オフにすると全部いっしょにスクロールします。お好みでどうぞ。</p>
+        <label class="vis-row" style="margin-top:10px"><input type="checkbox" id="chip-center-toggle"> 「月」カレンダーの予定・タスクの文字を中央ぞろえ</label>
+        <p class="hint">オフだと左ぞろえ（既定）。オンにすると、月表示の予定・タスクのラベルが中央ぞろえになります。</p>
       </div>
 
       <p class="section-label">タイマー終了の通知</p>
@@ -704,7 +718,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=69"></script>
-<script src="app.js?v=69"></script>
+<script src="firebase-config.js?v=71"></script>
+<script src="app.js?v=71"></script>
 </body>
 </html>

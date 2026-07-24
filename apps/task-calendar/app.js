@@ -71,7 +71,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -2213,7 +2213,8 @@ function renderMonth(body) {
   ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].forEach((w) => head.append(el('span', '', w)));
   body.append(head);
 
-  const grid = el('div', styleMode === 'timetree' ? 'mo-grid schedule timetree' : (schedule ? 'mo-grid schedule' : 'mo-grid'));
+  const gridBase = styleMode === 'timetree' ? 'mo-grid schedule timetree' : (schedule ? 'mo-grid schedule' : 'mo-grid');
+  const grid = el('div', gridBase + (db.settings.monthChipCenter ? ' mo-center' : '')); // 予定・タスクの文字を中央ぞろえ（設定）
   const first = new Date(c.getFullYear(), c.getMonth(), 1);
   const gridStart = startOfWeekMon(first);
   for (let i = 0; i < 42; i += 1) {
@@ -3002,12 +3003,17 @@ function renderSettings() {
   renderEdgeCals();
   const ie = $('#invert-events-toggle');
   if (ie) ie.checked = !!db.settings.invertEvents;
+  const cca = $('#chip-center-toggle');
+  if (cca) cca.checked = !!db.settings.monthChipCenter;
   const st = $('#sched-template');
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
   const sh = $('#sticky-toggle');
   if (sh) sh.checked = db.settings.stickyHeader !== false;
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
+  });
+  document.querySelectorAll('#startview-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.startview === (db.settings.startView || 'day'));
   });
   document.querySelectorAll('#font-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.fontOpt === (db.settings.font || 'gothic'));
@@ -3106,6 +3112,13 @@ document.querySelectorAll('#style-seg button').forEach((b) => {
     save(); applyStyle(); renderAll();
   });
 });
+document.querySelectorAll('#startview-seg button').forEach((b) => {
+  b.addEventListener('click', () => { // 起動時に開くビューを選ぶ（保存のみ。次回起動から反映）
+    db.settings.startView = b.dataset.startview;
+    save();
+    document.querySelectorAll('#startview-seg button').forEach((x) => x.classList.toggle('is-active', x === b));
+  });
+});
 $('#user-name').addEventListener('change', (e) => { db.settings.userName = e.target.value.trim(); save(); });
 $('#sender-name').addEventListener('change', (e) => { db.settings.senderName = e.target.value.trim(); save(); });
 $('#daylog-name').addEventListener('change', (e) => { db.settings.dayLogName = e.target.value.trim(); save(); });
@@ -3180,6 +3193,12 @@ $('#sticky-toggle').addEventListener('change', (e) => {
 
 $('#invert-events-toggle').addEventListener('change', (e) => {
   db.settings.invertEvents = e.target.checked;
+  save();
+  renderAll();
+});
+
+$('#chip-center-toggle')?.addEventListener('change', (e) => {
+  db.settings.monthChipCenter = e.target.checked; // 「月」カレンダーの予定・タスクの文字を中央ぞろえ
   save();
   renderAll();
 });
@@ -6254,4 +6273,6 @@ if (db.running) {
   startTick();
 }
 ui.selectedKey = todayKey();
+// 起動時に開くビュー（設定。既定は「日」。隠しているビューなら applyVisibility が安全に「日」へ退避）
+ui.view = db.settings.startView || 'day';
 renderAll();
