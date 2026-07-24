@@ -308,6 +308,9 @@ input, select, textarea { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .chip .icon { width: 12px; height: 12px; }
+/* 「誰と」の人タグ。アクセント寄りの色で少し目立たせつつ、長い名前は省略してレイアウトを守る */
+.chip-who { color: var(--tc-accent); background: var(--tc-accent-soft); flex-shrink: 0; max-width: 45%; }
+.chip-who .chip-who-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .play-btn {
   width: 36px; height: 36px;
@@ -501,6 +504,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .accent-swatch .icon { width: 16px; height: 16px; }
 
 .data-line { font-size: 13.5px; }
+.app-version { text-align: center; font-family: var(--tc-mono); font-size: 11px; color: var(--tc-ink4); margin: 18px 0 6px; }
 
 /* ---------- ボトムナビ・FAB ---------- */
 
