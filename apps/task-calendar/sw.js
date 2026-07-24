@@ -3,21 +3,21 @@
 /* Task Calendar service worker — オフラインでも開けるようにする（PWA）。
    スコープはこのアプリのディレクトリのみ。他のNESTアプリには影響しない。 */
 
-const CACHE_NAME = 'task-calendar-v76';
+const CACHE_NAME = 'task-calendar-v77';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=76',
-  './tokens.css?v=76',
-  './app.js?v=76',
-  './firebase-config.js?v=76',
+  './style.css?v=77',
+  './tokens.css?v=77',
+  './app.js?v=77',
+  './firebase-config.js?v=77',
   './vendor/firebase-app-compat.js?v=29',
   './vendor/firebase-auth-compat.js?v=29',
   './vendor/firebase-firestore-compat.js?v=29',
   './manifest.webmanifest',
-  './icons/icon.svg?v=76',
-  './icons/favicon-32.png?v=76',
-  './icons/apple-touch-icon.png?v=76',
+  './icons/icon.svg?v=77',
+  './icons/favicon-32.png?v=77',
+  './icons/apple-touch-icon.png?v=77',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
