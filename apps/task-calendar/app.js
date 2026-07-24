@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v73';
+const APP_VERSION = 'v74';
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -738,7 +738,7 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
   }
   if (it.kind === 'event') card.append(el('span', 'chip', '予定'));
   if (it.kind === 'gcal') card.append(el('span', 'chip', 'Google'));
-  if (!compact && (it.ref.who || []).length) { // 「誰と」の人タグ（長い場合は省略＝レイアウトを崩さない）
+  if ((it.ref.who || []).length) { // 「誰と」の人タグ（月の日付下リスト等のcompactでも出す。長い場合は省略＝レイアウトを崩さない）
     const names = it.ref.who;
     const c = el('span', 'chip chip-who');
     c.innerHTML = ICONS.users;
@@ -6282,4 +6282,9 @@ ui.selectedKey = todayKey();
 ui.view = db.settings.startView || 'day';
 const verEl = document.getElementById('app-version');
 if (verEl) verEl.textContent = `TaskARE ${APP_VERSION}`;
+// シート等モーダルの「暗い余白」を指でドラッグしても背面（カレンダー）が動かないように＝iOSの揺れ防止。
+// 中身（シート）のスクロールは target が余白そのものではないので妨げない。
+document.querySelectorAll('[id$="-scrim"]').forEach((scrim) => {
+  scrim.addEventListener('touchmove', (e) => { if (e.target === scrim) e.preventDefault(); }, { passive: false });
+});
 renderAll();
