@@ -1482,6 +1482,9 @@ input, select, textarea { font: inherit; color: inherit; }
 
 /* カレンダーごとの月フチ設定 */
 .edge-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--tc-line); }
+/* 人ごとのフチ（共有カレンダーの下にぶら下がる行） */
+.edge-row-sub { padding-left: 10px; }
+.edge-row-sub .edge-name { font-size: 12.5px; color: var(--tc-ink3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edge-row:last-child { border-bottom: none; }
 .edge-name { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edge-mini { flex: none; font-size: 12px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--tc-line); background: var(--tc-surface); color: var(--tc-ink3); }

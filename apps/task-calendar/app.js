@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v79';
+const APP_VERSION = 'v80';
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -279,6 +279,8 @@ function edgeModeFor(calId) {
 }
 // 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）優先、なければカレンダーごとのフチ設定。
 // ローカル設定なので共有相手の画面には出ない。
+// フチの色。ダークモードでは黒フチだと予定の色に埋もれて見えないので、明るいフチにする
+function edgeInk() { return effectiveDark() ? 'rgba(255,255,255,.88)' : 'rgba(0,0,0,.42)'; }
 function itemEdgeColor(it) {
   const rules = db.colorRules || [];
   if (rules.length) {
@@ -286,11 +288,13 @@ function itemEdgeColor(it) {
     const rule = rules.find((r) => r.label && hay.includes(r.label));
     if (rule) return (ACCENTS[rule.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
   }
+  const byUid = it.ref && it.ref.by; // 人ごとのフチ（誰が入れた予定かで分ける・自分の画面だけ）
+  if (byUid && (db.settings.edgePeople || {})[byUid]) return edgeInk();
   const mode = edgeModeFor(it.ref && it.ref.calendarId);
   if (mode) {
     const mine = itemIsMine(it);
     if (mode === 'all' || (mode === 'others' && !mine) || (mode === 'mine' && mine)) {
-      return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+      return edgeInk();
     }
   }
   return null;
@@ -3214,11 +3218,31 @@ function renderEdgeCals() {
     row.append(seg);
     wrap.append(row);
   };
+  // 人ごとのフチ（3人以上の共有で「誰が入れた予定か」を分けたいとき。設定は自分の画面だけ）
+  const peopleRows = (code, c) => {
+    const people = new Map(); // uid -> ラベル
+    if (c && c.ownerUid) people.set(c.ownerUid, c.ownerUid === (fbUser && fbUser.uid) ? '自分' : 'オーナー');
+    for (const [uid, m] of Object.entries((c && c.members) || {})) {
+      people.set(uid, uid === (fbUser && fbUser.uid) ? '自分' : (m && m.email) || 'メンバー');
+    }
+    if (people.size < 2) return; // 1人だけならカレンダー単位の設定で十分
+    const map2 = db.settings.edgePeople = db.settings.edgePeople || {};
+    for (const [uid, label] of people) {
+      const row = el('div', 'edge-row edge-row-sub');
+      row.append(el('span', 'edge-name', `└ ${label}`));
+      const btn = el('button', `edge-mini${map2[uid] ? ' is-on' : ''}`, map2[uid] ? 'フチあり' : 'フチなし');
+      btn.type = 'button';
+      btn.addEventListener('click', () => { if (map2[uid]) delete map2[uid]; else map2[uid] = true; save(); renderAll(); });
+      row.append(btn);
+      wrap.append(row);
+    }
+  };
   ownRow('c-default', (db.calendars.find((c) => c.id === 'c-default') || {}).name || 'マイカレンダー');
   db.calendars.filter((c) => c.id !== 'c-default').forEach((c) => ownRow(c.id, c.name));
   for (const code of db.sharedJoined) {
     const c = db.sharedCache[code];
     shRow(SH_PREFIX + code, `${(c && c.title) || code}（共有）`);
+    peopleRows(code, c);
   }
 }
 

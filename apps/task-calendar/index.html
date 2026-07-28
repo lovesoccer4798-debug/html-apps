@@ -8,18 +8,18 @@
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1e252d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=79">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=79">
-<link rel="icon" href="icons/icon-192.png?v=79" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=79">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=80">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=80">
+<link rel="icon" href="icons/icon-192.png?v=80" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=80">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=79">
-<link rel="stylesheet" href="style.css?v=79">
+<link rel="stylesheet" href="tokens.css?v=80">
+<link rel="stylesheet" href="style.css?v=80">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -188,7 +188,7 @@
       <div class="card">
         <p class="f-label" style="margin-top:0">カレンダーごとに「くっきりフチ」</p>
         <div id="edge-cals"></div>
-        <p class="hint">カレンダーごとに、月表示でフチをつけるか選べます。共有カレンダーは「相手の分だけ／自分の分だけ」も選べるので、誰の予定かをひと目で分けられます（判定は最新版アプリで入れた予定から・フチは自分の画面だけ）。</p>
+        <p class="hint">カレンダーごとに、月表示でフチをつけるか選べます。共有カレンダーは「相手の分だけ／自分の分だけ」も選べるので、誰の予定かをひと目で分けられます。3人以上で共有しているときは、共有カレンダーの下に出る<strong>人ごとの行</strong>で、その人が入れた予定だけにフチをつけられます（判定は最新版アプリで入れた予定から・フチは自分の画面だけ）。</p>
         <label class="sync-toggle"><input type="checkbox" id="invert-events-toggle"> 予定の色を反転（フチ＋薄塗り）してタスクと見分ける</label>
         <div id="colorrule-body"></div>
         <p class="hint">名前や意味（例：「村山さん」「遊び」）に色を割り当てると、その言葉を含む予定・タスクの月表示に、その色のフチがつきます。予定のタイトルや「誰と」に一致で判定。共有カレンダーでも<strong>この色分けは自分の画面だけ</strong>で、共有相手には影響しません。相手は相手で自由に色分けできます。</p>
@@ -759,7 +759,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=79"></script>
-<script src="app.js?v=79"></script>
+<script src="firebase-config.js?v=80"></script>
+<script src="app.js?v=80"></script>
 </body>
 </html>
