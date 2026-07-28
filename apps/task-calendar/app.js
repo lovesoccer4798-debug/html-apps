@@ -38,12 +38,15 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v81';
+const APP_VERSION = 'v82';
 
 /* アプリのアイコン（設定から選べる）。あとから増やすときはここに1行足すだけ。
    svg = タブのアイコン(favicon)とアプリ内ロゴに使う / touch = ホーム画面に追加するとき用 */
 const APP_ICONS = [
-  { id: 'default', name: 'TaskARE（標準）', svg: 'icons/icon.svg', touch: 'icons/apple-touch-icon.png' },
+  { id: 'default',   name: 'TaskARE（標準・ライト）', svg: 'icons/icon.svg',           touch: 'icons/apple-touch-icon.png' },
+  { id: 'dark',      name: 'TaskARE（標準・ダーク）', svg: 'icons/icon-dark.svg',      touch: 'icons/default-dark-180.png' },
+  { id: 'hand',      name: '手描きロゴ（ライト）',     svg: 'icons/icon-hand.svg',      touch: 'icons/hand-180.png' },
+  { id: 'hand-dark', name: '手描きロゴ（ダーク）',     svg: 'icons/icon-hand-dark.svg', touch: 'icons/hand-dark-180.png' },
 ];
 function appIconDef() {
   return APP_ICONS.find((i) => i.id === (db.settings.appIcon || 'default')) || APP_ICONS[0];
@@ -52,6 +55,9 @@ function appIconDef() {
 // iOSの仕様で自動更新されないため、変えたい場合は追加し直してもらう
 function applyAppIcon() {
   const def = appIconDef();
+  try { localStorage.setItem('tc-app-icon', def.svg); } catch (e) { /* 使えなくてもアイコン自体は出る */ }
+  const sp = document.querySelector('#tc-sp-img');
+  if (sp) sp.src = def.svg;
   const set = (sel, href) => { const elx = document.querySelector(sel); if (elx && href) elx.href = `${href}?${APP_VERSION}`; };
   set('link[rel="icon"][type="image/svg+xml"]', def.svg);
   set('link[rel="apple-touch-icon"]', def.touch);
@@ -343,6 +349,26 @@ function titleForKey(r, key) {
   if (r && r.repeat) return (r.titleDates || {})[key] ?? r.title;
   return r ? r.title : '';
 }
+/* 詳細（サブ項目）の「その日の分」。繰り返しは日ごとに独立させる＝ある日でチェックしたり
+   項目を足しても、他の日には影響しない。上書きが無い日は元の並び（未チェック）から始まる。 */
+function subsFor(r, key) {
+  if (!r) return [];
+  if (r.repeat) {
+    const d = (r.subsDates || {})[key];
+    if (d) return d;
+    return (r.subs || []).map((x) => ({ ...x, done: false })); // 元をひな形として使う（チェックは持ち越さない）
+  }
+  return r.subs || [];
+}
+// その日の詳細を書き込む（繰り返しはその日だけ・単発は本体）
+function setSubsFor(r, key, subs) {
+  if (r.repeat) {
+    r.subsDates = r.subsDates || {};
+    r.subsDates[key] = subs;
+  } else if (subs && subs.length) r.subs = subs;
+  else delete r.subs;
+}
+
 // リンク（動画URLなど）の「その日の実効値」。
 //   1) linkDates[key]  … カレンダー（日/週/時間/月）から編集した「この日だけ」の上書き（最優先）
 //   2) linkFrom[from]  … ルーティンタブでの変更。変更した日（from）以降にだけ効く＝それより前の日は変わらない
@@ -771,17 +797,23 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     main.append(meta);
   }
   // 詳細（サブ項目）: 大タスクの中身をチェックリストで表示。タップで完了を切り替え
-  if (!compact && (it.ref.subs || []).length) {
+  const cardSubs = subsFor(it.ref, it.key);
+  if (!compact && cardSubs.length) {
     const subsEl = el('div', 'item-subs');
-    for (const s of it.ref.subs) {
+    cardSubs.forEach((s, idx) => {
       const row = el('button', `item-sub${s.done ? ' is-done' : ''}`);
       row.type = 'button';
       const box = el('span', 'item-sub-box');
       if (s.done) box.innerHTML = ICONS.check;
       row.append(box, el('span', 'item-sub-title', s.title));
-      row.addEventListener('click', (e) => { e.stopPropagation(); s.done = !s.done; save(); renderAll(); });
+      row.addEventListener('click', (e) => { // チェックはその日の分だけ
+        e.stopPropagation();
+        const next = subsFor(it.ref, it.key).map((x, i) => (i === idx ? { ...x, done: !x.done } : { ...x }));
+        setSubsFor(it.ref, it.key, next);
+        save(); renderAll();
+      });
       subsEl.append(row);
-    }
+    });
     main.append(subsEl);
   }
   card.append(main);
@@ -3430,20 +3462,25 @@ function openDetail(it) {
     row('場所', it.ref.place);
     const cal = db.calendars.find((c) => c.id === it.ref.calendarId);
     if (cal && cal.id !== 'c-default') row('カレンダー', cal.name);
-    if ((it.ref.subs || []).length) {
+    const dtSubs = subsFor(it.ref, it.key);
+    if (dtSubs.length) {
       const blk = el('div', 'dt-block');
-      const doneN = it.ref.subs.filter((s) => s.done).length;
-      blk.append(el('span', 'dt-key', `詳細（${doneN}/${it.ref.subs.length}）`));
+      const doneN = dtSubs.filter((s) => s.done).length;
+      blk.append(el('span', 'dt-key', `詳細（${doneN}/${dtSubs.length}）`));
       const list = el('div', 'item-subs');
-      for (const s of it.ref.subs) {
+      dtSubs.forEach((s, idx) => {
         const r2 = el('button', `item-sub${s.done ? ' is-done' : ''}`);
         r2.type = 'button';
         const box = el('span', 'item-sub-box');
         if (s.done) box.innerHTML = ICONS.check;
         r2.append(box, el('span', 'item-sub-title', s.title));
-        r2.addEventListener('click', () => { s.done = !s.done; save(); openDetail(it); renderAll(); });
+        r2.addEventListener('click', () => { // チェックはその日の分だけ
+          const next = subsFor(it.ref, it.key).map((x, i) => (i === idx ? { ...x, done: !x.done } : { ...x }));
+          setSubsFor(it.ref, it.key, next);
+          save(); openDetail(it); renderAll();
+        });
         list.append(r2);
-      }
+      });
       blk.append(list);
       body.append(blk);
     }
@@ -3563,7 +3600,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-invite').value = (r.attendees || []).join('、');
     $('#f-invite-note').value = r.inviteNote || '';
     buildWhoChips(Array.isArray(r.who) ? r.who : []);
-    ui.sheetSubs = (r.subs || []).map((s) => ({ ...s }));
+    ui.sheetSubs = subsFor(r, item.key).map((s) => ({ ...s })); // 繰り返しは「この日」の詳細
   } else {
     sheetEls.fTitle.value = '';
     sheetEls.fDate.value = dateKey || (ui.view === 'month' ? (ui.selectedKey || todayKey()) : toKey(ui.cursor));
@@ -3876,7 +3913,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   } else if (link) r.link = link; else delete r.link;
   r.color = color;
   r.calendarId = calendarId;
-  if (canEditNotes(r)) { if (subs && subs.length) r.subs = subs; else delete r.subs; }
+  if (canEditNotes(r)) setSubsFor(r, item.key, subs); // 繰り返しの詳細は「この日」だけに反映
   if (item.kind === 'event') {
     r.place = place;
     r.who = who && who.length ? who : null;
@@ -3913,7 +3950,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
         r.doneAt = (r.doneDates || {})[dateKey] || null;
         delete r.doneDates;
       }
-      delete r.repeat; delete r.startDate; delete r.exDates; delete r.titleDates; delete r.linkDates; delete r.linkFrom;
+      delete r.repeat; delete r.startDate; delete r.exDates; delete r.titleDates; delete r.linkDates; delete r.linkFrom; delete r.subsDates;
     }
   }
 }
@@ -6474,7 +6511,7 @@ function notionDayPayload(key) {
     if (dv) diaries.push(`【${it.title}】${dv}`);
     const mv = memoFor(it);
     if (mv) memos.push(`【${it.title}】${mv}`);
-    const subs = it.ref && it.ref.subs;
+    const subs = subsFor(it.ref, it.key);
     if (subs && subs.length) memos.push(`【${it.title}｜詳細】${subs.map((s) => `${s.done ? '✓' : '・'}${s.title}`).join(' ')}`);
   }
   const d = fromKey(key);
