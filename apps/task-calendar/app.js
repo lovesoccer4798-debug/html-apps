@@ -38,7 +38,24 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v79';
+const APP_VERSION = 'v81';
+
+/* アプリのアイコン（設定から選べる）。あとから増やすときはここに1行足すだけ。
+   svg = タブのアイコン(favicon)とアプリ内ロゴに使う / touch = ホーム画面に追加するとき用 */
+const APP_ICONS = [
+  { id: 'default', name: 'TaskARE（標準）', svg: 'icons/icon.svg', touch: 'icons/apple-touch-icon.png' },
+];
+function appIconDef() {
+  return APP_ICONS.find((i) => i.id === (db.settings.appIcon || 'default')) || APP_ICONS[0];
+}
+// 選んだアイコンをタブ(favicon)とホーム画面用リンクに反映。※ホーム画面に追加済みのアイコンは
+// iOSの仕様で自動更新されないため、変えたい場合は追加し直してもらう
+function applyAppIcon() {
+  const def = appIconDef();
+  const set = (sel, href) => { const elx = document.querySelector(sel); if (elx && href) elx.href = `${href}?${APP_VERSION}`; };
+  set('link[rel="icon"][type="image/svg+xml"]', def.svg);
+  set('link[rel="apple-touch-icon"]', def.touch);
+}
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -75,7 +92,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -115,6 +132,7 @@ function persistLocal() {
   }
 }
 function save() {
+  if (db.settings.mirrorShared) syncSharedMirrors(); // 共有の予定を自分のカレンダーにも控える（設定ON時）
   db.updatedAt = Date.now();
   persistLocal();
   scheduleCloudPush(); // ログイン中ならクラウドへも（デバウンス）
@@ -279,6 +297,8 @@ function edgeModeFor(calId) {
 }
 // 月ビューの「縁（枠線）」の色。人・意味ルール（colorRules）優先、なければカレンダーごとのフチ設定。
 // ローカル設定なので共有相手の画面には出ない。
+// フチの色。ダークモードでは黒フチだと予定の色に埋もれて見えないので、明るいフチにする
+function edgeInk() { return effectiveDark() ? 'rgba(255,255,255,.88)' : 'rgba(0,0,0,.42)'; }
 function itemEdgeColor(it) {
   const rules = db.colorRules || [];
   if (rules.length) {
@@ -286,11 +306,13 @@ function itemEdgeColor(it) {
     const rule = rules.find((r) => r.label && hay.includes(r.label));
     if (rule) return (ACCENTS[rule.color] || ACCENTS.green)[effectiveDark() ? 'dark' : 'light'];
   }
+  const byUid = it.ref && it.ref.by; // 人ごとのフチ（誰が入れた予定かで分ける・自分の画面だけ）
+  if (byUid && (db.settings.edgePeople || {})[byUid]) return edgeInk();
   const mode = edgeModeFor(it.ref && it.ref.calendarId);
   if (mode) {
     const mine = itemIsMine(it);
     if (mode === 'all' || (mode === 'others' && !mine) || (mode === 'mine' && mine)) {
-      return effectiveDark() ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.42)';
+      return edgeInk();
     }
   }
   return null;
@@ -362,10 +384,12 @@ function eventSpan(e, key) {
 function itemsFor(key) {
   const items = [];
   for (const t of db.tasks) {
+    if (isHiddenMirror(t)) continue; // 共有に参加中の控えは隠す
     if (!occursOn(t, key)) continue;
     items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: titleForKey(t, key), time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: minutesOn(t, key), repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
+    if (isHiddenMirror(e)) continue; // 共有に参加中の控えは隠す
     const multi = eventCoversDay(e, key);
     if (!multi && !occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate、複数日は date〜endDate）
     const span = multi ? eventSpan(e, key) : null;
@@ -3042,6 +3066,12 @@ function renderSettings() {
   if (ie) ie.checked = !!db.settings.invertEvents;
   const cca = $('#chip-center-toggle');
   if (cca) cca.checked = !!db.settings.monthChipCenter;
+  const ms = $('#mirror-shared');
+  if (ms) ms.checked = !!db.settings.mirrorShared;
+  document.querySelectorAll('#notepriv-seg button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.npd === (db.settings.notePrivDefault || 'open'));
+  });
+  renderAppIconList();
   const st = $('#sched-template');
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
   const sh = $('#sticky-toggle');
@@ -3214,11 +3244,31 @@ function renderEdgeCals() {
     row.append(seg);
     wrap.append(row);
   };
+  // 人ごとのフチ（3人以上の共有で「誰が入れた予定か」を分けたいとき。設定は自分の画面だけ）
+  const peopleRows = (code, c) => {
+    const people = new Map(); // uid -> ラベル
+    if (c && c.ownerUid) people.set(c.ownerUid, c.ownerUid === (fbUser && fbUser.uid) ? '自分' : 'オーナー');
+    for (const [uid, m] of Object.entries((c && c.members) || {})) {
+      people.set(uid, uid === (fbUser && fbUser.uid) ? '自分' : (m && m.email) || 'メンバー');
+    }
+    if (people.size < 2) return; // 1人だけならカレンダー単位の設定で十分
+    const map2 = db.settings.edgePeople = db.settings.edgePeople || {};
+    for (const [uid, label] of people) {
+      const row = el('div', 'edge-row edge-row-sub');
+      row.append(el('span', 'edge-name', `└ ${label}`));
+      const btn = el('button', `edge-mini${map2[uid] ? ' is-on' : ''}`, map2[uid] ? 'フチあり' : 'フチなし');
+      btn.type = 'button';
+      btn.addEventListener('click', () => { if (map2[uid]) delete map2[uid]; else map2[uid] = true; save(); renderAll(); });
+      row.append(btn);
+      wrap.append(row);
+    }
+  };
   ownRow('c-default', (db.calendars.find((c) => c.id === 'c-default') || {}).name || 'マイカレンダー');
   db.calendars.filter((c) => c.id !== 'c-default').forEach((c) => ownRow(c.id, c.name));
   for (const code of db.sharedJoined) {
     const c = db.sharedCache[code];
     shRow(SH_PREFIX + code, `${(c && c.title) || code}（共有）`);
+    peopleRows(code, c);
   }
 }
 
@@ -3239,6 +3289,45 @@ $('#chip-center-toggle')?.addEventListener('change', (e) => {
   save();
   renderAll();
 });
+
+$('#mirror-shared')?.addEventListener('change', (e) => {
+  db.settings.mirrorShared = e.target.checked; // 共有の予定を自分のカレンダーにも控える
+  if (!e.target.checked) { // オフにしたら、隠していた控えは掃除する（見えている＝共有が無い分は残す）
+    const drop = (x) => x.mirrorOf && db.sharedJoined.includes(x.mirrorCode);
+    db.tasks = db.tasks.filter((t) => !drop(t));
+    db.events = db.events.filter((ev) => !drop(ev));
+  }
+  save();
+  renderAll();
+});
+
+document.querySelectorAll('#notepriv-seg button').forEach((b) => {
+  b.addEventListener('click', () => {
+    db.settings.notePrivDefault = b.dataset.npd;
+    save();
+    document.querySelectorAll('#notepriv-seg button').forEach((x) => x.classList.toggle('is-active', x === b));
+    renderAll();
+  });
+});
+
+// アプリのアイコン選択（今は標準のみ。APP_ICONS に足せば増える）
+function renderAppIconList() {
+  const wrap = $('#appicon-list');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const cur = db.settings.appIcon || 'default';
+  for (const ic of APP_ICONS) {
+    const row = el('button', `icon-row${ic.id === cur ? ' is-active' : ''}`);
+    row.type = 'button';
+    const img = document.createElement('img');
+    img.src = ic.svg; img.alt = ''; img.className = 'icon-row-img';
+    row.append(img, el('span', 'icon-row-name', ic.name));
+    if (ic.id === cur) { const chk = el('span', 'icon-row-check'); chk.innerHTML = ICONS.check; row.append(chk); }
+    row.addEventListener('click', () => { db.settings.appIcon = ic.id; save(); applyAppIcon(); renderAppIconList(); });
+    wrap.append(row);
+  }
+  if (APP_ICONS.length < 2) wrap.append(el('p', 'hint', '今は標準アイコンのみです。使いたい画像を追加すると、ここから選べるようになります。'));
+}
 
 /* ----- バックアップ（書き出し／復元。手動・容量は端末のファイル1個だけ） ----- */
 
@@ -3411,6 +3500,40 @@ $('#detail-edit').addEventListener('click', () => {
   if (detailItem) openSheet('edit', { item: detailItem });
 });
 
+let sheetNotePriv = 'open'; // 編集シートで選択中の公開範囲
+function setSheetNotePriv(v, { locked = false } = {}) {
+  sheetNotePriv = v || 'open';
+  document.querySelectorAll('#f-notepriv button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.np === sheetNotePriv);
+    b.disabled = locked; // 本人以外は変更させない
+  });
+}
+// 共有カレンダーを選んでいるときだけ公開範囲の選択を出し、'locked'で本人以外ならメモ類を読み取り専用に
+function syncSheetNotePriv() {
+  const calSel = $('#f-cal');
+  const calId = calSel ? (calSel.value || 'c-default') : 'c-default';
+  const wrap = $('#f-notepriv-wrap');
+  const isShared = isSharedCal(calId);
+  if (wrap) wrap.hidden = !isShared;
+  const ref = ui.editing && ui.editing.ref;
+  const editable = !isShared || !ref || canEditNotes(ref);
+  for (const sel of ['#f-memo', '#f-diary']) {
+    const elx = $(sel);
+    if (elx) { elx.readOnly = !editable; elx.style.opacity = editable ? '' : '.6'; }
+  }
+  const hint = $('#f-notepriv-hint');
+  if (hint) {
+    hint.textContent = editable
+      ? '「共有しない」を選ぶと、メモ・日記・詳細は相手の端末に送られません（この予定自体は共有されます）。'
+      : 'この予定のメモ・日記は、入れた本人だけが書き換えられる設定になっています。';
+  }
+  if (wrap && isShared && ref) setSheetNotePriv(notePrivOf(ref), { locked: !editable });
+}
+document.querySelectorAll('#f-notepriv button').forEach((b) => {
+  b.addEventListener('click', () => setSheetNotePriv(b.dataset.np));
+});
+$('#f-cal')?.addEventListener('change', syncSheetNotePriv);
+
 function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = null, type = null } = {}) {
   ui.editing = mode === 'edit' ? item : null;
   ui.sheetType = item ? item.kind : (type || 'task');
@@ -3428,6 +3551,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fMemo.value = memoFor(item) || '';
     sheetEls.fDiary.value = diaryFor(item) || '';
     $('#f-link').value = linkForKey(r, item.key) || ''; // 繰り返しは「この日」の実効リンク
+    setSheetNotePriv(notePrivOf(r));
     sheetEls.repeatHint.hidden = !r.repeat;
     $('#f-time-end').value = timeEndOn(r, item.key) || '';
     $('#f-date-end').value = r.endDate || '';
@@ -3449,6 +3573,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fMemo.value = '';
     sheetEls.fDiary.value = '';
     $('#f-link').value = '';
+    setSheetNotePriv(db.settings.notePrivDefault || 'open');
     sheetEls.repeatHint.hidden = true;
     $('#f-time-end').value = timeEnd || '';
     $('#f-date-end').value = '';
@@ -3486,6 +3611,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
   const single = db.calendars.length < 2 && !db.sharedJoined.length;
   calSel.hidden = single;
   $('#f-cal-label').hidden = single;
+  syncSheetNotePriv();
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
 }
@@ -3669,6 +3795,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const diary = sheetEls.fDiary.value.trim() || null;
   const meetUrl = $('#f-meeting').value.trim() || null;
   const link = $('#f-link').value.trim() || null; // リンク（YouTube等）
+  const notePriv = sheetNotePriv || 'open'; // メモ・日記・詳細の公開範囲
   const pushGoogle = getOpt('#opt-push');
   const autoMeet = getOpt('#opt-meet');
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
@@ -3684,6 +3811,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
     applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs, link });
+    if (notePriv && notePriv !== 'open') ui.editing.ref.notePriv = notePriv; else delete ui.editing.ref.notePriv;
     if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
@@ -3692,7 +3820,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, link: link || undefined, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, link: link || undefined, notePriv: notePriv !== 'open' ? notePriv : undefined, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -3700,11 +3828,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, link: link || undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, link: link || undefined, notePriv: notePriv !== 'open' ? notePriv : undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, link: link || undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, link: link || undefined, notePriv: notePriv !== 'open' ? notePriv : undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -3748,7 +3876,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   } else if (link) r.link = link; else delete r.link;
   r.color = color;
   r.calendarId = calendarId;
-  if (subs && subs.length) r.subs = subs; else delete r.subs;
+  if (canEditNotes(r)) { if (subs && subs.length) r.subs = subs; else delete r.subs; }
   if (item.kind === 'event') {
     r.place = place;
     r.who = who && who.length ? who : null;
@@ -3757,8 +3885,11 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   }
   // メモ・日記・時刻・タイマー時間: 繰り返し中は「この日」の分として独立保存、単発は本体に
   const perDay = Boolean(r.repeat) && Boolean(repeat);
-  setPerDayField(r, 'memo', 'memoDates', item.key, memo, perDay);
-  setPerDayField(r, 'diary', 'diaryDates', item.key, diary, perDay);
+  const notesOk = canEditNotes(r); // 「共有・自分だけ書ける」で本人以外なら、メモ類は据え置き
+  if (notesOk) {
+    setPerDayField(r, 'memo', 'memoDates', item.key, memo, perDay);
+    setPerDayField(r, 'diary', 'diaryDates', item.key, diary, perDay);
+  }
   setPerDayField(r, 'time', 'timeDates', item.key, time || null, perDay);
   setPerDayField(r, 'timeEnd', 'timeEndDates', item.key, time ? timeEnd : null, perDay);
   if (item.kind !== 'event') setPerDayField(r, 'minutes', 'minutesDates', item.key, minutes, perDay);
@@ -5664,9 +5795,64 @@ function sharedBlocked(calId) {
   return true;
 }
 
+/* ===== 共有カレンダーの予定を、自分のカレンダーにも「控え」として残す =====
+   設定ONのあいだ、共有の予定・タスクを自分のカレンダー(c-default)へ自動コピーする。
+   共有に参加しているあいだ控えは隠しておき（＝二重表示しない）、共有が削除/退出で無くなった
+   時点で自動的に自分の予定として現れる。 */
+const MIRROR_SKIP = new Set(['id', 'calendarId', 'by', 'mirrorOf', 'mirrorCode', 'gcalId', 'pushGoogle']);
+function isHiddenMirror(x) { // 元の共有カレンダーがまだ手元にある控え＝隠す
+  return Boolean(x && x.mirrorCode) && db.sharedJoined.includes(x.mirrorCode);
+}
+function syncSharedMirrors(onlyCode) {
+  const codes = onlyCode ? [onlyCode] : db.sharedJoined;
+  if (!codes.length) return;
+  for (const key of ['tasks', 'events']) {
+    const arr = db[key];
+    const byMirror = new Map(arr.filter((x) => x.mirrorOf).map((x) => [x.mirrorOf, x]));
+    const liveIds = new Set();
+    for (const code of codes) {
+      const calId = SH_PREFIX + code;
+      for (const src of arr.filter((x) => x.calendarId === calId)) {
+        liveIds.add(src.id);
+        let m = byMirror.get(src.id);
+        if (!m) { // 新しく控えを作る
+          m = { id: newId(key === 'tasks' ? 't' : 'e'), calendarId: 'c-default', mirrorOf: src.id, mirrorCode: code, createdAt: Date.now() };
+          arr.push(m);
+        }
+        m.mirrorCode = code;
+        for (const k of Object.keys(m)) { if (!MIRROR_SKIP.has(k) && !(k in src)) delete m[k]; } // 消えた項目を落とす
+        for (const [k, v] of Object.entries(src)) { if (!MIRROR_SKIP.has(k)) m[k] = v; }
+      }
+    }
+    // 参加中の共有から消えた予定の控えは、その共有ぶんだけ掃除する
+    db[key] = arr.filter((x) => !(x.mirrorOf && codes.includes(x.mirrorCode) && !liveIds.has(x.mirrorOf)));
+  }
+}
+
+/* ===== メモ・日記・詳細の公開範囲（共有カレンダーのとき） =====
+   'open'    … 共有して、お互い見える・書ける（これまでどおり）
+   'locked'  … 共有して見えるが、書けるのは入れた本人だけ
+   'private' … 相手には送らない（自分だけ）
+   予定ごとの指定（notePriv）が無ければ、設定の既定（notePrivDefault）を使う。 */
+const NOTE_FIELDS = ['memo', 'diary', 'memoDates', 'diaryDates', 'subs'];
+function notePrivOf(x) {
+  return (x && x.notePriv) || db.settings.notePrivDefault || 'open';
+}
+// メモ・日記・詳細をこの人が書き換えられるか（'locked' は入れた本人だけ）
+function canEditNotes(x) {
+  if (!x || !isSharedCal(x.calendarId)) return true;
+  if (notePrivOf(x) !== 'locked') return true;
+  return !x.by || Boolean(fbUser && x.by === fbUser.uid);
+}
+
 function shItemsFor(code) { // 共有ドキュメントに入れる形（calendarIdは持たせない）
   const calId = SH_PREFIX + code;
-  const strip = (x) => { const y = { ...x }; delete y.calendarId; return y; };
+  const strip = (x) => {
+    const y = { ...x };
+    delete y.calendarId;
+    if (notePrivOf(x) === 'private') for (const f of NOTE_FIELDS) delete y[f]; // 「共有しない」ぶんは送らない
+    return y;
+  };
   return {
     tasks: db.tasks.filter((t) => t.calendarId === calId).map(strip),
     events: db.events.filter((e) => e.calendarId === calId).map(strip),
@@ -5692,10 +5878,21 @@ function shApplyRemote(code, data) {
     updatedAt: data.updatedAt || 0,
   };
   const calId = SH_PREFIX + code;
-  const tag = (x) => ({ ...x, calendarId: calId });
+  // 「共有しない」にしたメモ・日記は相手に送っていないので、受信データで消えないよう手元の内容を戻す
+  const keepLocal = new Map();
+  for (const x of [...db.tasks, ...db.events]) {
+    if (x.calendarId === calId && notePrivOf(x) === 'private') keepLocal.set(x.id, x);
+  }
+  const tag = (x) => {
+    const y = { ...x, calendarId: calId };
+    const mine = keepLocal.get(x.id);
+    if (mine) for (const f of NOTE_FIELDS) { if (mine[f] !== undefined) y[f] = mine[f]; }
+    return y;
+  };
   db.tasks = db.tasks.filter((t) => t.calendarId !== calId).concat((data.tasks || []).map(tag));
   db.events = db.events.filter((e) => e.calendarId !== calId).concat((data.events || []).map(tag));
   shSnap[code] = JSON.stringify([data.tasks || [], data.events || []]);
+  if (db.settings.mirrorShared) syncSharedMirrors(code); // 相手の変更も控えに反映
   persistLocal(); // save()にしない（クラウド押し上げのループを避ける）
   renderAll();
 }
@@ -5719,6 +5916,18 @@ function shUnlistenAll() {
 }
 
 /* この端末から外す（ドキュメントは触らない） */
+/* 共有をやめる前に「予定を自分のカレンダーに残すか」を確認して、残すなら控えを作っておく。
+   控えは共有から抜けた瞬間に自分の予定として見えるようになる（isHiddenMirror）。 */
+function askKeepSharedCopy(code) {
+  const calId = SH_PREFIX + code;
+  const n = db.tasks.filter((t) => t.calendarId === calId).length + db.events.filter((e) => e.calendarId === calId).length;
+  if (!n) return;
+  const title = (db.sharedCache[code] || {}).title || code;
+  if (window.confirm(`「${title}」の予定・タスク${n}件を、自分のカレンダーに残しますか？\n\n[OK]残す（自分の予定としてコピー）／[キャンセル]残さない`)) {
+    syncSharedMirrors(code); // 設定OFFでもこのときだけ控えを作る
+  }
+}
+
 function shLeaveLocal(code) {
   if (shUnsubs[code]) { shUnsubs[code](); delete shUnsubs[code]; }
   db.sharedJoined = db.sharedJoined.filter((c) => c !== code);
@@ -5800,6 +6009,7 @@ async function shDelete(code) {
   const c = db.sharedCache[code];
   if (!c || c.role !== 'owner') return;
   const title = c.title || code;
+  askKeepSharedCopy(code);
   try {
     if (shUnsubs[code]) { shUnsubs[code](); delete shUnsubs[code]; }
     await shDocRef(code).delete();
@@ -5810,6 +6020,7 @@ async function shDelete(code) {
 }
 async function shLeave(code) {
   const c = db.sharedCache[code];
+  askKeepSharedCopy(code);
   try {
     if (fbUser && c && c.role !== 'owner') {
       await shDocRef(code).update({ [`members.${fbUser.uid}`]: window.firebase.firestore.FieldValue.delete() });
@@ -6381,6 +6592,7 @@ if (db.running) {
 ui.selectedKey = todayKey();
 // 起動時に開くビュー（設定。既定は「日」。隠しているビューなら applyVisibility が安全に「日」へ退避）
 ui.view = db.settings.startView || 'day';
+applyAppIcon();
 const verEl = document.getElementById('app-version');
 if (verEl) verEl.textContent = `TaskARE ${APP_VERSION}`;
 // シート等モーダルの「暗い余白」を指でドラッグしても背面（カレンダー）が動かないように＝iOSの揺れ防止。
