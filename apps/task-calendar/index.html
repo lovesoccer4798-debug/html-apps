@@ -8,18 +8,18 @@
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1e252d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=80">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=80">
-<link rel="icon" href="icons/icon-192.png?v=80" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=80">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=81">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=81">
+<link rel="icon" href="icons/icon-192.png?v=81" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=81">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=80">
-<link rel="stylesheet" href="style.css?v=80">
+<link rel="stylesheet" href="tokens.css?v=81">
+<link rel="stylesheet" href="style.css?v=81">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -249,10 +249,25 @@
         <p class="hint">ログインするとデータがあなた専用のクラウド領域に自動保存され、別の端末でも同じデータを使えます（ビジョンボードの写真はこの端末にのみ保存）。ログアウトしてもこの端末のデータは残ります。</p>
       </div>
 
+      <p class="section-label">アプリのアイコン</p>
+      <div class="card">
+        <div id="appicon-list"></div>
+        <p class="hint">タブのアイコンとアプリ内のロゴが切り替わります。<strong>ホーム画面に追加ずみのアイコンは、iPhoneの仕様で自動では変わりません</strong>（変えたいときは一度ホーム画面から削除して、追加し直してください）。</p>
+      </div>
+
       <p class="section-label">共有カレンダー</p>
       <div class="card">
         <div id="shared-body"></div>
         <p class="hint">招待コードを知っている人だけが参加できます。権限は「編集可」「閲覧専用」から選べ、「解除」で相手から見えなくなります（同じコードで再参加はできるので、完全に見せたくない場合はカレンダーごと削除して作り直してね）。</p>
+        <label class="vis-row" style="margin-top:10px"><input type="checkbox" id="mirror-shared"> 共有カレンダーの予定を、自分のカレンダーにも残す</label>
+        <p class="hint">オンにすると、共有カレンダーの予定・タスクを自分のカレンダーへ控えとしてコピーします。共有に参加しているあいだは二重に表示されず、<strong>共有カレンダーを削除・退出した時点で自分の予定として残ります</strong>（オフでも、やめるときに「残しますか？」と確認します）。</p>
+        <p class="f-label" style="margin-top:14px">メモ・日記・詳細の既定の公開範囲</p>
+        <div class="theme-seg" id="notepriv-seg">
+          <button data-npd="open">共有・両方書ける</button>
+          <button data-npd="locked">共有・自分だけ書ける</button>
+          <button data-npd="private">共有しない</button>
+        </div>
+        <p class="hint">共有カレンダーに入れる予定・タスクの、メモ／日記／詳細をどこまで共有するかの既定です。予定ごとの編集画面から個別に変えることもできます（「共有しない」を選んだ分は相手の端末には送られません）。</p>
       </div>
 
       <p class="section-label">Googleカレンダー連携</p>
@@ -495,6 +510,15 @@
       </div>
       <label class="f-label" for="f-link">リンク（任意 — YouTubeなどのURL）</label>
       <input type="url" id="f-link" maxlength="500" placeholder="https://… 保存すると詳細画面からタップで開けます" inputmode="url">
+      <div id="f-notepriv-wrap" hidden>
+        <label class="f-label">メモ・日記・詳細の公開範囲（共有カレンダー）</label>
+        <div class="theme-seg" id="f-notepriv">
+          <button type="button" data-np="open">共有・両方書ける</button>
+          <button type="button" data-np="locked">共有・自分だけ書ける</button>
+          <button type="button" data-np="private">共有しない</button>
+        </div>
+        <p class="hint" id="f-notepriv-hint"></p>
+      </div>
       <label class="f-label" for="f-memo">メモ（任意）</label>
       <textarea id="f-memo" rows="2" maxlength="500" placeholder="ひとこと・気づき・持ち物など"></textarea>
       <label class="f-label" for="f-diary">日記（任意）</label>
@@ -759,7 +783,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=80"></script>
-<script src="app.js?v=80"></script>
+<script src="firebase-config.js?v=81"></script>
+<script src="app.js?v=81"></script>
 </body>
 </html>

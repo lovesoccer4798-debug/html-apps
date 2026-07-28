@@ -2015,3 +2015,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 :root[data-palette="aurora"] .palette-card {
   backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
 }
+
+/* 設定: アプリのアイコン選択 */
+.icon-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 4px; border-bottom: 1px solid var(--tc-line); text-align: left; }
+.icon-row:last-of-type { border-bottom: none; }
+.icon-row-img { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.icon-row-name { flex: 1; min-width: 0; font-size: 14px; color: var(--tc-ink); }
+.icon-row.is-active .icon-row-name { font-weight: 700; color: var(--tc-accent); }
+.icon-row-check { color: var(--tc-accent); display: inline-flex; }
