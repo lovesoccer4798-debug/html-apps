@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v77';
+const APP_VERSION = 'v78';
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -50,6 +50,7 @@ const ICONS = {
   pencil: `<svg ${ICON_ATTRS}><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
   repeat: `<svg ${ICON_ATTRS}><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
   pin: `<svg ${ICON_ATTRS}><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`,
+  link: `<svg ${ICON_ATTRS}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
   calendar: `<svg ${ICON_ATTRS}><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>`,
   sprout: `<svg ${ICON_ATTRS}><path d="M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3"/><path d="M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4"/><path d="M5 21h14"/></svg>`,
   maximize: `<svg ${ICON_ATTRS}><path d="M15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></svg>`,
@@ -319,6 +320,29 @@ function diaryFor(it) {
 function titleForKey(r, key) {
   if (r && r.repeat) return (r.titleDates || {})[key] ?? r.title;
   return r ? r.title : '';
+}
+// リンク（動画URLなど）の「その日の実効値」。
+//   1) linkDates[key]  … カレンダー（日/週/時間/月）から編集した「この日だけ」の上書き（最優先）
+//   2) linkFrom[from]  … ルーティンタブでの変更。変更した日（from）以降にだけ効く＝それより前の日は変わらない
+//   3) link            … 作成時のベース
+function linkForKey(r, key) {
+  if (!r) return null;
+  if (r.repeat) {
+    const days = r.linkDates || {};
+    if (Object.prototype.hasOwnProperty.call(days, key)) return days[key] || null;
+    let best = null;
+    for (const from of Object.keys(r.linkFrom || {})) { if (from <= key && (best === null || from > best)) best = from; }
+    if (best !== null) return r.linkFrom[best] || null;
+  }
+  return r.link || null;
+}
+// ルーティンタブでのリンク変更を「今日以降」に適用（過去の予定・タスクには反映しない）
+function setRoutineLink(r, url) {
+  const cur = linkForKey(r, todayKey());
+  const next = url || null;
+  if ((cur || null) === next) return; // 変更なし
+  if (r.repeat) { r.linkFrom = r.linkFrom || {}; r.linkFrom[todayKey()] = next || ''; }
+  else if (next) r.link = next; else delete r.link;
 }
 
 // 複数日にまたがる予定（旅行・帰省など。endDate指定・繰り返しなし）が key を含むか
@@ -1203,7 +1227,7 @@ function renderGrid(body) {
       chip.type = 'button';
       const col = itemColor(it);
       if (col) chip.style.background = col;
-      chip.addEventListener('click', () => openSheet('edit', { item: it }));
+      chip.addEventListener('click', () => openDetail(it)); // まず詳細（編集前）を出す。編集はペンから（時刻ありの予定と同じ挙動に統一）
       cell.append(chip);
     }
     allday.append(cell);
@@ -3339,6 +3363,17 @@ function openDetail(it) {
   } else if (it.ref.place) {
     row('場所', it.ref.place);
   }
+  // リンク（YouTube等）→ タップでその場から開く。繰り返しはその日の実効リンク
+  const link = !isGcal ? linkForKey(it.ref, it.key) : null;
+  if (link) {
+    const open = el('a', 'cta join-btn');
+    open.href = link;
+    open.target = '_blank';
+    open.rel = 'noopener noreferrer';
+    open.innerHTML = ICONS.link;
+    open.append(el('span', '', 'リンクを開く'));
+    body.append(open);
+  }
   // 会議リンク（アプリの予定 or GoogleのconferenceData）→「会議に参加」＋「共有用にコピー」
   const meetUrl = it.ref.meetUrl || it.ref.hangoutLink || null;
   if (meetUrl) {
@@ -3390,6 +3425,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fRepeat.value = r.repeat || '';
     sheetEls.fMemo.value = memoFor(item) || '';
     sheetEls.fDiary.value = diaryFor(item) || '';
+    $('#f-link').value = linkForKey(r, item.key) || ''; // 繰り返しは「この日」の実効リンク
     sheetEls.repeatHint.hidden = !r.repeat;
     $('#f-time-end').value = timeEndOn(r, item.key) || '';
     $('#f-date-end').value = r.endDate || '';
@@ -3410,6 +3446,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     sheetEls.fRepeat.value = '';
     sheetEls.fMemo.value = '';
     sheetEls.fDiary.value = '';
+    $('#f-link').value = '';
     sheetEls.repeatHint.hidden = true;
     $('#f-time-end').value = timeEnd || '';
     $('#f-date-end').value = '';
@@ -3629,6 +3666,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
   const memo = sheetEls.fMemo.value.trim() || null;
   const diary = sheetEls.fDiary.value.trim() || null;
   const meetUrl = $('#f-meeting').value.trim() || null;
+  const link = $('#f-link').value.trim() || null; // リンク（YouTube等）
   const pushGoogle = getOpt('#opt-push');
   const autoMeet = getOpt('#opt-meet');
   const attendees = $('#f-invite').value.split(/[、,\s]+/).map((s) => s.trim()).filter((s) => s.includes('@'));
@@ -3643,7 +3681,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
 
   let syncTarget = null; // 保存後にGoogleへ反映する予定
   if (ui.editing) {
-    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs });
+    applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs, link });
     if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
     if (ui.editing.kind === 'event') {
       ui.editing.ref.pushGoogle = pushGoogle;
@@ -3652,7 +3690,7 @@ $('#sheet-form').addEventListener('submit', (e) => {
       if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
   } else if (ui.sheetType === 'event') {
-    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, link: link || undefined, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     const ev = repeat
       ? { ...base, repeat, startDate: dateKey, exDates: [], memoDates: {}, diaryDates: {} }
       : { ...base, date: dateKey, endDate };
@@ -3660,11 +3698,11 @@ $('#sheet-form').addEventListener('submit', (e) => {
     ui.justAddedId = `${ev.id}@${dateKey}`;
     if (pushGoogle && gcalCanWrite() && !repeat) syncTarget = { ev, key: dateKey, meet: autoMeet };
   } else if (repeat) {
-    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, time, timeEnd: time ? timeEnd : null, minutes, repeat, startDate: dateKey, doneDates: {}, exDates: [], memo, memoDates: {}, diary, diaryDates: {}, link: link || undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, link: link || undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
@@ -3690,7 +3728,7 @@ function setPerDayField(r, base, datesKey, key, val, perDay) {
   }
 }
 
-function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs }) {
+function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs, link }) {
   const r = item.ref;
   // タイトル: 繰り返し中はカレンダー（日/週/時間/月）編集を「この日だけ」の上書きにする。
   // ベースと同じ内容に戻したら上書きを消す＝クリーンに戻す（以降はルーティンタブでの変更に自動追従）。
@@ -3701,6 +3739,11 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
   } else {
     r.title = title;
   }
+  // リンク: 繰り返し中はタイトルと同じく「この日だけ」の上書き。その日の実効値と同じなら上書きしない（クリーンのまま）
+  if (Boolean(r.repeat) && Boolean(repeat)) {
+    const eff = linkForKey(r, item.key);
+    if ((link || null) !== (eff || null)) { r.linkDates = r.linkDates || {}; r.linkDates[item.key] = link || ''; }
+  } else if (link) r.link = link; else delete r.link;
   r.color = color;
   r.calendarId = calendarId;
   if (subs && subs.length) r.subs = subs; else delete r.subs;
@@ -3737,7 +3780,7 @@ function applyEdit(item, { title, dateKey, time, minutes, repeat, memo, diary, c
         r.doneAt = (r.doneDates || {})[dateKey] || null;
         delete r.doneDates;
       }
-      delete r.repeat; delete r.startDate; delete r.exDates; delete r.titleDates;
+      delete r.repeat; delete r.startDate; delete r.exDates; delete r.titleDates; delete r.linkDates; delete r.linkFrom;
     }
   }
 }
@@ -4224,7 +4267,15 @@ function routineItemRow(data = {}) {
   hide.addEventListener('click', () => hide.classList.toggle('is-on'));
   opts.append(colorWrap, pin, hide);
 
-  row.append(title, rep, time, min, rm, wd, opts);
+  // リンク（YouTube等）。貼るとこの項目の予定・タスクから開ける（変更は今日以降にだけ反映）
+  const linkRow = el('div', 'r-item-link');
+  const link = document.createElement('input');
+  link.type = 'url'; link.maxLength = 500; link.inputMode = 'url';
+  link.placeholder = 'リンク（任意・YouTubeなどのURL）';
+  link.value = data.link || '';
+  linkRow.append(link);
+
+  row.append(title, rep, time, min, rm, wd, opts, linkRow);
   if (data.itemId) row.dataset.itemId = data.itemId;
   row._fields = {
     title, rep, time, min,
@@ -4232,6 +4283,7 @@ function routineItemRow(data = {}) {
     getColor: () => curColor || null,
     getPin: () => pin.classList.contains('is-on'),
     getHideMonth: () => hide.classList.contains('is-on'),
+    getLink: () => link.value.trim() || null,
   };
   return row;
 }
@@ -4265,7 +4317,7 @@ function openRoutineSheet(r) {
   items.textContent = '';
   if (r) {
     for (const t of routineItems(r)) {
-      items.append(routineItemRow({ itemId: t.id, title: t.title, repeat: t.repeat, weekdays: t.weekdays, time: t.time, minutes: t.minutes, color: t.color, pin: t.pin, hideMonth: t.hideMonth }));
+      items.append(routineItemRow({ itemId: t.id, title: t.title, repeat: t.repeat, weekdays: t.weekdays, time: t.time, minutes: t.minutes, color: t.color, pin: t.pin, hideMonth: t.hideMonth, link: linkForKey(t, todayKey()) }));
     }
   }
   if (!items.children.length) items.append(routineItemRow());
@@ -4351,9 +4403,10 @@ $('#r-form').addEventListener('submit', (e) => {
       if (itemColorSel) existing.color = itemColorSel; else delete existing.color;
       if (itemPin) existing.pin = true; else delete existing.pin;
       if (itemHide) existing.hideMonth = true; else delete existing.hideMonth;
+      setRoutineLink(existing, f.getLink()); // リンクの変更は「今日以降」だけに反映（過去の予定はそのまま）
       keptIds.add(existing.id);
     } else {
-      const base = { id: newId(rtype === 'event' ? 'e' : 't'), routineId: r.id, title: t2, time, repeat, weekdays: weekdays || undefined, startDate: r.startDate || todayKey(), exDates: [], color: itemColorSel || undefined, pin: itemPin || undefined, hideMonth: itemHide || undefined, createdAt: Date.now() };
+      const base = { id: newId(rtype === 'event' ? 'e' : 't'), routineId: r.id, title: t2, time, repeat, weekdays: weekdays || undefined, startDate: r.startDate || todayKey(), exDates: [], color: itemColorSel || undefined, pin: itemPin || undefined, hideMonth: itemHide || undefined, link: f.getLink() || undefined, createdAt: Date.now() };
       if (rtype === 'event') { arr.push(base); } else { arr.push({ ...base, minutes, doneDates: {}, memo: null, memoDates: {} }); }
       keptIds.add(base.id);
     }
