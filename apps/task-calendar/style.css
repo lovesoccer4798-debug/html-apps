@@ -1812,6 +1812,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .r-opt-chip { display: inline-flex; align-items: center; gap: 3px; padding: 5px 9px; border-radius: 8px; background: var(--tc-surface2); border: 1.5px solid var(--tc-line); font-size: 11.5px; color: var(--tc-ink2); cursor: pointer; }
 .r-opt-chip svg { width: 13px; height: 13px; }
 .r-opt-chip.is-on { background: var(--tc-accent-soft); border-color: var(--tc-accent); color: var(--tc-accent); font-weight: 700; }
+/* ルーティン項目のリンク欄（YouTube等） */
+.r-item-link { flex-basis: 100%; margin-top: 4px; }
+.r-item-link input { width: 100%; font-size: 16px; } /* 16px＝iOSの入力ズーム防止 */
 
 /* ---------- v41: 予定の色反転・バックアップ ---------- */
 .mo-chip-invert { border: 1.5px solid; background: transparent; }

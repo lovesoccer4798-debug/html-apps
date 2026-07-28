@@ -8,18 +8,18 @@
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1e252d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=77">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=77">
-<link rel="icon" href="icons/icon-192.png?v=77" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=77">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=78">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=78">
+<link rel="icon" href="icons/icon-192.png?v=78" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=78">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=77">
-<link rel="stylesheet" href="style.css?v=77">
+<link rel="stylesheet" href="tokens.css?v=78">
+<link rel="stylesheet" href="style.css?v=78">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -493,6 +493,8 @@
         <input type="text" id="f-sub-input" maxlength="80" placeholder="例：本の名前・持ち物・手順など">
         <button type="button" class="cta ghost" id="f-sub-add">追加</button>
       </div>
+      <label class="f-label" for="f-link">リンク（任意 — YouTubeなどのURL）</label>
+      <input type="url" id="f-link" maxlength="500" placeholder="https://… 保存すると詳細画面からタップで開けます" inputmode="url">
       <label class="f-label" for="f-memo">メモ（任意）</label>
       <textarea id="f-memo" rows="2" maxlength="500" placeholder="ひとこと・気づき・持ち物など"></textarea>
       <label class="f-label" for="f-diary">日記（任意）</label>
@@ -756,7 +758,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=77"></script>
-<script src="app.js?v=77"></script>
+<script src="firebase-config.js?v=78"></script>
+<script src="app.js?v=78"></script>
 </body>
 </html>
