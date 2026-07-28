@@ -632,7 +632,7 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .focus-top { display: flex; align-items: center; justify-content: space-between; width: min(440px, 100%); }
 .focus-top-pad { width: 38px; }
-.focus-mid { flex: 1; display: flex; align-items: center; justify-content: center; }
+.focus-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
 .ring-wrap { position: relative; width: min(270px, 72vw); }
 .ring { width: 100%; transform: rotate(-90deg); display: block; }
@@ -661,6 +661,19 @@ input, select, textarea { font: inherit; color: inherit; }
 .focus.is-finished .ring-fg { animation: ring-blink 1.2s ease infinite; }
 @keyframes ring-blink { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 
+/* タイマーを1分のばす小さなチップ（リングの下） */
+.focus-plus {
+  margin-top: 14px;
+  padding: 5px 14px;
+  border-radius: var(--tc-r-pill);
+  border: 1.5px solid var(--tc-line);
+  background: var(--tc-surface);
+  color: var(--tc-ink2);
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+.focus-plus:active { transform: scale(.94); }
+.focus-plus:hover { border-color: var(--tc-accent-line); color: var(--tc-ink); }
 .focus-actions { display: flex; align-items: center; gap: 22px; margin: 10px 0 18px; }
 .f-btn {
   width: 54px; height: 54px;

@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v78';
+const APP_VERSION = 'v79';
 
 const ICONS = {
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -609,7 +609,9 @@ function autoFillTimerTime(t, key, r) {
   const endMin = round5(now);
   let startMin = round5(startedAt);
   if (startMin >= endMin) startMin = Math.max(0, endMin - 5); // 最低5分は確保
-  const dur = endMin - startMin;
+  // カウントする時間は「実際にかかった時間」を5分単位で四捨五入（例: 22分→20分 / 23分→25分）。
+  // 途中の「＋1分」や、時間を過ぎてから完了した分もそのまま含まれる。
+  const dur = Math.max(5, Math.round(Math.max(0, (now - startedAt) / 60000) / 5) * 5);
   const perDay = Boolean(t.repeat);
   setPerDayField(t, 'time', 'timeDates', key, tgMinToStr(startMin), perDay);
   setPerDayField(t, 'timeEnd', 'timeEndDates', key, tgMinToStr(endMin), perDay);
@@ -3879,6 +3881,28 @@ function resumeTimer() {
   save();
   updateTimerUI();
 }
+// タイマーを n 分のばす（実行中でも一時停止中でも、終了後の再開でも足せる）
+function addTimerMinutes(n) {
+  const r = db.running;
+  if (!r) return;
+  const add = n * 60000;
+  r.totalMs = Math.max(0, (r.totalMs || 0) + add);
+  if (r.finished) { // 時間になったあとに足したら、その分だけまた動き出す
+    r.finished = false;
+    r.paused = false;
+    r.remainingMs = null;
+    r.endAt = Date.now() + add;
+    startTick();
+  } else if (r.paused) {
+    r.remainingMs = Math.max(0, (r.remainingMs || 0) + add);
+  } else {
+    r.endAt = (r.endAt || Date.now()) + add;
+  }
+  save();
+  updateTimerUI();
+  renderAll();
+}
+
 function finishTimer() {
   const r = db.running;
   if (!r) return;
@@ -3984,6 +4008,11 @@ function openFocus() {
   const r = db.running;
   if (!r) return;
   $('#focus-task').textContent = r.title;
+  const eb = $('#focus-eyebrow'); // その日の日付・曜日も見えるように
+  if (eb) {
+    const d = fromKey(r.dateKey || todayKey());
+    eb.textContent = `FOCUS · ${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）`;
+  }
   $('#focus').hidden = false;
   document.body.style.overflow = 'hidden';
 
@@ -4002,6 +4031,7 @@ function closeFocus() {
 }
 
 $('#focus-close').addEventListener('click', () => { closeFocus(); renderAll(); }); // タイマーは走り続ける
+$('#timer-plus1').addEventListener('click', () => addTimerMinutes(1));
 $('#timer-stop').addEventListener('click', stopTimer);
 $('#timer-done').addEventListener('click', completeRunning);
 $('#timer-toggle').addEventListener('click', () => {
