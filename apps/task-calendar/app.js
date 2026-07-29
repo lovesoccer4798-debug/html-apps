@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v83';
+const APP_VERSION = 'v84';
 
 /* アプリのアイコン（設定から選べる）。あとから増やすときはここに1行足すだけ。
    svg = タブのアイコン(favicon)とアプリ内ロゴに使う / touch = ホーム画面に追加するとき用 */
@@ -522,6 +522,7 @@ const PALETTES = [
   { id: 'night', name: 'ナイトターミナル', sub: 'Night Terminal', bg: '#0a0c10', surface: '#0d1016', accent: '#00e5ff', line: '#1e2530' },
   { id: 'bounce', name: 'バウンスポップ', sub: 'Bounce Pop', bg: '#fff7ec', surface: '#ffffff', accent: '#ff5c5c', line: '#171310' },
   { id: 'aurora', name: 'オーロラオービット', sub: 'Aurora Orbit', bg: '#101540', surface: '#252a52', accent: '#8e7cff', line: 'rgba(255,255,255,.25)' },
+  { id: 'candy', name: 'クラウドキャンディ', sub: 'Cloud Candy', bg: '#fdf4ff', surface: '#ffffff', accent: '#c9a6ff', line: '#f3e4ff' },
 ];
 function applyPalette() {
   const p = db.settings.palette;

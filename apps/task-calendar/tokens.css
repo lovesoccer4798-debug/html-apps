@@ -233,6 +233,40 @@
 }
 
 /* 6c｜Aurora Orbit — フロストガラス面＋控えめな星＋オーロラ・アクセントの没入路線（固定ダーク） */
+/* 6d: Cloud Candy — 白ベース＋パステルの“にじみ”。彩度を上げず、柔らかい光と浮遊感の影で表現 */
+:root[data-palette="candy"] {
+  --tc-bg: #fdf4ff; --tc-surface: #ffffff; --tc-line: #f3e4ff;
+  --tc-ink: #5b4b6b; --tc-ink2: #b49cc7; --tc-ink3: #c3aed3; --tc-ink4: #d6c7e2;
+  --tc-surface2: #fbefff; --tc-check-border: #ffd3f0;
+  --tc-accent: #c9a6ff; --tc-accent-bright: #ffaedd; --tc-accent-ink: #ffffff;
+  --tc-accent-soft: #fbefff; --tc-accent-line: #edd5ff;
+  --tc-deep: #f6ecff; --tc-deep-track: #eddcfb; --tc-deep-sub: #9c86b4; --tc-deep-ink: #5b4b6b;
+  --tc-shadow: 0 6px 16px rgba(180, 150, 220, .2); --tc-scrim: rgba(91, 75, 107, .38);
+  --tc-r-card: 20px; --tc-r-run: 22px; --tc-r-cell: 16px; --tc-r-sheet: 28px; --tc-r-pill: 999px;
+  --tc-sat: #7aa7e8; --tc-sun: #ef9ab8;
+}
+/* ダークにしても“ふわふわ”のまま（夜のパステル） */
+:root[data-palette="candy"][data-theme="dark"] {
+  --tc-bg: #241d2e; --tc-surface: #302740; --tc-line: #3f3352;
+  --tc-ink: #f2e9fa; --tc-ink2: #bda8d2; --tc-ink3: #9b86b2; --tc-ink4: #7c6a92;
+  --tc-surface2: #3a2f4c; --tc-check-border: #5b4a72;
+  --tc-accent: #d9b8ff; --tc-accent-bright: #ffc2e8; --tc-accent-ink: #2a2136;
+  --tc-accent-soft: #3d3152; --tc-accent-line: #59477a;
+  --tc-deep: #2b2338; --tc-deep-track: #3f3352; --tc-deep-sub: #bda8d2; --tc-deep-ink: #f2e9fa;
+  --tc-shadow: 0 8px 22px rgba(20, 10, 35, .45); --tc-scrim: rgba(15, 10, 24, .6);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="candy"]:not([data-theme="light"]) {
+  --tc-bg: #241d2e; --tc-surface: #302740; --tc-line: #3f3352;
+  --tc-ink: #f2e9fa; --tc-ink2: #bda8d2; --tc-ink3: #9b86b2; --tc-ink4: #7c6a92;
+  --tc-surface2: #3a2f4c; --tc-check-border: #5b4a72;
+  --tc-accent: #d9b8ff; --tc-accent-bright: #ffc2e8; --tc-accent-ink: #2a2136;
+  --tc-accent-soft: #3d3152; --tc-accent-line: #59477a;
+  --tc-deep: #2b2338; --tc-deep-track: #3f3352; --tc-deep-sub: #bda8d2; --tc-deep-ink: #f2e9fa;
+  --tc-shadow: 0 8px 22px rgba(20, 10, 35, .45); --tc-scrim: rgba(15, 10, 24, .6);
+  }
+}
+
 :root[data-palette="aurora"] {
   --tc-bg: #0b0f2b; --tc-surface: rgba(38, 42, 82, .88); --tc-line: rgba(255, 255, 255, .14);
   --tc-ink: #e8e9f7; --tc-ink2: #8a8fc0; --tc-ink3: #6f75a8; --tc-ink4: #565c8c;

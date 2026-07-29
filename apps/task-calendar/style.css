@@ -2016,6 +2016,42 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
 }
 
+/* 6d: Cloud Candy の装飾レイヤー — 背景の“にじみ”（シャボン玉の反射光）と、宙に浮く色つきの影 */
+:root[data-palette="candy"] body::before {
+  content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background: linear-gradient(160deg, #fdf4ff, #f1f8ff);
+}
+:root[data-palette="candy"] body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 82% 8%, rgba(255, 255, 255, .9), rgba(255, 196, 240, .35) 42%, transparent 62%),
+    radial-gradient(circle at 12% 84%, rgba(255, 255, 255, .85), rgba(178, 214, 255, .32) 44%, transparent 64%),
+    radial-gradient(circle at 96% 62%, rgba(255, 255, 255, .7), rgba(201, 166, 255, .26) 40%, transparent 60%);
+  background-repeat: no-repeat;
+  background-size: 460px 460px, 520px 520px, 380px 380px;
+}
+:root[data-palette="candy"] body { background: transparent; }
+/* 進捗リング・アクセント面はピンク→パープルのにじみグラデーションで */
+:root[data-palette="candy"] .cta:not(.ghost),
+:root[data-palette="candy"] .fab,
+:root[data-palette="candy"] .seg-btn.is-active,
+:root[data-palette="candy"] .check[aria-checked="true"],
+:root[data-palette="candy"] .play-btn,
+:root[data-palette="candy"] .f-main {
+  background-image: linear-gradient(135deg, #ffaedd, #c9a6ff);
+  border-color: transparent;
+}
+:root[data-palette="candy"] .fab,
+:root[data-palette="candy"] .play-btn { box-shadow: 0 6px 16px rgba(200, 150, 230, .45); }
+:root[data-palette="candy"] .ring-fg,
+:root[data-palette="candy"] .rr-fg { stroke: #ffaedd; }
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="candy"]:not([data-theme="light"]) body::before { background: linear-gradient(160deg, #241d2e, #1d2331); }
+  :root[data-palette="candy"]:not([data-theme="light"]) body::after { opacity: .45; }
+}
+:root[data-palette="candy"][data-theme="dark"] body::before { background: linear-gradient(160deg, #241d2e, #1d2331); }
+:root[data-palette="candy"][data-theme="dark"] body::after { opacity: .45; }
+
 /* 設定: アプリのアイコン選択 */
 .icon-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 4px; border-bottom: 1px solid var(--tc-line); text-align: left; }
 .icon-row:last-of-type { border-bottom: none; }
