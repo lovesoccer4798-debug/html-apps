@@ -8,18 +8,18 @@
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1e252d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=84" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=84">
-<link rel="icon" href="icons/icon-192.png?v=84" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=84">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=85" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=85">
+<link rel="icon" href="icons/icon-192.png?v=85" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=85">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=84">
-<link rel="stylesheet" href="style.css?v=84">
+<link rel="stylesheet" href="tokens.css?v=85">
+<link rel="stylesheet" href="style.css?v=85">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -241,6 +241,12 @@
       <div class="card">
         <div id="sync-body"></div>
         <p class="hint">ログインするとデータがあなた専用のクラウド領域に自動保存され、別の端末でも同じデータを使えます（ビジョンボードの写真はこの端末にのみ保存）。ログアウトしてもこの端末のデータは残ります。</p>
+      </div>
+
+      <p class="section-label">タイマーのデザイン</p>
+      <div class="card">
+        <div id="timerstyle-list"></div>
+        <p class="hint">タイマー（フォーカス）画面の見た目だけを切り替えます。停止・一時停止・完了の操作と、時間の数え方は6種類とも同じです。配色テーマとは別の設定なので、好きな組み合わせで使えます。</p>
       </div>
 
       <p class="section-label">アプリのアイコン</p>
@@ -746,7 +752,8 @@
     <span class="focus-top-pad"></span>
   </div>
   <div class="focus-mid">
-    <div class="ring-wrap">
+    <div class="focus-art" id="focus-art" hidden></div>
+    <div class="ring-wrap" id="focus-ring">
       <svg class="ring" viewBox="0 0 270 270" aria-hidden="true">
         <circle class="ring-bg" cx="135" cy="135" r="120"/>
         <circle class="ring-fg" id="ring-fg" cx="135" cy="135" r="120"/>
@@ -777,7 +784,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=84"></script>
-<script src="app.js?v=84"></script>
+<script src="firebase-config.js?v=85"></script>
+<script src="app.js?v=85"></script>
 </body>
 </html>

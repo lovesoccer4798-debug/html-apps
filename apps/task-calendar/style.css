@@ -2059,3 +2059,162 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .icon-row-name { flex: 1; min-width: 0; font-size: 14px; color: var(--tc-ink); }
 .icon-row.is-active .icon-row-name { font-weight: 700; color: var(--tc-accent); }
 .icon-row-check { color: var(--tc-accent); display: inline-flex; }
+
+/* ==========================================================================
+   タイマー（フォーカス）画面のデザイン切替。操作系の配置・機能は共通で、
+   残り時間の見せ方と配色だけが変わる（settings.timerStyle / #focus[data-timer]）
+   ========================================================================== */
+.focus-art { width: min(340px, 86vw); display: flex; flex-direction: column; align-items: center; }
+.focus-art .fa { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.focus-art .fa-ring { position: relative; width: 100%; }
+.focus-art .fa-ring svg { width: 100%; display: block; transform: rotate(-90deg); }
+.focus-art .fa-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.focus-art .fa-below { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-top: 16px; text-align: center; }
+.focus-art .fa-time { font-size: 48px; font-weight: 700; line-height: 1.1; }
+.focus-art .fa-set { font-size: 11px; letter-spacing: .12em; }
+.focus-art .fa-task { font-size: 15px; font-weight: 700; margin-top: 14px; }
+.ts-name { display: block; font-size: 14px; }
+.ts-sub { display: block; font-size: 11.5px; color: var(--tc-ink3); margin-top: 2px; }
+.icon-row .icon-row-name { display: flex; flex-direction: column; }
+
+/* ---- T4 Neon Pulse ---- */
+#focus[data-timer="neon"] { background: radial-gradient(120% 80% at 50% 12%, #241238, #0b0716); }
+#focus[data-timer="neon"]::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 4px); }
+#focus[data-timer="neon"] #focus-eyebrow { color: #ff3d9a; text-shadow: 0 0 10px rgba(255,61,154,.9); }
+#focus[data-timer="neon"] #focus-close { color: #8a6fb0; }
+.fa-neon { animation: fa-flick 4s ease-in-out infinite; }
+@keyframes fa-flick { 0%,100% { opacity: 1 } 48% { opacity: .84 } 52% { opacity: 1 } }
+.fa-neon .n-track { fill: none; stroke: rgba(255,61,154,.1); stroke-width: 16; }
+.fa-neon .n-glow { fill: none; stroke: #ff3d9a; stroke-width: 15; stroke-linecap: round; filter: blur(11px); opacity: .85; }
+.fa-neon .n-mid  { fill: none; stroke: #ff71b8; stroke-width: 7; stroke-linecap: round; }
+.fa-neon .n-core { fill: none; stroke: #ffeaf6; stroke-width: 2.5; stroke-linecap: round; }
+.fa-neon .n-dash { fill: none; stroke: rgba(94,240,255,.28); stroke-width: 1.5; stroke-dasharray: 3 9; }
+.fa-neon .fa-time { color: #fff0f8; text-shadow: 0 0 6px #ff3d9a, 0 0 22px rgba(255,61,154,.85), 0 0 46px rgba(255,61,154,.45); }
+.fa-neon .fa-set { color: #5ef0ff; text-shadow: 0 0 12px rgba(94,240,255,.8); }
+.fa-neon .fa-task { color: #f3e9ff; }
+#focus[data-timer="neon"] .f-btn { background: rgba(255,255,255,.06); border: none; color: #c8b6e8; box-shadow: inset 0 0 0 1px rgba(255,61,154,.35); }
+#focus[data-timer="neon"] .f-main { background: #1a0f2b; color: #ffeaf6; box-shadow: inset 0 0 0 2px #ff3d9a, 0 0 26px rgba(255,61,154,.6); }
+#focus[data-timer="neon"] .focus-plus { background: rgba(255,255,255,.06); border-color: rgba(255,61,154,.35); color: #c8b6e8; }
+
+/* ---- T5 Sandglass ---- */
+#focus[data-timer="sand"] { background: linear-gradient(175deg, #fbf6ee, #efe4d4); }
+#focus[data-timer="sand"] #focus-eyebrow, #focus[data-timer="sand"] #focus-close { color: #a99178; }
+.fa-sand svg { width: min(200px, 54vw); display: block; }
+.fa-sand .s-cap { fill: #c08a4e; }
+.fa-sand .s-glass { stroke: #dccbb2; stroke-width: 2; }
+.fa-sand .s-top, .fa-sand .s-bot { fill: #dca968; transition: y .3s linear, height .3s linear; }
+.fa-sand .s-stream { fill: #e8bc85; }
+.fa-sand .s-drop { fill: #c08a4e; animation: fa-fall 1s linear infinite; }
+@keyframes fa-fall { from { transform: translateY(-6px) } to { transform: translateY(30px) } }
+.fa-sand .s-shine { stroke: rgba(255,255,255,.85); stroke-linecap: round; fill: none; }
+.fa-sand .fa-time { color: #4a3a22; font-size: 42px; }
+.fa-sand .fa-set { color: #a99178; }
+.fa-sand .fa-task { color: #4a3a22; }
+#focus[data-timer="sand"] .f-btn { background: #fff; border: none; color: #8a7156; box-shadow: 0 4px 12px rgba(150,120,80,.2); }
+#focus[data-timer="sand"] .f-main { background: linear-gradient(150deg, #d3a165, #a8763c); color: #fff8ee; box-shadow: 0 10px 24px rgba(150,110,60,.4); }
+#focus[data-timer="sand"] .focus-plus { background: #fff; border-color: #e4d6c2; color: #8a7156; }
+
+/* ---- T6 Metro Run ---- */
+#focus[data-timer="metro"] { background: linear-gradient(180deg, #f3f6fc, #e7edf8); }
+#focus[data-timer="metro"] #focus-eyebrow { color: #2f6be0; }
+#focus[data-timer="metro"] #focus-close { color: #8a9bb8; }
+.fa-metro { width: 100%; }
+.m-rail { position: relative; width: 100%; padding-left: 4px; }
+.m-line { position: absolute; left: 11px; top: 8px; bottom: 8px; width: 3px; background: #cbd8ec; border-radius: 2px; }
+.m-line-fill { position: absolute; left: 0; top: 0; width: 100%; background: #2f6be0; border-radius: 2px; transition: height .3s linear; }
+.m-stop { position: relative; display: flex; align-items: center; gap: 12px; height: 42px; }
+.m-dot { width: 15px; height: 15px; border-radius: 50%; background: #fff; border: 3px solid #cbd8ec; flex: none; z-index: 1; }
+.m-stop.is-passed .m-dot { background: #2f6be0; border-color: #2f6be0; }
+.m-name { flex: 1; font-size: 13.5px; font-weight: 600; color: #8a9bb8; }
+.m-stop.is-passed .m-name { color: #233457; font-weight: 700; }
+.m-min { font-size: 11px; color: #b4c1d6; }
+.m-train { position: absolute; left: 3px; width: 28px; height: 28px; border-radius: 9px; background: #2f6be0; color: #fff;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(47,107,224,.45);
+  transform: translateY(-50%); transition: top .3s linear; z-index: 2; }
+.m-train .icon { width: 15px; height: 15px; }
+.m-card { margin-top: 14px; background: #fff; border-radius: 18px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 6px 18px rgba(60,90,150,.14); }
+.m-left { flex: 1; display: flex; flex-direction: column; }
+.m-lbl { font-size: 11px; font-weight: 700; color: #8a9bb8; }
+.fa-metro .fa-time { font-size: 34px; color: #233457; }
+.m-right { text-align: right; display: flex; flex-direction: column; gap: 3px; }
+.fa-metro .fa-task { margin: 0; font-size: 13.5px; color: #233457; }
+.fa-metro .fa-set { color: #8a9bb8; }
+#focus[data-timer="metro"] .f-btn { background: #fff; border: none; color: #5d7398; box-shadow: 0 4px 12px rgba(60,90,150,.18); }
+#focus[data-timer="metro"] .f-main { background: linear-gradient(150deg, #4a85f0, #2456c4); color: #fff; box-shadow: 0 10px 24px rgba(45,95,200,.45); }
+#focus[data-timer="metro"] .focus-plus { background: #fff; border-color: #d6e0f2; color: #5d7398; }
+
+/* ---- T1 Liquid Drop ---- */
+#focus[data-timer="liquid"] { background: linear-gradient(170deg, #f2fbff, #e4f2fa); }
+#focus[data-timer="liquid"] #focus-eyebrow, #focus[data-timer="liquid"] #focus-close { color: #7fa3b8; }
+.l-cap { position: relative; width: min(186px, 50vw); height: min(320px, 46vh); border-radius: 100px; background: #fff; overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(80,140,175,.16), 0 14px 34px rgba(90,150,190,.25); }
+.l-water { position: absolute; left: 0; right: 0; bottom: 0; height: 64%; background: linear-gradient(180deg, #7fdcef, #4cc5e0); transition: height .3s linear; }
+.l-wave { position: absolute; top: -11px; left: 0; width: 100%; height: 20px; display: block; animation: fa-wave 3.2s ease-in-out infinite; }
+.l-wave path { fill: #7fdcef; }
+@keyframes fa-wave { 0%,100% { transform: translateX(0) } 50% { transform: translateX(-14px) } }
+.l-bub { position: absolute; border-radius: 50%; background: rgba(255,255,255,.45); animation: fa-rise 4.5s ease-in infinite; }
+.l-bub.b1 { width: 15px; height: 15px; left: 34px; bottom: 12%; }
+.l-bub.b2 { width: 10px; height: 10px; left: 104px; bottom: 34%; animation-delay: 1.4s; }
+.l-bub.b3 { width: 7px; height: 7px; left: 60px; bottom: 56%; animation-delay: 2.6s; }
+@keyframes fa-rise { 0% { transform: translateY(0); opacity: .6 } 100% { transform: translateY(-90px); opacity: 0 } }
+.l-gloss { position: absolute; top: 18px; left: 0; right: 0; height: 56px; border-radius: 100px 100px 50% 50%; background: linear-gradient(180deg, rgba(255,255,255,.75), transparent); }
+.fa-liquid .fa-time { color: #0c3b4c; font-size: 42px; text-shadow: 0 1px 2px rgba(255,255,255,.5); }
+.fa-liquid .fa-set { color: #3c7a90; }
+.fa-liquid .fa-task { color: #1d4c5e; }
+#focus[data-timer="liquid"] .f-btn { background: #fff; border: none; color: #5b7f94; box-shadow: 0 4px 12px rgba(90,150,190,.2); }
+#focus[data-timer="liquid"] .f-main { background: linear-gradient(150deg, #4cc5e0, #2c9cc4); color: #fff; box-shadow: 0 10px 24px rgba(60,170,205,.5); }
+#focus[data-timer="liquid"] .focus-plus { background: #fff; border-color: #cfe6f0; color: #5b7f94; }
+
+/* ---- T2 Turntable ---- */
+#focus[data-timer="turntable"] { background: radial-gradient(120% 90% at 50% 0%, #2a2723, #141210); }
+#focus[data-timer="turntable"] #focus-eyebrow { color: #c8a24a; }
+#focus[data-timer="turntable"] #focus-close { color: #7c7161; }
+.t-wrap { position: relative; width: min(290px, 78vw); aspect-ratio: 1; }
+.t-disc { position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-radial-gradient(circle at 50% 50%, #1b1917 0 3px, #232120 3px 6px);
+  box-shadow: 0 18px 40px rgba(0,0,0,.6), inset 0 0 0 1px rgba(200,162,74,.18);
+  animation: fa-spin 8s linear infinite; }
+@keyframes fa-spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
+#focus.is-paused .t-disc, #focus.is-finished .t-disc { animation-play-state: paused; }
+.t-ring { position: absolute; inset: 0; width: 100%; transform: rotate(-90deg); }
+.t-ring .t-track { fill: none; stroke: rgba(200,162,74,.14); stroke-width: 4; }
+.t-ring .t-prog { fill: none; stroke: #c8a24a; stroke-width: 4; stroke-linecap: round; }
+.t-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 52%; aspect-ratio: 1; border-radius: 50%;
+  background: linear-gradient(150deg, #c8a24a, #8e6e2c); display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  gap: 1px; padding: 0 6px 22px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.fa-tt .fa-time { color: #1a1512; font-size: 29px; }
+.fa-tt .fa-set { color: #4a3a18; font-size: 9.5px; letter-spacing: .06em; }
+.t-spindle { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 11px; height: 11px; border-radius: 50%; background: #0d0b0a; z-index: 0; }
+.t-arm { position: absolute; right: -4px; top: 26px; width: 52%; height: 8px; border-radius: 4px;
+  background: linear-gradient(90deg, #9a8a6e, #d8cdb4); transform-origin: right center; transform: rotate(34deg);
+  box-shadow: 0 3px 8px rgba(0,0,0,.5); transition: transform .4s ease; }
+.t-pivot { position: absolute; right: -14px; top: 16px; width: 28px; height: 28px; border-radius: 50%; background: #3a342c; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+.fa-tt .fa-task { color: #efe6d4; }
+#focus[data-timer="turntable"] .f-btn { background: #241f1b; border: none; color: #a99b84; box-shadow: inset 0 0 0 1px rgba(200,162,74,.2); }
+#focus[data-timer="turntable"] .f-main { background: linear-gradient(150deg, #d8b45c, #a2812f); color: #1a1512; box-shadow: 0 10px 26px rgba(0,0,0,.55); }
+#focus[data-timer="turntable"] .focus-plus { background: #241f1b; border-color: rgba(200,162,74,.25); color: #a99b84; }
+
+/* ---- T3 Bloom ---- */
+#focus[data-timer="bloom"] { background: linear-gradient(175deg, #f6fbf3, #e6f3e4); }
+#focus[data-timer="bloom"] #focus-eyebrow, #focus[data-timer="bloom"] #focus-close { color: #8aa891; }
+.b-stage { position: relative; width: min(250px, 66vw); height: min(300px, 40vh); display: flex; align-items: flex-end; justify-content: center; }
+.b-plant { position: absolute; bottom: 0; left: 0; width: 100%; animation: fa-sway 5s ease-in-out infinite; transform-origin: 50% 95%; }
+@keyframes fa-sway { 0%,100% { transform: rotate(-2deg) } 50% { transform: rotate(2deg) } }
+#focus.is-paused .b-plant, #focus.is-finished .b-plant { animation-play-state: paused; }
+.b-stem { stroke: #5fbf7a; stroke-width: 7; fill: none; stroke-linecap: round; }
+.b-leaf, .b-flower { opacity: 0; transform: scale(.6); transform-origin: 126px 150px; transition: opacity .4s ease-out, transform .4s ease-out; }
+.b-leaf.is-on, .b-flower.is-on { opacity: 1; transform: scale(1); }
+.b-pot { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 68%; height: 52px;
+  border-radius: 14px 14px 20px 20px; background: linear-gradient(180deg, #c98f63, #a9714b); box-shadow: 0 10px 24px rgba(140,100,70,.3); }
+.b-rim { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); width: 74%; height: 16px; border-radius: 8px; background: #d89c6e; }
+.fa-bloom .fa-time { color: #25522f; font-size: 42px; }
+.b-bar { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; }
+.b-bar-track { position: relative; display: block; width: 130px; height: 7px; border-radius: 4px; background: #d3e7d6; overflow: hidden; }
+.b-bar-fill { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #7acf92, #4fae6a); border-radius: 4px; transition: width .3s linear; }
+.b-pct { font-size: 11px; font-weight: 700; color: #4c7b58; }
+.fa-bloom .fa-task { color: #25522f; }
+.b-hint { font-size: 12px; color: #7a9c82; }
+#focus[data-timer="bloom"] .f-btn { background: #fff; border: none; color: #6c9077; box-shadow: 0 4px 12px rgba(110,150,120,.22); }
+#focus[data-timer="bloom"] .f-main { background: linear-gradient(150deg, #6fcb89, #3f9e5c); color: #fff; box-shadow: 0 10px 24px rgba(75,165,105,.45); }
+#focus[data-timer="bloom"] .focus-plus { background: #fff; border-color: #cfe4d3; color: #6c9077; }

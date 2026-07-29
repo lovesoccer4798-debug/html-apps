@@ -38,7 +38,106 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v84';
+const APP_VERSION = 'v85';
+
+/* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
+   配色テーマとは独立した設定（settings.timerStyle）。 */
+const TIMER_STYLES = [
+  { id: '',          name: '標準（リング）',       sub: 'いまのデザイン' },
+  { id: 'neon',      name: 'ネオンパルス',         sub: 'Neon Pulse — 発光するネオン管' },
+  { id: 'sand',      name: '砂時計',               sub: 'Sandglass — 落ちていく砂の量' },
+  { id: 'metro',     name: 'メトロラン',           sub: 'Metro Run — 終点へ進む路線図' },
+  { id: 'liquid',    name: 'リキッドドロップ',     sub: 'Liquid Drop — カプセルの水位' },
+  { id: 'turntable', name: 'ターンテーブル',       sub: 'Turntable — 回るレコード盤' },
+  { id: 'bloom',     name: 'ブルーム',             sub: 'Bloom — 育つ植物（経過で成長）' },
+];
+function timerStyleId() { return db.settings.timerStyle || ''; }
+
+// 各デザインの中身（見た目だけ。時間の値は updateFocusArt が毎回書き込む）
+const TIMER_ART = {
+  neon: `<div class="fa fa-neon">
+    <div class="fa-ring">
+      <svg viewBox="0 0 296 296" aria-hidden="true">
+        <circle class="n-track" cx="148" cy="148" r="122"/>
+        <circle class="n-glow fa-prog" cx="148" cy="148" r="122"/>
+        <circle class="n-mid fa-prog" cx="148" cy="148" r="122"/>
+        <circle class="n-core fa-prog" cx="148" cy="148" r="122"/>
+        <circle class="n-dash" cx="148" cy="148" r="97"/>
+      </svg>
+      <div class="fa-center"><span class="fa-time mono">--:--</span><span class="fa-set mono"></span></div>
+    </div>
+    <div class="fa-task"></div>
+  </div>`,
+  sand: `<div class="fa fa-sand">
+    <svg viewBox="0 0 196 308" aria-hidden="true">
+      <defs>
+        <linearGradient id="sgGlass" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="rgba(255,255,255,.95)"/><stop offset=".45" stop-color="rgba(255,255,255,.28)"/><stop offset="1" stop-color="rgba(255,255,255,.7)"/>
+        </linearGradient>
+        <clipPath id="sgTop"><path d="M32 30 H164 L110 148 H86 Z"/></clipPath>
+        <clipPath id="sgBot"><path d="M86 160 H110 L164 278 H32 Z"/></clipPath>
+      </defs>
+      <rect x="18" y="16" width="160" height="14" rx="7" class="s-cap"/>
+      <rect x="18" y="278" width="160" height="14" rx="7" class="s-cap"/>
+      <path d="M32 30 H164 L110 148 H86 Z" fill="url(#sgGlass)" class="s-glass"/>
+      <path d="M86 160 H110 L164 278 H32 Z" fill="url(#sgGlass)" class="s-glass"/>
+      <g clip-path="url(#sgTop)"><rect class="s-top" x="30" y="60" width="136" height="92"/></g>
+      <g clip-path="url(#sgBot)"><rect class="s-bot" x="30" y="278" width="136" height="0"/></g>
+      <rect class="s-stream" x="96" y="150" width="4" height="86"/>
+      <circle class="s-drop" cx="98" cy="196" r="2.6"/>
+      <path d="M44 40 L44 132" class="s-shine" stroke-width="5"/>
+      <path d="M50 176 L50 264" class="s-shine" stroke-width="4"/>
+    </svg>
+    <div class="fa-below"><span class="fa-time mono"></span><span class="fa-set mono"></span><span class="fa-task"></span></div>
+  </div>`,
+  metro: `<div class="fa fa-metro"><div class="m-rail" id="fa-metro-rail"></div>
+    <div class="m-card"><div class="m-left"><span class="m-lbl">残り</span><span class="fa-time mono"></span></div>
+    <div class="m-right"><span class="fa-task"></span><span class="fa-set mono"></span></div></div>
+  </div>`,
+  liquid: `<div class="fa fa-liquid">
+    <div class="l-cap">
+      <div class="l-water"><svg class="l-wave" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 12 Q25 2 50 12 T100 12 T150 12 T200 12 V20 H0 Z"/></svg>
+        <span class="l-bub b1"></span><span class="l-bub b2"></span><span class="l-bub b3"></span></div>
+      <div class="l-gloss"></div>
+      <div class="fa-center"><span class="fa-time mono"></span><span class="fa-set mono"></span></div>
+    </div>
+    <div class="fa-task"></div>
+  </div>`,
+  turntable: `<div class="fa fa-tt">
+    <div class="t-wrap">
+      <div class="t-disc"></div>
+      <svg class="t-ring" viewBox="0 0 290 290" aria-hidden="true">
+        <circle class="t-track" cx="145" cy="145" r="134"/>
+        <circle class="t-prog fa-prog" cx="145" cy="145" r="134"/>
+      </svg>
+      <div class="t-label"><span class="fa-time mono"></span><span class="fa-set mono"></span></div>
+      <div class="t-spindle"></div>
+      <div class="t-arm" id="fa-tt-arm"></div>
+      <div class="t-pivot"></div>
+    </div>
+    <div class="fa-task"></div>
+  </div>`,
+  bloom: `<div class="fa fa-bloom">
+    <div class="b-stage">
+      <svg class="b-plant" viewBox="0 0 250 300" aria-hidden="true">
+        <path class="b-stem" d="M125 285 C125 240 122 205 125 170 C127 140 124 118 126 96"/>
+        <path class="b-leaf" data-i="1" d="M124 236 C100 232 84 216 80 196 C104 196 120 212 124 236 Z" fill="#7ACF92"/>
+        <path class="b-leaf" data-i="2" d="M126 202 C150 198 166 182 170 162 C146 162 130 178 126 202 Z" fill="#68C382"/>
+        <path class="b-leaf" data-i="3" d="M125 168 C102 164 88 150 84 132 C106 132 121 146 125 168 Z" fill="#8AD9A0"/>
+        <path class="b-leaf" data-i="4" d="M126 134 C148 130 162 116 166 98 C144 98 130 112 126 134 Z" fill="#75CB8C"/>
+        <g class="b-flower">
+          <circle cx="126" cy="80" r="17" fill="#FFD1E0"/><circle cx="108" cy="92" r="15" fill="#FFC0D6"/>
+          <circle cx="144" cy="92" r="15" fill="#FFC0D6"/><circle cx="115" cy="112" r="14" fill="#FFD1E0"/>
+          <circle cx="138" cy="112" r="14" fill="#FFD1E0"/><circle cx="126" cy="98" r="13" fill="#FFE9A3"/>
+        </g>
+      </svg>
+      <div class="b-pot"></div><div class="b-rim"></div>
+    </div>
+    <div class="fa-below"><span class="fa-time mono"></span>
+      <span class="b-bar"><span class="b-bar-track"><span class="b-bar-fill"></span></span><span class="b-pct mono"></span></span>
+      <span class="fa-task"></span><span class="b-hint"></span></div>
+  </div>`,
+};
 
 /* アプリのアイコン（設定から選べる）。あとから増やすときはここに1行足すだけ。
    svg = タブのアイコン(favicon)とアプリ内ロゴに使う / touch = ホーム画面に追加するとき用 */
@@ -99,7 +198,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', timerStyle: '', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -3105,6 +3204,7 @@ function renderSettings() {
   document.querySelectorAll('#notepriv-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.npd === (db.settings.notePrivDefault || 'open'));
   });
+  renderTimerStyleList();
   renderAppIconList();
   const st = $('#sched-template');
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
@@ -3343,6 +3443,33 @@ document.querySelectorAll('#notepriv-seg button').forEach((b) => {
     renderAll();
   });
 });
+
+// タイマーのデザイン選択
+function renderTimerStyleList() {
+  const wrap = $('#timerstyle-list');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const cur = timerStyleId();
+  for (const t of TIMER_STYLES) {
+    const row = el('button', `icon-row${t.id === cur ? ' is-active' : ''}`);
+    row.type = 'button';
+    const txt = el('span', 'icon-row-name');
+    txt.append(el('span', 'ts-name', t.name), el('span', 'ts-sub', t.sub));
+    row.append(txt);
+    if (t.id === cur) { const chk = el('span', 'icon-row-check'); chk.innerHTML = ICONS.check; row.append(chk); }
+    row.addEventListener('click', () => {
+      db.settings.timerStyle = t.id || undefined;
+      const art = $('#focus-art');
+      if (art) { art.dataset.built = ''; art.innerHTML = ''; }
+      const rail = document.getElementById('fa-metro-rail');
+      if (rail) delete rail.dataset.built;
+      save();
+      if (!$('#focus').hidden) { buildFocusArt(); updateTimerUI(); }
+      renderTimerStyleList();
+    });
+    wrap.append(row);
+  }
+}
 
 // アプリのアイコン選択（今は標準のみ。APP_ICONS に足せば増える）
 function renderAppIconList() {
@@ -4017,6 +4144,8 @@ function startTimer(it) {
     finished: false,
   };
   save();
+  const rail0 = document.getElementById('fa-metro-rail');
+  if (rail0) delete rail0.dataset.built; // 設定時間が変わるので駅を作り直す
   startTick();
   openFocus();
   renderAll();
@@ -4123,6 +4252,98 @@ function completeRunning() {
   renderAll();
 }
 
+// 選んだデザインの中身を組み立てる（フォーカス画面を開いたとき・設定を変えたとき）
+function buildFocusArt() {
+  const st = timerStyleId();
+  const art = $('#focus-art');
+  const ring = $('#focus-ring');
+  const focus = $('#focus');
+  if (!art || !focus) return;
+  focus.dataset.timer = st;
+  if (!st) { art.hidden = true; art.innerHTML = ''; if (ring) ring.hidden = false; return; }
+  if (ring) ring.hidden = true;
+  art.hidden = false;
+  if (art.dataset.built !== st) { art.innerHTML = TIMER_ART[st] || ''; art.dataset.built = st; }
+  // メトロは駅（区間）を残り時間に応じて並べる
+  const rail = $('#fa-metro-rail');
+  if (rail && !rail.dataset.built) {
+    const r = db.running;
+    const total = Math.max(1, Math.round((r ? r.totalMs : 0) / 60000));
+    const stops = 5;
+    let html = '';
+    for (let i = 0; i <= stops; i += 1) {
+      const min = Math.round((total * i) / stops);
+      const label = i === 0 ? '出発' : i === stops ? '終点 — 完了' : `第${i}区間`;
+      html += `<div class="m-stop" data-i="${i}"><span class="m-dot"></span><span class="m-name">${label}</span><span class="m-min mono">${String(min).padStart(2, '0')}:00</span></div>`;
+    }
+    rail.innerHTML = `<div class="m-line"><span class="m-line-fill"></span></div>${html}<span class="m-train" id="fa-metro-train">${ICONS.play}</span>`;
+    rail.dataset.built = '1';
+  }
+}
+// 残り時間の割合（1=満タン, 0=終わり）を各デザインに反映
+function updateFocusArt(progress, label) {
+  const st = timerStyleId();
+  if (!st) return;
+  const art = $('#focus-art');
+  if (!art || art.hidden) return;
+  const r = db.running;
+  const done = Math.max(0, Math.min(1, 1 - progress)); // 経過の割合
+  const setTxt = r ? `SET ${Math.round(r.totalMs / 60000)}分${r.time ? ` ・ ${r.time}` : ''}` : '';
+  art.querySelectorAll('.fa-time').forEach((e) => { e.textContent = label; });
+  art.querySelectorAll('.fa-set').forEach((e) => { e.textContent = setTxt; });
+  art.querySelectorAll('.fa-task').forEach((e) => { e.textContent = (r && r.title) || ''; });
+
+  if (st === 'neon' || st === 'turntable') { // リング系: 円周に対する残りぶん
+    const circ = st === 'neon' ? 766.5 : 842;
+    art.querySelectorAll('.fa-prog').forEach((c) => {
+      c.style.strokeDasharray = String(circ);
+      c.style.strokeDashoffset = String(circ * (1 - progress));
+    });
+  }
+  if (st === 'turntable') { // トーンアームは進むほど内側へ
+    const arm = $('#fa-tt-arm');
+    if (arm) arm.style.transform = `rotate(${34 - done * 18}deg)`;
+  }
+  if (st === 'sand') { // 上の砂は減り、下の山は増える
+    const top = art.querySelector('.s-top');
+    const bot = art.querySelector('.s-bot');
+    if (top) { const h = 92 * progress; top.setAttribute('y', String(152 - h)); top.setAttribute('height', String(h)); }
+    if (bot) { const h = 62 * done; bot.setAttribute('y', String(278 - h)); bot.setAttribute('height', String(h)); }
+    const stream = art.querySelector('.s-stream');
+    if (stream) stream.style.opacity = progress > 0 && progress < 1 ? '.9' : '0';
+  }
+  if (st === 'liquid') { // 水位＝残り
+    const w = art.querySelector('.l-water');
+    if (w) w.style.height = `${Math.max(0, Math.min(100, progress * 100))}%`;
+  }
+  if (st === 'metro') { // 電車が終点へ進む
+    const rail = $('#fa-metro-rail');
+    const train = $('#fa-metro-train');
+    if (rail && train) {
+      const stops = [...rail.querySelectorAll('.m-stop')];
+      train.style.top = `${done * 100}%`;
+      const fill = rail.querySelector('.m-line-fill');
+      if (fill) fill.style.height = `${done * 100}%`;
+      stops.forEach((el, i) => el.classList.toggle('is-passed', done >= i / (stops.length - 1) - 0.001));
+    }
+  }
+  if (st === 'bloom') { // 経過で葉が増え、完走で花が咲く
+    const leaves = art.querySelectorAll('.b-leaf');
+    leaves.forEach((el, i) => el.classList.toggle('is-on', done >= (i + 1) / (leaves.length + 1)));
+    const fl = art.querySelector('.b-flower');
+    if (fl) fl.classList.toggle('is-on', done >= 0.995);
+    const bar = art.querySelector('.b-bar-fill');
+    if (bar) bar.style.width = `${done * 100}%`;
+    const pct = art.querySelector('.b-pct');
+    if (pct) pct.textContent = `${Math.round(done * 100)}%`;
+    const hint = art.querySelector('.b-hint');
+    if (hint) {
+      const left = [...leaves].filter((el) => !el.classList.contains('is-on')).length;
+      hint.textContent = done >= 0.995 ? '咲きました！' : left ? `あと${left}枚の葉っぱで開花` : 'もうすぐ開花';
+    }
+  }
+}
+
 function updateTimerUI() {
   const r = db.running;
   if (!r) return;
@@ -4141,6 +4362,7 @@ function updateTimerUI() {
     $('#focus-set').textContent = r.finished
       ? 'おつかれさま！'
       : `SET ${Math.round(r.totalMs / 60000)}分${r.time ? ` ・ ${r.time}` : ''}`;
+    updateFocusArt(progress, label);
   }
   const runFg = document.querySelector('.run-card .rr-fg');
   if (runFg) {
@@ -4183,6 +4405,7 @@ function openFocus() {
     const d = fromKey(r.dateKey || todayKey());
     eb.textContent = `FOCUS · ${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）`;
   }
+  buildFocusArt();
   $('#focus').hidden = false;
   document.body.style.overflow = 'hidden';
 
