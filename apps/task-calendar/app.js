@@ -38,15 +38,15 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v82';
+const APP_VERSION = 'v83';
 
 /* アプリのアイコン（設定から選べる）。あとから増やすときはここに1行足すだけ。
    svg = タブのアイコン(favicon)とアプリ内ロゴに使う / touch = ホーム画面に追加するとき用 */
 const APP_ICONS = [
-  { id: 'default',   name: 'TaskARE（標準・ライト）', svg: 'icons/icon.svg',           touch: 'icons/apple-touch-icon.png' },
-  { id: 'dark',      name: 'TaskARE（標準・ダーク）', svg: 'icons/icon-dark.svg',      touch: 'icons/default-dark-180.png' },
-  { id: 'hand',      name: '手描きロゴ（ライト）',     svg: 'icons/icon-hand.svg',      touch: 'icons/hand-180.png' },
-  { id: 'hand-dark', name: '手描きロゴ（ダーク）',     svg: 'icons/icon-hand-dark.svg', touch: 'icons/hand-dark-180.png' },
+  { id: 'default',   name: 'TaskARE（標準・ライト）',   svg: 'icons/icon.svg',           type: 'image/svg+xml', touch: 'icons/apple-touch-icon.png' },
+  { id: 'dark',      name: 'TaskARE（標準・ダーク）',   svg: 'icons/icon-dark.svg',      type: 'image/svg+xml', touch: 'icons/default-dark-180.png' },
+  { id: 'logo',      name: '手書きロゴ（ライト）',       svg: 'icons/logo-512.png',       type: 'image/png',     touch: 'icons/logo-180.png' },
+  { id: 'logo-dark', name: '手書きロゴ（ダーク）',       svg: 'icons/logo-dark-512.png',  type: 'image/png',     touch: 'icons/logo-dark-180.png' },
 ];
 function appIconDef() {
   return APP_ICONS.find((i) => i.id === (db.settings.appIcon || 'default')) || APP_ICONS[0];
@@ -58,9 +58,10 @@ function applyAppIcon() {
   try { localStorage.setItem('tc-app-icon', def.svg); } catch (e) { /* 使えなくてもアイコン自体は出る */ }
   const sp = document.querySelector('#tc-sp-img');
   if (sp) sp.src = def.svg;
-  const set = (sel, href) => { const elx = document.querySelector(sel); if (elx && href) elx.href = `${href}?${APP_VERSION}`; };
-  set('link[rel="icon"][type="image/svg+xml"]', def.svg);
-  set('link[rel="apple-touch-icon"]', def.touch);
+  const fav = document.querySelector('#app-favicon');
+  if (fav && def.svg) { fav.type = def.type || 'image/svg+xml'; fav.href = `${def.svg}?${APP_VERSION}`; }
+  const touch = document.querySelector('link[rel="apple-touch-icon"]');
+  if (touch && def.touch) touch.href = `${def.touch}?${APP_VERSION}`;
 }
 
 const ICONS = {
