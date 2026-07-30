@@ -17,7 +17,7 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 日／週／月／年＋タイマー＋繰り返し＋予定＋メモ＋ルーティンパッケージの個人用タスクカレンダー（v1.0・PWA・共有カレンダー対応・PR #27レビュー待ち） |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 日／週／月／年＋タイマー＋繰り返し＋予定＋メモ＋ルーティンパッケージの個人用タスクカレンダー（PWA・共有カレンダー／思い出シェアカレンダー対応・アプリ内表示は v87） |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
@@ -36,6 +36,8 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 6. 保留のオーナー判断: Phase 8の着手時期／アプリ単位のタグ運用の要否／CHANGELOG `[Unreleased]` のv1.1.0繰り上げ（リリースを切る好機）
 
 ## 注意点・申し送り
+
+- **思い出シェアカレンダー（v87）はFirebaseのルール追加が必要**。`shared/{calId}/photos/{photoId}` に read/write の許可を足さないと写真の保存だけが失敗する（正本: `apps/task-calendar/specs/task-calendar-memories.md`）。写真はCloud Storageではなく Firestore に入れているので、Blaze（従量課金）への切り替えは不要
 
 - **鮮度情報の正本はHandbook品質パネルへ移設**（NotebookLM同期日はSTATUSではなく[Handbook表紙](../docs/README.md)の品質パネルに記録する。ADR: 20260714-handbook-living-map）
 - **Phase 7のレビュー記録（docs/reviews/phase-7.md）が未作成**。遡って書くか欠番として扱うかはオーナー判断（reviews/READMEに注記済み）

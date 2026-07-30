@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v86';
+const APP_VERSION = 'v87';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -189,6 +189,10 @@ const ICONS = {
   users: `<svg ${ICON_ATTRS}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   sparkles: `<svg ${ICON_ATTRS}><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>`,
   video: `<svg ${ICON_ATTRS}><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>`,
+  image: `<svg ${ICON_ATTRS}><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+  camera: `<svg ${ICON_ATTRS}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
+  message: `<svg ${ICON_ATTRS}><path d="M12 20a8 8 0 1 0-8-8 8 8 0 0 0 .6 3L3 21l5.4-1.5A8 8 0 0 0 12 20Z"/></svg>`,
+  send: `<svg ${ICON_ATTRS}><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>`,
 };
 
 /* ========== persistent data ========== */
@@ -198,7 +202,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', timerStyle: '', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', timerStyle: '', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', memShowInCal: {}, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -260,6 +264,9 @@ const ui = {
   justToggledId: null,
   justAddedId: null,
   sheetType: 'task',
+  sheetPhotos: [],          // 編集シートで選択中の写真（思い出カレンダー用）
+  memCode: null,            // 「思い出」タブで表示中の思い出カレンダー
+  memStampOpen: null,       // スタンプ一覧を開いている思い出のid
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
   schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
   schedDur: 60,             // 候補1枠の長さ（分）
@@ -345,7 +352,7 @@ const MAX_CALENDARS = 8; // 仕様§7: 色の見分けとチップ視認性の�
 
 function allFilterIds() {
   const ids = db.calendars.map((c) => c.id);
-  for (const code of db.sharedJoined) ids.push(SH_PREFIX + code);
+  for (const code of db.sharedJoined) { if (!isMemCode(code) || memShownInCal(code)) ids.push(SH_PREFIX + code); }
   if (db.routines.length) ids.push('routine');
   if (gcalConnected()) ids.push('gcal');
   return ids;
@@ -511,11 +518,13 @@ function itemsFor(key) {
   const items = [];
   for (const t of db.tasks) {
     if (isHiddenMirror(t)) continue; // 共有に参加中の控えは隠す
+    if (memHiddenHere(t)) continue; // 思い出カレンダーはふだんの画面に出さない（設定でONにできる）
     if (!occursOn(t, key)) continue;
     items.push({ kind: 'task', id: `${t.id}@${key}`, ref: t, key, title: titleForKey(t, key), time: timeOn(t, key), timeEnd: timeEndOn(t, key), minutes: minutesOn(t, key), repeat: t.repeat || null, done: taskDoneOn(t, key) });
   }
   for (const e of db.events) {
     if (isHiddenMirror(e)) continue; // 共有に参加中の控えは隠す
+    if (memHiddenHere(e)) continue; // 思い出カレンダーはふだんの画面に出さない（設定でONにできる）
     const multi = eventCoversDay(e, key);
     if (!multi && !occursOn(e, key)) continue; // 予定も繰り返し対応（単発は date、繰り返しは repeat+startDate、複数日は date〜endDate）
     const span = multi ? eventSpan(e, key) : null;
@@ -993,6 +1002,7 @@ $('#bottomnav').addEventListener('click', (e) => {
   if (nav === 'anniv') setScreen('anniv');
   if (nav === 'tasks') setScreen('tasklist');
   if (nav === 'routines') setScreen('routines');
+  if (nav === 'memories') setScreen('memories');
 });
 
 document.querySelectorAll('.seg-btn').forEach((btn) => {
@@ -1080,7 +1090,8 @@ function renderAll() {
   $('#scr-tasklist').hidden = ui.screen !== 'tasklist';
   $('#scr-help').hidden = ui.screen !== 'help';
   $('#scr-person').hidden = ui.screen !== 'person';
-  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person';
+  $('#scr-memories').hidden = ui.screen !== 'memories';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person' || ui.screen === 'memories';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -1093,7 +1104,8 @@ function renderAll() {
       || (nav === 'insights' && ui.screen === 'insights')
       || (nav === 'anniv' && ui.screen === 'anniv')
       || (nav === 'tasks' && ui.screen === 'tasklist')
-      || (nav === 'routines' && ui.screen === 'routines');
+      || (nav === 'routines' && ui.screen === 'routines')
+      || (nav === 'memories' && ui.screen === 'memories');
     b.classList.toggle('is-active', active);
   });
 
@@ -1105,6 +1117,7 @@ function renderAll() {
   if (ui.screen === 'tasklist') renderTaskList();
   if (ui.screen === 'help') { renderHelpChips(); renderHelp(($('#help-search') && $('#help-search').value) || ''); }
   if (ui.screen === 'person') renderPerson();
+  if (ui.screen === 'memories') renderMemories();
 }
 
 function streakDays() {
@@ -3118,7 +3131,7 @@ const SETTINGS_CATS = [
   ['見た目・表示', ['テーマ', 'テーマ（配色）', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
   ['カレンダー', ['マイカレンダー', 'よく会う人', 'スケジュール調整の定型文']],
   ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知']],
-  ['連携・同期', ['アカウントと同期', '共有カレンダー', 'Googleカレンダー連携', 'Notion連携']],
+  ['連携・同期', ['アカウントと同期', '共有カレンダー', '思い出シェアカレンダー', 'Googleカレンダー連携', 'Notion連携']],
   ['アカウント・データ', ['あなたの名前', 'バックアップ', 'データ']],
 ];
 function setupSettingsAccordion() {
@@ -3171,6 +3184,7 @@ function renderSettings() {
   renderPeopleCard();
   renderSyncCard();
   renderSharedCard();
+  renderMemCalCard();
   renderGcalCard();
   renderColorRuleCard();
   renderNotionCard();
@@ -3613,6 +3627,26 @@ function openDetail(it) {
       blk.append(list);
       body.append(blk);
     }
+    // 思い出カレンダーの写真（1枚1ドキュメントなので必要になったときだけ取ってくる）
+    const memCode = memCodeOf(it.ref);
+    const dtPhotos = memCode ? (it.ref.photos || []) : [];
+    if (dtPhotos.length) {
+      const blk = el('div', 'dt-block');
+      blk.append(el('span', 'dt-key', `写真（${dtPhotos.length}枚）`));
+      const grid = el('div', `mem-photos n${Math.min(4, dtPhotos.length)}`);
+      dtPhotos.forEach((p) => {
+        const cell = el('button', 'mem-ph');
+        cell.type = 'button';
+        const img = document.createElement('img');
+        img.alt = '';
+        memPhotoUrl(memCode, p).then((u) => { if (u) { img.src = u; cell.dataset.url = u; } else cell.classList.add('is-missing'); });
+        cell.append(img);
+        cell.addEventListener('click', () => { if (cell.dataset.url) openPhoto(cell.dataset.url, it.title); });
+        grid.append(cell);
+      });
+      blk.append(grid);
+      body.append(blk);
+    }
     const memo = memoFor(it);
     if (memo) { const r = el('div', 'dt-block'); r.append(el('span', 'dt-key', 'メモ')); r.append(el('p', 'dt-text', memo)); body.append(r); }
     const diary = diaryFor(it);
@@ -3698,9 +3732,9 @@ function syncSheetNotePriv() {
 document.querySelectorAll('#f-notepriv button').forEach((b) => {
   b.addEventListener('click', () => setSheetNotePriv(b.dataset.np));
 });
-$('#f-cal')?.addEventListener('change', syncSheetNotePriv);
+$('#f-cal')?.addEventListener('change', () => { syncSheetNotePriv(); renderSheetPhotos(); });
 
-function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = null, type = null } = {}) {
+function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = null, type = null, calId = null } = {}) {
   ui.editing = mode === 'edit' ? item : null;
   ui.sheetType = item ? item.kind : (type || 'task');
   sheetEls.title.textContent = mode === 'edit' ? '編集' : '追加';
@@ -3769,15 +3803,17 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     const c = db.sharedCache[code];
     const o = document.createElement('option');
     o.value = SH_PREFIX + code;
-    o.textContent = `${(c && c.title) || code}（共有）`;
+    o.textContent = `${(c && c.title) || code}（${isMemCode(code) ? '思い出' : '共有'}）`;
     if (!fbUser || !c || c.role === 'viewer') o.disabled = true; // 閲覧専用・未ログインは選べない
     calSel.append(o);
   }
-  calSel.value = item ? (item.ref.calendarId || 'c-default') : 'c-default';
+  calSel.value = item ? (item.ref.calendarId || 'c-default') : (calId || 'c-default');
   const single = db.calendars.length < 2 && !db.sharedJoined.length;
   calSel.hidden = single;
   $('#f-cal-label').hidden = single;
   syncSheetNotePriv();
+  ui.sheetPhotos = item ? (item.ref.photos || []).map((p) => ({ ...p })) : [];
+  renderSheetPhotos();
   sheetEls.scrim.hidden = false;
   sheetEls.fTitle.focus();
 }
@@ -4002,6 +4038,13 @@ $('#sheet-form').addEventListener('submit', (e) => {
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   }
+  // 写真（思い出カレンダーのみ）。保存できた予定に対して、選んだぶんをアップロードする
+  const savedRef = ui.editing ? ui.editing.ref
+    : (ui.sheetType === 'event' ? db.events[db.events.length - 1] : db.tasks[db.tasks.length - 1]);
+  const photoTarget = isMemoryCal(calendarId) ? { ref: savedRef, code: calendarId.slice(SH_PREFIX.length) } : null;
+  if (photoTarget) memApplySheetPhotos(photoTarget.ref, photoTarget.code, ui.sheetPhotos || []);
+  else if (savedRef && savedRef.photos) delete savedRef.photos; // 思い出カレンダー以外に移したら写真は外す
+
   save();
   closeSheet();
   renderAll();
@@ -5028,6 +5071,14 @@ function vbGet(key) {
     const req = d.transaction('images').objectStore('images').get(key);
     req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
+  }));
+}
+function vbDel(key) {
+  return vbOpenDb().then((d) => new Promise((resolve, reject) => {
+    const tx = d.transaction('images', 'readwrite');
+    tx.objectStore('images').delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
   }));
 }
 const vbUrlCache = new Map();
@@ -6074,7 +6125,8 @@ function sharedBlocked(calId) {
    設定ONのあいだ、共有の予定・タスクを自分のカレンダー(c-default)へ自動コピーする。
    共有に参加しているあいだ控えは隠しておき（＝二重表示しない）、共有が削除/退出で無くなった
    時点で自動的に自分の予定として現れる。 */
-const MIRROR_SKIP = new Set(['id', 'calendarId', 'by', 'mirrorOf', 'mirrorCode', 'gcalId', 'pushGoogle']);
+// 写真・スタンプ・コメントは共有カレンダー側の持ち物なので控えには写さない（写真は共有と一緒に消える）
+const MIRROR_SKIP = new Set(['id', 'calendarId', 'by', 'mirrorOf', 'mirrorCode', 'gcalId', 'pushGoogle', 'photos', 'stamps', 'comments']);
 function isHiddenMirror(x) { // 元の共有カレンダーがまだ手元にある控え＝隠す
   return Boolean(x && x.mirrorCode) && db.sharedJoined.includes(x.mirrorCode);
 }
@@ -6151,6 +6203,7 @@ function shApplyRemote(code, data) {
     title: data.title || '', color: data.color || 'blue', ownerUid: data.ownerUid,
     members: data.members || {}, role: isOwner ? 'owner' : (me ? me.role : 'viewer'),
     updatedAt: data.updatedAt || 0,
+    kind: data.kind === 'memory' ? 'memory' : 'plan', // 'plan'=予定を合わせる／'memory'=思い出をためる
   };
   const calId = SH_PREFIX + code;
   // 「共有しない」にしたメモ・日記は相手に送っていないので、受信データで消えないよう手元の内容を戻す
@@ -6234,18 +6287,21 @@ function scheduleSharedPush() {
   }, 3000);
 }
 
-async function shCreate(title) {
+async function shCreate(title, kind = 'plan') {
   if (!navigator.onLine) { flashToast('オフラインです'); return; }
   if (!(await ensureFirebase()) || !fbUser) { flashToast('先にGoogleでログインしてね'); return; }
   const code = shNewCode();
-  const data = { title, color: 'blue', ownerUid: fbUser.uid, members: {}, updatedAt: Date.now(), tasks: [], events: [] };
+  const mem = kind === 'memory';
+  const data = { title, color: mem ? 'pink' : 'blue', kind: mem ? 'memory' : 'plan', ownerUid: fbUser.uid, members: {}, updatedAt: Date.now(), tasks: [], events: [] };
   try {
     await shDocRef(code).set(data);
     db.sharedJoined.push(code);
+    // 種類・権限の控えを先に置く（onSnapshotを待たずに「思い出」タブへ入れるように）
+    db.sharedCache[code] = { title, color: data.color, kind: data.kind, ownerUid: fbUser.uid, members: {}, role: 'owner', updatedAt: data.updatedAt };
     save();
     shListen(code);
     flashToast(`「${title}」を作成しました。招待コードを共有してね`);
-    renderAll();
+    if (mem) setScreen('memories'); else renderAll();
   } catch (err) { console.warn(err); flashToast('作成できませんでした'); }
 }
 
@@ -6287,6 +6343,7 @@ async function shDelete(code) {
   askKeepSharedCopy(code);
   try {
     if (shUnsubs[code]) { shUnsubs[code](); delete shUnsubs[code]; }
+    await memDeleteAllPhotos(code); // 写真は別ドキュメントなので、消し忘れて容量を食わないよう先に片づける
     await shDocRef(code).delete();
     shLeaveLocal(code);
     flashToast(`「${title}」を削除しました`);
@@ -6318,6 +6375,7 @@ function renderSharedCard() {
   }
   const dark = effectiveDark();
   for (const code of db.sharedJoined) {
+    if (isMemCode(code)) continue; // 思い出シェアカレンダーは専用のカードで管理する
     const c = db.sharedCache[code] || { title: code, color: 'blue', role: 'viewer', members: {} };
     const row = el('div', 'sh-cal');
     const head = el('div', 'sh-head');
@@ -6374,15 +6432,614 @@ function renderSharedCard() {
     fr.append(input, go);
     return fr;
   };
-  wrap.append(mkForm('新しい共有カレンダー名', '作成', 20, shCreate));
+  wrap.append(mkForm('新しい共有カレンダー名', '作成', 20, (v) => shCreate(v, 'plan')));
   wrap.append(mkForm('招待コードで参加', '参加', 8, shJoin));
+}
+
+
+/* ========== v87: 思い出シェアカレンダー ==========
+   仲間・家族・仕事仲間と「終わったこと」を持ち寄るための共有カレンダー。
+   ・種類は共有ドキュメントの kind ('plan' | 'memory')。'memory' はふだんの
+     「日・週・時間・月・年」には出さず、専用の「思い出」タブだけに出す
+     （端末ごとの設定 memShowInCal でカレンダーにも出せる）。
+   ・スタンプ／ひとことコメント／セット記録（既存の「詳細」を流用）は
+     予定そのものに持たせるので、既存の共有のしくみでそのまま同期される。
+   ・写真は共有ドキュメントとは別に shared/{code}/photos/{写真ID} へ1枚1件で保存する。
+     本体ドキュメントは変更のたびに丸ごと書き換えるので、そこに写真を入れると
+     1MiBの上限と書き込み量をすぐ食いつぶしてしまうため。
+     Cloud Storage ではなく Firestore に入れているのは、無料枠（Sparkプラン）だけで
+     動かすため＝予期しない課金が起きないようにするため。
+     容量を守るために「1件あたり4枚」「1カレンダー100枚」「長辺1280px・1枚240KBまで」に
+     圧縮＆制限している（100枚でも約24MB。無料枠の保存容量1GiBに対して十分に小さい）。
+   ・一度読んだ写真は端末のIndexedDBに残すので、2回目以降は通信も読み取り回数も使わない。 */
+
+const MEM_MAX_PER_ITEM = 4;      // 1つの思い出につき写真4枚まで（「ベストを濃く残す」方針）
+const MEM_MAX_PER_CAL = 100;     // 1つの思い出カレンダーにつき写真100枚まで
+const MEM_PHOTO_BYTES = 240 * 1024; // 1枚の上限（圧縮後）
+const MEM_PHOTO_EDGE = 1280;     // 長辺
+const MEM_STAMPS = ['❤️', '🔥', '😂', '🥹', '👏', '🎉', '🍻', '📸'];
+const MEM_COMMENT_MAX = 30;      // 1つの思い出につきコメント30件まで
+
+function isMemCode(code) { return (db.sharedCache[code] || {}).kind === 'memory'; }
+function memCodes() { return db.sharedJoined.filter(isMemCode); }
+function isMemoryCal(calId) { return isSharedCal(calId) && isMemCode(calId.slice(SH_PREFIX.length)); }
+function memShownInCal(code) { return Boolean((db.settings.memShowInCal || {})[code]); }
+/* ふだんの画面（日・週・時間・月・年）から隠すべきか */
+function memHiddenHere(x) {
+  const calId = x && x.calendarId;
+  if (!isMemoryCal(calId)) return false;
+  return !memShownInCal(calId.slice(SH_PREFIX.length));
+}
+function memCodeOf(x) {
+  const calId = x && x.calendarId;
+  return isMemoryCal(calId) ? calId.slice(SH_PREFIX.length) : null;
+}
+function memCanEdit(code) {
+  const role = shRole(code);
+  return Boolean(myUid()) && (role === 'owner' || role === 'editor');
+}
+/* 表示名（スタンプ・コメントの「だれが」）。設定の名前 → メール → 「メンバー」 */
+function myUid() { return (fbUser && fbUser.uid) || null; }
+function myDisplayName() {
+  return (db.settings.userName || '').trim()
+    || ((fbUser && fbUser.displayName) || '').trim()
+    || ((fbUser && fbUser.email) || '').split('@')[0]
+    || 'わたし';
+}
+
+/* ===== 写真の置き場所 ===== */
+
+function memPhotoCol(code) { return shDocRef(code).collection('photos'); }
+function memPhotoItems(code) { // その思い出カレンダーの予定・タスク（写真の持ち主）
+  const calId = SH_PREFIX + code;
+  return [...db.tasks, ...db.events].filter((x) => x.calendarId === calId);
+}
+function memPhotosOf(code) { return memPhotoItems(code).flatMap((x) => x.photos || []); }
+function memPhotoCount(code) { return memPhotosOf(code).length; }
+function memPhotoBytes(code) { return memPhotosOf(code).reduce((n, p) => n + (p.b || 0), 0); }
+function fmtBytes(n) {
+  if (!n) return '0KB';
+  return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)}MB` : `${Math.round(n / 1024)}KB`;
+}
+
+/* 長辺1280pxのJPEGへ。上限バイトに収まるまで画質を落とす（無料枠を守るため） */
+function memShrink(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, MEM_PHOTO_EDGE / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(img.width * scale));
+      cv.height = Math.max(1, Math.round(img.height * scale));
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      const enc = (q) => new Promise((ok) => cv.toBlob(ok, 'image/jpeg', q));
+      let blob = null;
+      for (const q of [0.82, 0.72, 0.62, 0.52, 0.42]) {
+        blob = await enc(q); // eslint-disable-line no-await-in-loop
+        if (blob && blob.size <= MEM_PHOTO_BYTES) break;
+      }
+      if (!blob) { reject(new Error('encode failed')); return; }
+      resolve({ blob, w: cv.width, h: cv.height });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+    img.src = url;
+  });
+}
+
+/* 端末キャッシュ（既存のビジョンボードと同じIndexedDBを使う） */
+function memCacheKey(id) { return `mp:${id}`; }
+const memUrlCache = new Map();
+async function memPhotoUrl(code, p) {
+  const key = memCacheKey(p.id);
+  if (memUrlCache.has(key)) return memUrlCache.get(key);
+  let blob = null;
+  try { blob = await vbGet(key); } catch (e) { blob = null; }
+  if (!blob) { // まだ端末に無いのでクラウドから1回だけ取る
+    if (!(await ensureFirebase()) || !myUid()) return null;
+    try {
+      const snap = await memPhotoCol(code).doc(p.id).get();
+      if (!snap.exists) return null;
+      const d = snap.data();
+      const bytes = d.bin && d.bin.toUint8Array ? d.bin.toUint8Array() : null;
+      blob = bytes ? new Blob([bytes], { type: 'image/jpeg' }) : null;
+      if (!blob) return null;
+      await vbPut(key, blob);
+    } catch (err) { console.warn('memory photo get failed', err); return null; }
+  }
+  const url = URL.createObjectURL(blob);
+  memUrlCache.set(key, url);
+  return url;
+}
+async function memPhotoUpload(code, blob, meta) {
+  if (!(await ensureFirebase()) || !myUid()) throw new Error('not signed in');
+  const id = newId('ph');
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  await memPhotoCol(code).doc(id).set({
+    bin: window.firebase.firestore.Blob.fromUint8Array(buf),
+    w: meta.w, h: meta.h, b: blob.size, at: Date.now(), by: myUid(),
+  });
+  await vbPut(memCacheKey(id), blob); // 自分の端末では取り直さない
+  return { id, w: meta.w, h: meta.h, b: blob.size };
+}
+async function memPhotoDelete(code, id) {
+  try { await memPhotoCol(code).doc(id).delete(); } catch (err) { console.warn('memory photo delete failed', err); }
+  const key = memCacheKey(id);
+  if (memUrlCache.has(key)) { URL.revokeObjectURL(memUrlCache.get(key)); memUrlCache.delete(key); }
+  try { await vbDel(key); } catch (e) { /* 端末のキャッシュは残っても害はない */ }
+}
+/* カレンダーを削除するとき、写真ドキュメントも消す（残すと無料枠を食べ続けるため） */
+async function memDeleteAllPhotos(code) {
+  if (!isMemCode(code) || !myUid()) return;
+  const ids = memPhotosOf(code).map((p) => p.id);
+  for (const id of ids) await memPhotoDelete(code, id); // eslint-disable-line no-await-in-loop
+}
+/* どの思い出からも参照されていない写真を掃除する（削除の取り消しなどで置き去りになった分） */
+async function memGcPhotos(code) {
+  if (!(await ensureFirebase()) || !myUid()) { flashToast('先にGoogleでログインしてね'); return; }
+  const keep = new Set(memPhotosOf(code).map((p) => p.id));
+  try {
+    const snap = await memPhotoCol(code).get();
+    const stray = snap.docs.filter((d) => !keep.has(d.id));
+    for (const d of stray) await d.ref.delete(); // eslint-disable-line no-await-in-loop
+    flashToast(stray.length ? `使っていない写真${stray.length}枚を片づけました` : '片づける写真はありませんでした');
+    renderAll();
+  } catch (err) { console.warn(err); flashToast('片づけできませんでした'); }
+}
+
+/* ===== 編集シートの写真欄 ===== */
+
+function sheetMemCode() {
+  const calSel = $('#f-cal');
+  const calId = calSel ? calSel.value : '';
+  return isMemoryCal(calId) ? calId.slice(SH_PREFIX.length) : null;
+}
+function renderSheetPhotos() {
+  const wrap = $('#f-photos-wrap');
+  if (!wrap) return;
+  const code = sheetMemCode();
+  wrap.hidden = !code;
+  const maxEl = $('#f-photo-max');
+  if (maxEl) maxEl.textContent = String(MEM_MAX_PER_ITEM);
+  if (!code) return;
+  const list = ui.sheetPhotos || (ui.sheetPhotos = []);
+  const grid = $('#f-photos');
+  grid.textContent = '';
+  list.forEach((p, i) => {
+    const cell = el('div', 'mem-ph');
+    const img = document.createElement('img');
+    img.alt = '';
+    if (p.blob) img.src = URL.createObjectURL(p.blob);
+    else memPhotoUrl(code, p).then((u) => { if (u) img.src = u; });
+    cell.append(img);
+    const rm = el('button', 'mem-ph-x');
+    rm.type = 'button';
+    rm.setAttribute('aria-label', '写真を外す');
+    rm.textContent = '×';
+    rm.addEventListener('click', () => { list.splice(i, 1); renderSheetPhotos(); });
+    cell.append(rm);
+    grid.append(cell);
+  });
+  const room = MEM_MAX_PER_ITEM - list.length;
+  const calRoom = MEM_MAX_PER_CAL - memPhotoCount(code) - list.filter((p) => p.blob).length;
+  if (room > 0 && calRoom > 0 && memCanEdit(code)) {
+    const add = el('button', 'mem-ph mem-ph-add');
+    add.type = 'button';
+    add.innerHTML = `${ICONS.camera}<span>写真を選ぶ</span>`;
+    add.addEventListener('click', () => $('#f-photo-input').click());
+    grid.append(add);
+  }
+  const hint = $('#f-photo-hint');
+  if (hint) {
+    hint.textContent = memCanEdit(code)
+      ? `このカレンダーの写真 ${memPhotoCount(code)}/${MEM_MAX_PER_CAL}枚（約${fmtBytes(memPhotoBytes(code))}）。長辺1280pxに縮めて保存します。`
+      : 'このカレンダーは閲覧専用なので、写真は追加できません。';
+  }
+}
+$('#f-photo-input')?.addEventListener('change', async (e) => {
+  const code = sheetMemCode();
+  const files = [...(e.target.files || [])];
+  e.target.value = '';
+  if (!code || !files.length) return;
+  const list = ui.sheetPhotos || (ui.sheetPhotos = []);
+  for (const file of files) {
+    if (list.length >= MEM_MAX_PER_ITEM) { flashToast(`写真は1件${MEM_MAX_PER_ITEM}枚までです`); break; }
+    if (memPhotoCount(code) + list.filter((p) => p.blob).length >= MEM_MAX_PER_CAL) { flashToast(`このカレンダーは写真${MEM_MAX_PER_CAL}枚までです`); break; }
+    try {
+      const { blob, w, h } = await memShrink(file); // eslint-disable-line no-await-in-loop
+      list.push({ id: null, blob, w, h, b: blob.size });
+    } catch (err) { console.warn(err); flashToast('この写真は読み込めませんでした'); }
+  }
+  renderSheetPhotos();
+});
+/* 保存時：まだクラウドに無い写真を上げ、外された写真を消す */
+function memApplySheetPhotos(ref, code, list) {
+  if (!ref) return;
+  const before = (ref.photos || []).map((p) => p.id);
+  const kept = list.filter((p) => p.id).map((p) => ({ id: p.id, w: p.w, h: p.h, b: p.b }));
+  ref.photos = kept.length ? kept : undefined;
+  if (!ref.photos) delete ref.photos;
+  const removed = before.filter((id) => !kept.some((p) => p.id === id));
+  removed.forEach((id) => memPhotoDelete(code, id));
+  const pending = list.filter((p) => !p.id && p.blob);
+  if (!pending.length) return;
+  flashToast(`写真${pending.length}枚を保存中…`);
+  (async () => {
+    for (const p of pending) {
+      try {
+        const saved = await memPhotoUpload(code, p.blob, p); // eslint-disable-line no-await-in-loop
+        ref.photos = [...(ref.photos || []), saved];
+      } catch (err) {
+        console.warn(err);
+        // ルール未更新だと permission-denied になるので、原因が分かる文言にする
+        flashToast(fbErrCode(err).includes('permission')
+          ? '写真を保存できません（Firebaseのルールに photos の許可を追加してね）'
+          : '写真を保存できませんでした');
+      }
+    }
+    save();
+    renderAll();
+  })();
+}
+
+/* ===== スタンプ・ひとことコメント ===== */
+
+function memStampToggle(ref, emoji) {
+  const code = memCodeOf(ref);
+  if (!code || !memCanEdit(code)) { flashToast('このカレンダーは閲覧専用です'); return; }
+  const uid = myUid();
+  const list = (ref.stamps || []).filter((s) => s.uid !== uid);
+  const mine = (ref.stamps || []).find((s) => s.uid === uid);
+  if (!mine || mine.e !== emoji) list.push({ uid, name: myDisplayName(), e: emoji, at: Date.now() });
+  ref.stamps = list.length ? list : undefined;
+  if (!ref.stamps) delete ref.stamps;
+  save();
+  renderMemories();
+}
+function memAddComment(ref, text) {
+  const code = memCodeOf(ref);
+  if (!code || !memCanEdit(code)) { flashToast('このカレンダーは閲覧専用です'); return; }
+  const body = (text || '').trim().slice(0, 200);
+  if (!body) return;
+  const list = [...(ref.comments || []), { id: newId('cm'), uid: myUid(), name: myDisplayName(), t: body, at: Date.now() }];
+  ref.comments = list.slice(-MEM_COMMENT_MAX);
+  save();
+  renderMemories();
+}
+function memDeleteComment(ref, id) {
+  const list = (ref.comments || []).filter((c) => c.id !== id);
+  ref.comments = list.length ? list : undefined;
+  if (!ref.comments) delete ref.comments;
+  save();
+  renderMemories();
+}
+
+/* ===== 写真の拡大表示 ===== */
+
+function openPhoto(url, caption) {
+  const view = $('#photo-view');
+  if (!view || !url) return;
+  $('#photo-view-img').src = url;
+  $('#photo-cap').textContent = caption || '';
+  view.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closePhoto() {
+  const view = $('#photo-view');
+  if (!view) return;
+  view.hidden = true;
+  document.body.style.overflow = '';
+}
+$('#photo-close')?.addEventListener('click', closePhoto);
+$('#photo-view')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closePhoto(); });
+
+/* ===== 「思い出」タブ ===== */
+
+function memCurrentCode() {
+  const codes = memCodes();
+  if (!codes.length) return null;
+  if (ui.memCode && codes.includes(ui.memCode)) return ui.memCode;
+  ui.memCode = codes[0];
+  return ui.memCode;
+}
+function renderMemCals() {
+  const wrap = $('#mem-cals');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const codes = memCodes();
+  wrap.hidden = codes.length < 2;
+  if (codes.length < 2) return;
+  const cur = memCurrentCode();
+  for (const code of codes) {
+    const c = db.sharedCache[code] || {};
+    const b = el('button', `mem-cal-chip${code === cur ? ' is-on' : ''}`, c.title || code);
+    b.type = 'button';
+    b.addEventListener('click', () => { ui.memCode = code; renderMemories(); });
+    wrap.append(b);
+  }
+}
+
+/* その思い出カレンダーの中身を新しい順に。日付のあるものだけを並べる */
+function memEntries(code) {
+  const calId = SH_PREFIX + code;
+  const out = [];
+  for (const x of [...db.events, ...db.tasks]) {
+    if (x.calendarId !== calId) continue;
+    const key = x.repeat ? x.startDate : x.date;
+    if (!key) continue;
+    out.push({ kind: db.events.includes(x) ? 'event' : 'task', ref: x, key, id: `${x.id}@${key}`, title: titleForKey(x, key), time: timeOn(x, key), timeEnd: timeEndOn(x, key), repeat: x.repeat || null, done: x.repeat ? taskDoneOn(x, key) : Boolean(x.done) });
+  }
+  return out.sort((a, b) => (b.key.localeCompare(a.key)) || ((b.ref.createdAt || 0) - (a.ref.createdAt || 0)));
+}
+
+function renderMemories() {
+  const body = $('#mem-body');
+  if (!body) return;
+  renderMemCals();
+  body.textContent = '';
+  const code = memCurrentCode();
+  const titleEl = $('#mem-title');
+  if (!code) {
+    if (titleEl) titleEl.textContent = '思い出';
+    body.append(el('p', 'empty', '思い出シェアカレンダーがまだありません。設定の「思い出シェアカレンダー」から作れます。'));
+    const go = el('button', 'cta', '設定を開く');
+    go.type = 'button';
+    go.addEventListener('click', () => setScreen('settings'));
+    body.append(go);
+    return;
+  }
+  const c = db.sharedCache[code] || {};
+  if (titleEl) titleEl.textContent = c.title || '思い出';
+  const canEdit = memCanEdit(code);
+
+  const cta = el('div', 'r-cta-row');
+  const add = el('button', 'cta', '＋ 思い出を追加');
+  add.type = 'button';
+  add.disabled = !canEdit;
+  add.addEventListener('click', () => { ui.sheetType = 'event'; openSheet('add', { type: 'event', dateKey: todayKey(), calId: SH_PREFIX + code }); });
+  cta.append(add);
+  body.append(cta);
+
+  const entries = memEntries(code);
+  // 「去年の今日」は次のフェーズ。まずは新しい順のタイムラインと月の区切り
+  if (!entries.length) {
+    body.append(el('p', 'empty', 'まだ思い出がありません。「＋ 思い出を追加」から、行った日・タイトル・写真・セット記録を残せます。招待コードは設定から共有できます。'));
+    return;
+  }
+  let lastMonth = '';
+  for (const it of entries) {
+    const mk = it.key.slice(0, 7);
+    if (mk !== lastMonth) {
+      lastMonth = mk;
+      const [y, m] = mk.split('-');
+      body.append(el('p', 'mem-month', `${y}年${Number(m)}月`));
+    }
+    body.append(buildMemCard(it, code, canEdit));
+  }
+  const foot = el('p', 'hint', `写真 ${memPhotoCount(code)}/${MEM_MAX_PER_CAL}枚（約${fmtBytes(memPhotoBytes(code))}）・招待コード ${code}`);
+  body.append(foot);
+}
+
+function buildMemCard(it, code, canEdit) {
+  const card = el('article', 'mem-card');
+  const d = fromKey(it.key);
+
+  const head = el('button', 'mem-head');
+  head.type = 'button';
+  const day = el('span', 'mem-date mono', `${d.getMonth() + 1}/${d.getDate()}`);
+  const wd = el('span', 'mem-wd', `（${WD_JA[d.getDay()]}）`);
+  const ttl = el('span', 'mem-title', it.title);
+  head.append(day, wd, ttl);
+  head.addEventListener('click', () => openDetail(it));
+  card.append(head);
+
+  const meta = [];
+  if (it.time) meta.push(it.time + (it.timeEnd ? `〜${it.timeEnd}` : ''));
+  if (it.ref.place) meta.push(it.ref.place);
+  if ((it.ref.who || []).length) meta.push(it.ref.who.join('、'));
+  if (meta.length) card.append(el('p', 'mem-meta', meta.join(' ・ ')));
+
+  // 写真（ベスト数枚）
+  const photos = it.ref.photos || [];
+  if (photos.length) {
+    const grid = el('div', `mem-photos n${Math.min(4, photos.length)}`);
+    photos.forEach((p) => {
+      const cell = el('button', 'mem-ph');
+      cell.type = 'button';
+      const img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      memPhotoUrl(code, p).then((u) => { if (u) { img.src = u; cell.dataset.url = u; } else cell.classList.add('is-missing'); });
+      cell.append(img);
+      cell.addEventListener('click', () => { if (cell.dataset.url) openPhoto(cell.dataset.url, `${d.getMonth() + 1}/${d.getDate()} ${it.title}`); });
+      grid.append(cell);
+    });
+    card.append(grid);
+  }
+
+  // セット記録（既存の「詳細」をそのまま使う）
+  const subs = subsFor(it.ref, it.key);
+  if (subs.length) {
+    const list = el('ol', 'mem-set');
+    subs.forEach((s) => list.append(el('li', '', s.title)));
+    card.append(el('p', 'mem-set-label', 'セット記録'));
+    card.append(list);
+  }
+
+  const link = linkForKey(it.ref, it.key);
+  if (link) {
+    const a = el('a', 'mem-link');
+    a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.innerHTML = ICONS.link;
+    a.append(el('span', '', 'リンクを開く'));
+    card.append(a);
+  }
+
+  const memo = it.ref.memo;
+  if (memo) card.append(el('p', 'mem-memo', memo));
+
+  // スタンプ
+  const stamps = it.ref.stamps || [];
+  const srow = el('div', 'mem-stamps');
+  const counts = new Map();
+  for (const s of stamps) counts.set(s.e, [...(counts.get(s.e) || []), s.name || 'メンバー']);
+  const mine = stamps.find((s) => s.uid === myUid()) || null;
+  for (const e of MEM_STAMPS) {
+    const who = counts.get(e) || [];
+    if (!who.length && (!canEdit || (ui.memStampOpen !== it.id))) continue;
+    const b = el('button', `mem-stamp${mine && mine.e === e ? ' is-mine' : ''}`);
+    b.type = 'button';
+    b.append(el('span', 'mem-stamp-e', e));
+    if (who.length) b.append(el('span', 'mem-stamp-n mono', String(who.length)));
+    b.title = who.join('、');
+    b.addEventListener('click', () => memStampToggle(it.ref, e));
+    srow.append(b);
+  }
+  if (canEdit && ui.memStampOpen !== it.id) {
+    const more = el('button', 'mem-stamp mem-stamp-more');
+    more.type = 'button';
+    more.setAttribute('aria-label', 'スタンプを押す');
+    more.innerHTML = `${ICONS.heart}`;
+    more.addEventListener('click', () => { ui.memStampOpen = it.id; renderMemories(); });
+    srow.append(more);
+  }
+  if (srow.childElementCount) card.append(srow);
+  if (stamps.length) {
+    const names = [...new Set(stamps.map((s) => `${s.e}${s.name || 'メンバー'}`))].join(' ');
+    card.append(el('p', 'mem-stamp-who', names));
+  }
+
+  // ひとことコメント
+  const comments = it.ref.comments || [];
+  if (comments.length) {
+    const list = el('div', 'mem-comments');
+    for (const cm of comments) {
+      const row = el('div', 'mem-cm');
+      row.append(el('span', 'mem-cm-name', cm.name || 'メンバー'));
+      row.append(el('span', 'mem-cm-text', cm.t));
+      if (cm.uid === myUid()) {
+        const x = el('button', 'mem-cm-x');
+        x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'コメントを削除');
+        x.addEventListener('click', () => memDeleteComment(it.ref, cm.id));
+        row.append(x);
+      }
+      list.append(row);
+    }
+    card.append(list);
+  }
+  if (canEdit) {
+    const form = el('div', 'mem-cm-form');
+    const input = document.createElement('input');
+    input.type = 'text'; input.maxLength = 200; input.placeholder = 'ひとこと残す';
+    const go = el('button', 'mem-cm-go');
+    go.type = 'button';
+    go.innerHTML = ICONS.send;
+    go.setAttribute('aria-label', 'コメントを送る');
+    const send = () => { const v = input.value; input.value = ''; memAddComment(it.ref, v); };
+    go.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+    form.append(input, go);
+    card.append(form);
+  }
+  return card;
+}
+
+/* ===== 設定の「思い出シェアカレンダー」カード ===== */
+
+function renderMemCalCard() {
+  const wrap = $('#memcal-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const maxEl = $('#memcal-max');
+  if (maxEl) maxEl.textContent = String(MEM_MAX_PER_ITEM);
+  if (!db.settings.syncUser) {
+    wrap.append(el('p', 'hint', '上の「アカウントと同期」からGoogleでログインすると使えます。'));
+    return;
+  }
+  const dark = effectiveDark();
+  for (const code of memCodes()) {
+    const c = db.sharedCache[code] || { title: code, color: 'pink', role: 'viewer', members: {} };
+    const row = el('div', 'sh-cal');
+    const head = el('div', 'sh-head');
+    const dot = el('span', 'ccdot');
+    dot.style.background = (ACCENTS[c.color] || ACCENTS.pink)[dark ? 'dark' : 'light'];
+    head.append(dot, el('strong', '', c.title || code), el('span', 'sh-role', ROLE_LABEL[c.role] || ''));
+    row.append(head);
+    const codeRow = el('div', 'sh-coderow');
+    codeRow.append(el('span', 'sh-code mono', code));
+    const cp = el('button', 'iconbtn');
+    cp.type = 'button'; cp.setAttribute('aria-label', '招待コードをコピー'); cp.innerHTML = ICONS.copy;
+    cp.addEventListener('click', () => {
+      navigator.clipboard?.writeText(code).then(() => flashToast('招待コードをコピーしました')).catch(() => flashToast(`招待コード: ${code}`));
+    });
+    codeRow.append(cp);
+    row.append(codeRow);
+
+    const showLbl = el('label', 'vis-row');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = memShownInCal(code);
+    cb.addEventListener('change', () => {
+      db.settings.memShowInCal = db.settings.memShowInCal || {};
+      if (cb.checked) db.settings.memShowInCal[code] = true; else delete db.settings.memShowInCal[code];
+      save();
+      renderAll();
+    });
+    showLbl.append(cb, document.createTextNode(' ふだんのカレンダー（日・週・時間・月）にも出す'));
+    row.append(showLbl);
+
+    row.append(el('p', 'hint', `写真 ${memPhotoCount(code)}/${MEM_MAX_PER_CAL}枚・約${fmtBytes(memPhotoBytes(code))}（無料枠の保存容量1GiBに対して十分に小さい範囲です）`));
+
+    if (c.role === 'owner') {
+      const members = Object.entries(c.members || {});
+      if (!members.length) row.append(el('p', 'hint', 'まだメンバーはいません。招待コードを伝えてね。'));
+      for (const [uid, m] of members) {
+        const mr = el('div', 'sh-member');
+        mr.append(el('span', 'sh-email', m.email || 'メンバー'));
+        const sel = document.createElement('select');
+        for (const [v, label] of [['editor', '書き込める'], ['viewer', '見るだけ'], ['remove', '解除（非表示）']]) {
+          const o = document.createElement('option');
+          o.value = v; o.textContent = label;
+          sel.append(o);
+        }
+        sel.value = m.role === 'viewer' ? 'viewer' : 'editor';
+        sel.addEventListener('change', () => shSetRole(code, uid, sel.value === 'remove' ? null : sel.value));
+        mr.append(sel);
+        row.append(mr);
+      }
+      const gc = el('button', 'cta ghost', '使っていない写真を片づける');
+      gc.type = 'button';
+      gc.addEventListener('click', () => memGcPhotos(code));
+      row.append(gc);
+      const delBtn = el('button', 'cta ghost danger', 'この思い出カレンダーを削除（写真も消えます）');
+      delBtn.type = 'button';
+      delBtn.addEventListener('click', () => { if (window.confirm(`「${c.title || code}」を削除します。共有した写真もすべて消えます。よろしいですか？`)) shDelete(code); });
+      row.append(delBtn);
+    } else {
+      const leaveBtn = el('button', 'cta ghost', '退出する');
+      leaveBtn.type = 'button';
+      leaveBtn.addEventListener('click', () => shLeave(code));
+      row.append(leaveBtn);
+    }
+    wrap.append(row);
+  }
+  const fr = el('div', 'sh-form');
+  const input = document.createElement('input');
+  input.type = 'text'; input.placeholder = '例：ライブ仲間・家族・チーム'; input.maxLength = 20;
+  const go = el('button', 'cta ghost', '作成');
+  go.type = 'button';
+  go.addEventListener('click', () => { const v = input.value.trim(); if (v) { input.value = ''; shCreate(v, 'memory'); } });
+  fr.append(input, go);
+  wrap.append(fr);
+  wrap.append(el('p', 'hint', '参加する側は、上の「共有カレンダー」の「招待コードで参加」からどちらの種類にも参加できます。'));
 }
 
 /* ========== v15: ホーム表示のON/OFF（使わないビュー・タブを隠す） ========== */
 
 const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
-const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['tasks', 'タスク'], ['routines', 'ルーティン']];
-const NAV_SCREEN = { tasks: 'tasklist' }; // data-nav と画面名が違うものだけ対応表
+const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['tasks', 'タスク'], ['routines', 'ルーティン'], ['memories', '思い出']];
+const NAV_SCREEN = { tasks: 'tasklist', memories: 'memories' }; // data-nav と画面名が違うものだけ対応表
 // 日ビューに出るカード（後から追加された機能ぶんも隠せるように）
 function hideSections() { return [['sleep', '睡眠の記録'], ['daylog', dayLogName()]]; }
 function sectionHidden(key) { return !!(db.settings.hidden || {})[`section:${key}`]; }
@@ -6397,6 +7054,13 @@ function applyVisibility() {
     const btn = document.querySelector(`#bottomnav button[data-nav="${n}"]`);
     if (btn) btn.hidden = !!h[`nav:${n}`];
   }
+  // 「思い出」は思い出シェアカレンダーが1つも無いあいだは出さない（ふだんは自分用がメインなので）
+  const memBtn = document.querySelector('#bottomnav button[data-nav="memories"]');
+  if (memBtn && !memCodes().length) memBtn.hidden = true;
+  if (ui.screen === 'memories' && memBtn && memBtn.hidden) ui.screen = 'cal';
+  // タブが多いときは文字を小さくして2行になるのを防ぐ
+  const nav = $('#bottomnav');
+  if (nav) nav.classList.toggle('is-dense', nav.querySelectorAll('button:not([hidden])').length >= 7);
   // 隠したビュー・画面を今開いていたら安全な場所へ退避
   if ((h[`view:${ui.view}`]) && ui.screen === 'cal') ui.view = 'day';
   if (h[`nav:${ui.screen}`]) { ui.screen = 'cal'; }
