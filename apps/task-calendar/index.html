@@ -8,18 +8,18 @@
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1e252d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=89" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=89">
-<link rel="icon" href="icons/icon-192.png?v=89" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=89">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=90" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=90">
+<link rel="icon" href="icons/icon-192.png?v=90" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=90">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=89">
-<link rel="stylesheet" href="style.css?v=89">
+<link rel="stylesheet" href="tokens.css?v=90">
+<link rel="stylesheet" href="style.css?v=90">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -779,7 +779,7 @@
   <div class="focus-top">
     <button class="iconbtn" id="focus-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
     <span class="eyebrow mono" id="focus-eyebrow">FOCUS</span>
-    <span class="focus-top-pad"></span>
+    <a class="focus-link" id="focus-link" target="_blank" rel="noopener noreferrer" hidden><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>リンク</span></a>
   </div>
   <div class="focus-mid">
     <div class="focus-art" id="focus-art" hidden></div>
@@ -821,7 +821,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=89"></script>
-<script src="app.js?v=89"></script>
+<script src="firebase-config.js?v=90"></script>
+<script src="app.js?v=90"></script>
 </body>
 </html>

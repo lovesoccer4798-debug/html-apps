@@ -71,7 +71,7 @@ export default {
 
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: 'bad-json' }, 400, cors); }
-    const { dbId, date, title, diary, memo, doneCount, bed, wake } = body || {};
+    const { dbId, date, title, diary, memo, doneCount, bed, wake, tasks } = body || {};
     if (!dbId || !date) return json({ error: 'missing dbId/date' }, 400, cors);
 
     const headers = {
@@ -87,6 +87,10 @@ export default {
     if (diary != null) props['日記'] = { rich_text: richText(diary) };
     if (memo != null) props['メモ'] = { rich_text: richText(memo) };
     if (typeof doneCount === 'number') props['できたこと'] = { number: doneCount };
+    // その日にやったタスク名（アプリ側の設定がONのときだけ送られてくる。
+    // Notion側に「タスク」というテキストプロパティが無いと書き込みでエラーになるので、
+    // 送られてきたときだけ設定する）
+    if (tasks != null) props['タスク'] = { rich_text: richText(tasks) };
     if (bed != null) props['就寝'] = { rich_text: [{ text: { content: String(bed) } }] };
     if (wake != null) props['起床'] = { rich_text: [{ text: { content: String(wake) } }] };
 
