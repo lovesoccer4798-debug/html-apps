@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v89';
+const APP_VERSION = 'v90';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -4600,6 +4600,14 @@ function openFocus() {
     eb.textContent = `FOCUS · ${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}）`;
   }
   buildFocusArt();
+  // リンク（YouTube等）があれば、タイマーを止めずにそのまま開けるように出す
+  const linkEl = $('#focus-link');
+  if (linkEl) {
+    const t = db.tasks.find((x) => x.id === r.taskId);
+    const url = t ? linkForKey(t, r.dateKey || todayKey()) : null;
+    linkEl.hidden = !url;
+    if (url) linkEl.href = url;
+  }
   $('#focus').hidden = false;
   document.body.style.overflow = 'hidden';
   updateFocusClock();
@@ -7566,6 +7574,8 @@ function notionDayPayload(key) {
     doneCount: tasksStatsFor(key).done,
     bed: rec.bed || null,
     wake: rec.wake || null,
+    // その日にやったタスク名（設定ONのときだけ。空の日も送って前日の内容が残らないようにする）
+    tasks: n.tasks ? itemsFor(key).filter((i) => i.kind === 'task' && i.done).map((i) => `・${i.title}`).join('\n') : undefined,
   };
 }
 
@@ -7626,6 +7636,15 @@ function renderNotionCard() {
   cb.addEventListener('change', () => { n.on = cb.checked; persistLocal(); });
   tg.append(cb, ' 保存時に自動でNotionへ送る（今日の分）');
   wrap.append(tg);
+
+  const tg2 = el('label', 'sync-toggle');
+  const cb2 = document.createElement('input');
+  cb2.type = 'checkbox';
+  cb2.checked = !!n.tasks;
+  cb2.addEventListener('change', () => { n.tasks = cb2.checked; persistLocal(); });
+  tg2.append(cb2, ' その日にやったタスクの名前も送る');
+  wrap.append(tg2);
+  wrap.append(el('p', 'hint', 'オンにすると、完了したタスクのタイトルだけを箇条書きでNotionの「タスク」プロパティに入れます。使う前に、Notionのデータベースに「タスク」という名前のテキスト（リッチテキスト）プロパティを追加して、Workerを最新の notion-worker.js に貼り替えてください。'));
 
   const btn = el('button', 'cta', '今日の記録をNotionに送る');
   btn.type = 'button';
