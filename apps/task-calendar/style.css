@@ -522,12 +522,19 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .bottomnav button {
   flex: 1;
+  min-width: 0; /* タブが増えても文字が折り返さないように */
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   font-size: 11px;
   color: var(--tc-ink3);
   padding: 4px 0;
 }
+.bottomnav button span { white-space: nowrap; overflow: hidden; text-overflow: clip; max-width: 100%; }
 .bottomnav button .icon { width: 21px; height: 21px; padding: 3px 16px; border-radius: var(--tc-r-pill); box-sizing: content-box; }
+/* 7タブ以上になると「カレンダー」等が2行になってしまうので、狭い画面では文字を少し小さくする */
+@media (max-width: 430px) {
+  .bottomnav.is-dense button { font-size: 9.5px; }
+  .bottomnav.is-dense button .icon { width: 20px; height: 20px; padding: 3px 10px; }
+}
 .bottomnav button.is-active { color: var(--tc-accent); font-weight: 700; }
 .bottomnav button.is-active .icon { background: var(--tc-accent-soft); }
 
@@ -1277,7 +1284,8 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--tc-surface); border: 1.5px solid var(--tc-line); border-radius: 10px; padding: 5px 8px;
 }
 .sh-cal .cta { margin-top: 10px; }
-.sh-cal .cta.danger { color: var(--tc-danger); border-color: var(--tc-danger); }
+/* ghost + danger は .cta.danger の赤い背景が勝って文字が読めなくなるので、背景も戻す */
+.sh-cal .cta.danger { background: var(--tc-surface2); color: var(--tc-danger); border: 1px solid var(--tc-danger); }
 .sh-form { display: flex; gap: 8px; margin-top: 12px; }
 .sh-form input {
   flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--tc-ink);
@@ -2272,4 +2280,101 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   .m-stop { height: 20px; }
   .m-card { margin-top: 6px; padding: 7px 13px; border-radius: 13px; }
   .fa-metro .fa-time { font-size: 26px; }
+}
+
+/* ---------- 思い出シェアカレンダー ---------- */
+
+.mem-cals { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 2px; scrollbar-width: none; }
+.mem-cals::-webkit-scrollbar { display: none; }
+.mem-cal-chip {
+  flex: none; padding: 6px 13px; border-radius: 999px; border: 1px solid var(--tc-line);
+  background: var(--tc-surface); color: var(--tc-ink2); font-size: 12.5px; font-weight: 700;
+}
+.mem-cal-chip.is-on { background: var(--tc-accent-soft); border-color: var(--tc-accent-line); color: var(--tc-accent-ink); }
+
+.mem-month { margin: 18px 2px 8px; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--tc-ink3); }
+.mem-card {
+  background: var(--tc-surface); border: 1px solid var(--tc-line); border-radius: 18px;
+  padding: 12px 14px 10px; margin-bottom: 12px;
+}
+.mem-head { display: flex; align-items: baseline; gap: 6px; width: 100%; text-align: left; background: none; border: 0; padding: 0; color: inherit; }
+.mem-date { font-size: 15px; font-weight: 800; color: var(--tc-ink); }
+.mem-wd { font-size: 11px; color: var(--tc-ink3); }
+.mem-title { flex: 1; font-size: 15px; font-weight: 700; color: var(--tc-ink); }
+.mem-meta { margin: 4px 0 0; font-size: 12px; color: var(--tc-ink3); }
+
+.mem-photos { display: grid; gap: 4px; margin-top: 10px; }
+.mem-photos.n1 { grid-template-columns: 1fr; }
+.mem-photos.n2 { grid-template-columns: 1fr 1fr; }
+.mem-photos.n4 { grid-template-columns: 1fr 1fr; }
+/* 3枚は「左に大きく1枚・右に2枚」のコラージュにする（ベストの1枚が主役になるように） */
+.mem-photos.n3 { grid-template-columns: 1.35fr 1fr; grid-template-rows: 1fr 1fr; }
+.mem-photos.n3 > .mem-ph:first-child { grid-row: span 2; aspect-ratio: auto; }
+.mem-photos.is-edit { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+.mem-ph {
+  position: relative; overflow: hidden; border-radius: 12px; border: 0; padding: 0;
+  background: var(--tc-surface2); aspect-ratio: 1; display: block; width: 100%;
+}
+.mem-photos.n1 .mem-ph { aspect-ratio: 4 / 3; }
+.mem-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mem-ph.is-missing::after {
+  content: "写真を読み込めませんでした"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; color: var(--tc-ink3); padding: 6px; text-align: center;
+}
+.mem-ph-x {
+  position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+  border: 0; background: rgba(0,0,0,.55); color: #fff; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.mem-ph-add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px dashed var(--tc-line); background: var(--tc-surface); color: var(--tc-ink3); font-size: 11px; font-weight: 700;
+}
+.mem-ph-add .icon { width: 20px; height: 20px; }
+
+.mem-set-label { margin: 10px 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--tc-ink3); }
+.mem-set { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 2px; }
+.mem-set li { font-size: 13px; color: var(--tc-ink); }
+.mem-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; font-weight: 700; color: var(--tc-accent-ink); text-decoration: none; }
+.mem-link .icon { width: 15px; height: 15px; }
+.mem-memo { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: var(--tc-ink2); white-space: pre-wrap; }
+
+.mem-stamps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mem-stamp {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px;
+  border: 1px solid var(--tc-line); background: var(--tc-surface2); color: var(--tc-ink2); font-size: 13px;
+}
+.mem-stamp.is-mine { border-color: var(--tc-accent-line); background: var(--tc-accent-soft); }
+.mem-stamp-e { font-size: 14px; line-height: 1; }
+.mem-stamp-n { font-size: 11px; font-weight: 700; }
+.mem-stamp-more .icon { width: 15px; height: 15px; }
+.mem-stamp-who { margin: 6px 0 0; font-size: 11px; color: var(--tc-ink3); }
+
+.mem-comments { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.mem-cm { display: flex; align-items: baseline; gap: 7px; }
+.mem-cm-name { flex: none; font-size: 11px; font-weight: 800; color: var(--tc-ink3); max-width: 34%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mem-cm-text { flex: 1; font-size: 13px; color: var(--tc-ink); word-break: break-word; }
+.mem-cm-x { flex: none; border: 0; background: none; color: var(--tc-ink3); font-size: 14px; line-height: 1; padding: 0 2px; }
+.mem-cm-form { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.mem-cm-form input {
+  flex: 1; min-width: 0; font-size: 16px; padding: 8px 12px; border-radius: 999px;
+  border: 1px solid var(--tc-line); background: var(--tc-surface2); color: var(--tc-ink);
+}
+.mem-cm-go {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0;
+  background: var(--tc-accent-soft); color: var(--tc-accent-ink); display: flex; align-items: center; justify-content: center;
+}
+.mem-cm-go .icon { width: 17px; height: 17px; }
+
+/* 写真の拡大 */
+.photo-view {
+  position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.92);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+}
+.photo-view img { max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 10px; }
+.photo-cap { margin: 0; font-size: 12.5px; color: rgba(255,255,255,.8); text-align: center; }
+.photo-close {
+  position: absolute; top: max(10px, env(safe-area-inset-top)); right: 14px;
+  width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff;
+  display: flex; align-items: center; justify-content: center;
 }

@@ -54,6 +54,12 @@ service cloud.firestore {
       );
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
+    // 思い出シェアカレンダーの写真: 1枚=1ドキュメント（本体は変更ごとに丸ごと書き換えるので分ける）。
+    // 親の shared/{calId} と同じ「招待コードを知っている＝アクセスできる」モデルに合わせる。
+    match /shared/{calId}/photos/{photoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
     // スケジュール調整のリンク予約: 相手はログインなしで開くので read/pick を無認証に許可
     match /meet/{code} {
       allow get: if true; // リンク（コード）を知っている相手が候補を読む
