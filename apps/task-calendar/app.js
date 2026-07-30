@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v90';
+const APP_VERSION = 'v91';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -1299,6 +1299,57 @@ function gridStart() {
   return new Date(ui.cursor.getFullYear(), ui.cursor.getMonth(), ui.cursor.getDate());
 }
 
+/* 重なった予定を Googleカレンダー風に横へ並べる。
+   1) 時間がつながっている「かたまり」に分ける
+   2) かたまりの中で、重ならないもの同士は同じ列に入れる
+   3) 右にあいている列があれば、その分だけ横に広げる
+   列が多くなりすぎて1本が細くなる（＝読めない）ときは、階段状にずらして左端が見えるようにする。 */
+const TG_MAX_COLS = { 1: 4, 3: 3, 7: 2 }; // 日数ごとに「これ以上細くしない」列数
+function tgLayout(list, days) {
+  const maxCols = TG_MAX_COLS[days] || 3;
+  const sorted = [...list].sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
+  const out = [];
+  let cluster = [];
+  let clusterEnd = -1;
+  const flush = () => {
+    if (!cluster.length) return;
+    const colEnd = []; // 各列の「最後の予定が終わる時刻」
+    for (const x of cluster) {
+      let c = 0;
+      while (c < colEnd.length && colEnd[c] > x.startMin) c += 1;
+      x.col = c;
+      colEnd[c] = x.endMin;
+    }
+    const n = colEnd.length;
+    if (n === 1) {
+      out.push({ ...cluster[0], left: '2px', width: 'calc(100% - 4px)', z: 2 });
+    } else if (n <= maxCols) {
+      const w = 100 / n;
+      for (const x of cluster) {
+        let span = 1; // 右にあいている列ぶんだけ広げる
+        for (let c = x.col + 1; c < n; c += 1) {
+          if (cluster.some((y) => y !== x && y.col === c && y.startMin < x.endMin && x.startMin < y.endMin)) break;
+          span += 1;
+        }
+        out.push({ ...x, left: `calc(${x.col * w}% + 2px)`, width: `calc(${span * w}% - 4px)`, z: 2 + x.col });
+      }
+    } else {
+      cluster.forEach((x, i) => { // 細くしすぎず、どれも左端が見えるように少しずつずらす
+        out.push({ ...x, left: `${2 + i * 10}px`, width: `calc(100% - ${4 + i * 10}px)`, z: 2 + i });
+      });
+    }
+    cluster = [];
+    clusterEnd = -1;
+  };
+  for (const x of sorted) {
+    if (cluster.length && x.startMin >= clusterEnd) flush();
+    cluster.push(x);
+    clusterEnd = Math.max(clusterEnd, x.endMin);
+  }
+  flush();
+  return out;
+}
+
 function renderGrid(body) {
   // 日数の切替（1日／3日／週）
   const seg = el('div', 'tg-seg');
@@ -1378,6 +1429,7 @@ function renderGrid(body) {
   const start = gridStart();
   const days = Array.from({ length: ui.gridDays }, (_, i) => addDays(start, i));
   const wrap = el('div', 'tg-wrap');
+  const tgNarrowCheck = [];
 
   // 見出し（曜日・日付。タップでその日のデイリーへ）
   const head = el('div', 'tg-head');
@@ -1446,22 +1498,29 @@ function renderGrid(body) {
       sb.addEventListener('click', (e) => { e.stopPropagation(); ui.schedSlots = ui.schedSlots.filter((x) => x !== s); renderAll(); });
       col.append(sb);
     }
-    for (const it of itemsFor(key).filter(passFilter).filter((x) => x.time)) {
-      const [hh, mm] = it.time.split(':').map(Number);
+    const timed = itemsFor(key).filter(passFilter).filter((x) => x.time).map((it) => {
+      const startMin = tgStrToMin(it.time);
       // 長さ: 予定は終了時刻まで、タスクは所要時間、どちらもなければ1時間ぶん
-      const durMin = it.timeEnd
-        ? Math.max(15, tgStrToMin(it.timeEnd) - tgStrToMin(it.time))
-        : (it.minutes || 60);
+      const durMin = it.timeEnd ? Math.max(15, tgStrToMin(it.timeEnd) - startMin) : (it.minutes || 60);
+      return { it, startMin, durMin, endMin: startMin + durMin };
+    });
+    for (const lay of tgLayout(timed, ui.gridDays)) {
+      const it = lay.it;
       const block = el('button', `tg-item${it.done ? ' is-done' : ''}`);
       block.type = 'button';
-      block.style.top = `${(hh + mm / 60) * TG_HOUR_H + 1}px`;
-      block.style.height = `${Math.max(20, (durMin / 60) * TG_HOUR_H - 2)}px`;
+      block.style.top = `${(lay.startMin / 60) * TG_HOUR_H + 1}px`;
+      block.style.height = `${Math.max(20, (lay.durMin / 60) * TG_HOUR_H - 2)}px`;
+      block.style.left = lay.left;
+      block.style.width = lay.width;
+      block.style.right = 'auto';
+      block.style.zIndex = String(lay.z);
       const c2 = itemColor(it);
       if (c2) block.style.background = c2;
       block.append(el('span', 'tg-ittl', it.title));
-      if (durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.timeEnd ? `${it.time}〜${it.timeEnd}` : it.time));
+      if (lay.durMin >= 45 && ui.gridDays < 7) block.append(el('span', 'tg-itime mono', it.timeEnd ? `${it.time}〜${it.timeEnd}` : it.time));
       block.addEventListener('click', (e) => { e.stopPropagation(); openDetail(it); });
       col.append(block);
+      tgNarrowCheck.push(block); // 幅が狭いときは1行に切って、文字が縦積みになるのを防ぐ
     }
     if (key === todayKey()) { // 現在時刻の線
       const now = new Date();
@@ -1473,6 +1532,10 @@ function renderGrid(body) {
   }
   wrap.append(grid);
   body.append(wrap);
+  // 実際に描かれた幅を見て、狭い枠は1行表示に切り替える（縦に1文字ずつ並ぶのを防ぐ）
+  requestAnimationFrame(() => {
+    for (const b2 of tgNarrowCheck) b2.classList.toggle('is-narrow', b2.offsetWidth < 56);
+  });
 
   // 時間割に「入った時」は一番上（0時・今日）へ。日付を送った時は見ていた時間帯を保つ
   if (ui.lastView !== 'grid') {
@@ -3717,6 +3780,83 @@ function meetingShareText(it, url) {
 }
 
 /* タップで開く詳細ビュー（読み取り）。右上ペンで編集シートへ */
+/* ===== リンクの見た目（YouTubeはサムネイル＋動画タイトル） =====
+   youtube.com/oembed は APIキー不要・無料・CORS許可ありなので、中継サーバーを立てずに
+   ブラウザから直接呼べる。取れなかったとき（オフライン・非公開動画・仕様変更）は
+   今までどおりのボタンに戻すので、リンク自体はいつでも開ける。
+   サムネイルは動画IDから組み立てるだけなので、oEmbedが失敗しても出る。 */
+const YT_CACHE_MAX = 300;
+const ytMem = new Map(); // 同じ画面で何度も取りにいかないための一時キャッシュ
+function ytIdOf(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (u.pathname === '/watch') return u.searchParams.get('v');
+      const m = u.pathname.match(/^\/(embed|shorts|live|v)\/([\w-]+)/);
+      if (m) return m[2];
+    }
+  } catch (err) { /* URLとして読めないものはYouTubeではない */ }
+  return null;
+}
+function ytThumbUrl(id) { return `https://i.ytimg.com/vi/${id}/mqdefault.jpg`; }
+async function ytInfo(url) {
+  const id = ytIdOf(url);
+  if (!id) return null;
+  if (ytMem.has(id)) return ytMem.get(id);
+  const store = db.ytCache || (db.ytCache = {});
+  if (store[id]) { ytMem.set(id, store[id]); return store[id]; }
+  if (!navigator.onLine) return null;
+  try {
+    const api = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`;
+    const res = await fetch(api);
+    if (!res.ok) throw new Error(String(res.status));
+    const d = await res.json();
+    const info = { title: String(d.title || '').slice(0, 200), author: String(d.author_name || '').slice(0, 80) };
+    const keys = Object.keys(store);
+    if (keys.length >= YT_CACHE_MAX) delete store[keys[0]]; // 古いものから捨てる
+    store[id] = info;
+    persistLocal();
+    ytMem.set(id, info);
+    return info;
+  } catch (err) {
+    ytMem.set(id, null); // 取れないURLを何度も叩かない
+    return null;
+  }
+}
+function buildLinkCard(url, variant) {
+  const id = ytIdOf(url);
+  if (!id) { // YouTube以外は今までどおりのボタン
+    const a = el('a', variant === 'mem' ? 'mem-link' : 'cta join-btn');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.innerHTML = ICONS.link;
+    a.append(el('span', '', 'リンクを開く'));
+    return a;
+  }
+  const a = el('a', 'link-card');
+  a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  const th = el('span', 'link-thumb');
+  const img = document.createElement('img');
+  img.alt = ''; img.loading = 'lazy';
+  img.addEventListener('error', () => { img.remove(); th.classList.add('is-noimg'); });
+  img.src = ytThumbUrl(id);
+  const play = el('span', 'link-play');
+  play.innerHTML = ICONS.play;
+  th.append(img, play);
+  const txt = el('span', 'link-txt');
+  const ttl = el('span', 'link-title', 'YouTube を開く');
+  const sub = el('span', 'link-sub', 'youtube.com');
+  txt.append(ttl, sub);
+  a.append(th, txt);
+  ytInfo(url).then((info) => { // 取れたらタイトルとチャンネル名に差し替える
+    if (!info) return;
+    if (info.title) ttl.textContent = info.title;
+    if (info.author) sub.textContent = info.author;
+  });
+  return a;
+}
+
 let detailItem = null;
 function openDetail(it) {
   detailItem = it;
@@ -3795,15 +3935,7 @@ function openDetail(it) {
   }
   // リンク（YouTube等）→ タップでその場から開く。繰り返しはその日の実効リンク
   const link = !isGcal ? linkForKey(it.ref, it.key) : null;
-  if (link) {
-    const open = el('a', 'cta join-btn');
-    open.href = link;
-    open.target = '_blank';
-    open.rel = 'noopener noreferrer';
-    open.innerHTML = ICONS.link;
-    open.append(el('span', '', 'リンクを開く'));
-    body.append(open);
-  }
+  if (link) body.append(buildLinkCard(link));
   // 会議リンク（アプリの予定 or GoogleのconferenceData）→「会議に参加」＋「共有用にコピー」
   const meetUrl = it.ref.meetUrl || it.ref.hangoutLink || null;
   if (meetUrl) {
@@ -7015,13 +7147,7 @@ function buildMemCard(it, code, canEdit) {
   }
 
   const link = linkForKey(it.ref, it.key);
-  if (link) {
-    const a = el('a', 'mem-link');
-    a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer';
-    a.innerHTML = ICONS.link;
-    a.append(el('span', '', 'リンクを開く'));
-    card.append(a);
-  }
+  if (link) card.append(buildLinkCard(link, 'mem'));
 
   const memo = it.ref.memo;
   if (memo) card.append(el('p', 'mem-memo', memo));
