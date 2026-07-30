@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v87';
+const APP_VERSION = 'v88';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -266,6 +266,7 @@ const ui = {
   sheetType: 'task',
   sheetPhotos: [],          // 編集シートで選択中の写真（思い出カレンダー用）
   memCode: null,            // 「思い出」タブで表示中の思い出カレンダー
+  personEdit: false,        // プロフィール帳を編集モードで開いているか（既定は読むモード）
   memStampOpen: null,       // スタンプ一覧を開いている思い出のid
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
   schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
@@ -2920,12 +2921,19 @@ const PROFILE_FIELDS = [
   { key: 'relation', label: '関係性', ph: '例：大学の友だち・同僚・家族' },
   { key: 'age', label: '年齢', ph: '例：28' },
   { key: 'birthday', label: '誕生日', ph: '例：5/12' },
-  { key: 'personality', label: '性格', ph: '例：明るい・聞き上手', multi: true },
-  { key: 'likes', label: '好きなところ', ph: '一緒にいて落ち着く、話が面白い…', multi: true },
-  { key: 'met', label: '出会ったきっかけ', ph: 'いつ・どこで・どうやって出会った？', multi: true },
-  { key: 'next', label: '次に会ったらしたいこと', ph: '例：あの店に行く・旅行の話をする', multi: true },
-  { key: 'memory', label: '思い出・エピソード', ph: '一緒に過ごした思い出を自由に書けます', multi: true },
+  { key: 'personality', label: '性格', ph: '例：明るい・聞き上手', multi: true, icon: 'sparkles' },
+  { key: 'likes', label: '好きなところ', ph: '一緒にいて落ち着く、話が面白い…', multi: true, icon: 'heart' },
+  { key: 'met', label: '出会ったきっかけ', ph: 'いつ・どこで・どうやって出会った？', multi: true, icon: 'users' },
+  { key: 'next', label: '次に会ったらしたいこと', ph: '例：あの店に行く・旅行の話をする', multi: true, icon: 'party' },
+  { key: 'memory', label: '思い出・エピソード', ph: '一緒に過ごした思い出を自由に書けます', multi: true, icon: 'image' },
 ];
+// 見出しに使う「その人の顔」ぶん（ヘッダーに小さく並べる）と、読み物ぶん（ブロックで見せる）
+const PROFILE_HEAD_KEYS = ['nick', 'relation', 'age', 'birthday'];
+function profileStoryFields() { return PROFILE_FIELDS.filter((f) => !PROFILE_HEAD_KEYS.includes(f.key)); }
+function profileFilled(name) {
+  const p = (db.peopleProfiles || {})[name] || {};
+  return PROFILE_FIELDS.filter((f) => (p[f.key] || '').trim());
+}
 function peopleCountsInPeriod(keys) {
   const set = new Set(keys);
   const counts = {};
@@ -2967,6 +2975,8 @@ function openPerson(name) {
   ui.personName = name;
   ui.prevScreen = ui.screen;
   ui.screen = 'person';
+  // 何か書いてあるときは「読む」から。まだ空っぽなら入力欄をそのまま開く
+  ui.personEdit = profileFilled(name).length === 0;
   renderAll();
 }
 function personProfile(name) {
@@ -2981,6 +2991,9 @@ function renderPerson() {
   const body = $('#person-body');
   body.textContent = '';
   const prof = personProfile(name);
+
+  // プロフィール帳（読むのが目的なので先に置く）
+  body.append(ui.personEdit ? buildProfileEdit(name, prof) : buildProfileView(name, prof));
 
   // 一緒の予定（思い出）
   const evs = personEventList(name);
@@ -3000,11 +3013,61 @@ function renderPerson() {
     }
   }
   body.append(histCard);
+}
 
-  // プロフィール帳
-  const profCard = el('div', 'card');
-  profCard.append(el('p', 'section-label', 'プロフィール帳'));
-  profCard.append(el('p', 'hint', 'この人のことを、思い出せるように書き残しておけます（自分だけのメモ）。'));
+/* 読むためのプロフィール帳。書いてある項目だけを出す（空欄は見せない） */
+function buildProfileView(name, prof) {
+  const card = el('div', 'card prof-card');
+  const val = (k) => (prof[k] || '').trim();
+
+  const hero = el('div', 'prof-hero');
+  const av = el('span', 'prof-av', (name || '?').trim().slice(0, 1));
+  hero.append(av);
+  const heroText = el('div', 'prof-hero-txt');
+  heroText.append(el('p', 'prof-nick', val('nick') || name));
+  if (val('nick')) heroText.append(el('p', 'prof-realname', name));
+  const chips = el('div', 'prof-chips');
+  if (val('relation')) chips.append(el('span', 'prof-chip', val('relation')));
+  if (val('age')) chips.append(el('span', 'prof-chip', `${val('age')}歳`));
+  if (val('birthday')) {
+    const bd = el('span', 'prof-chip');
+    bd.innerHTML = ICONS.cake;
+    bd.append(el('span', '', val('birthday')));
+    chips.append(bd);
+  }
+  if (chips.childElementCount) heroText.append(chips);
+  hero.append(heroText);
+  card.append(hero);
+
+  const blocks = el('div', 'prof-blocks');
+  for (const f of profileStoryFields()) {
+    const v = val(f.key);
+    if (!v) continue;
+    const blk = el('div', 'prof-block');
+    const head = el('p', 'prof-b-head');
+    if (f.icon && ICONS[f.icon]) { const ic = el('span', 'prof-b-ic'); ic.innerHTML = ICONS[f.icon]; head.append(ic); }
+    head.append(el('span', '', f.label));
+    blk.append(head, el('p', 'prof-b-text', v));
+    blocks.append(blk);
+  }
+  if (blocks.childElementCount) card.append(blocks);
+  else card.append(el('p', 'hint', '呼び方などだけ書いてある状態です。「書き足す・直す」から続きを書けます。'));
+
+  const rest = PROFILE_FIELDS.length - profileFilled(name).length;
+  const edit = el('button', 'cta ghost prof-edit-btn');
+  edit.type = 'button';
+  edit.innerHTML = ICONS.pencil;
+  edit.append(el('span', '', rest ? `書き足す・直す（あと${rest}項目）` : '書き直す'));
+  edit.addEventListener('click', () => { ui.personEdit = true; renderPerson(); $('#person-body').scrollIntoView({ block: 'start' }); });
+  card.append(edit);
+  return card;
+}
+
+/* 書くためのプロフィール帳（入力しながら自動保存） */
+function buildProfileEdit(name, prof) {
+  const card = el('div', 'card');
+  card.append(el('p', 'section-label', 'プロフィール帳'));
+  card.append(el('p', 'hint', 'この人のことを、思い出せるように書き残しておけます（自分だけのメモ）。'));
   for (const f of PROFILE_FIELDS) {
     const wrap = el('div', 'prof-field');
     wrap.append(el('label', 'f-label', f.label));
@@ -3022,9 +3085,19 @@ function renderPerson() {
       input._t = setTimeout(save, 400);
     });
     wrap.append(input);
-    profCard.append(wrap);
+    card.append(wrap);
   }
-  body.append(profCard);
+  const done = el('button', 'cta prof-done-btn', '書けた！プロフィール帳を見る');
+  done.type = 'button';
+  done.addEventListener('click', () => {
+    save();
+    if (!profileFilled(name).length) { flashToast('まだ何も書かれていません'); return; }
+    ui.personEdit = false;
+    renderPerson();
+    $('#person-body').scrollIntoView({ block: 'start' });
+  });
+  card.append(done);
+  return card;
 }
 
 /* ----- settings ----- */
