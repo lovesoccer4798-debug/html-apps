@@ -872,7 +872,7 @@ input, select, textarea { font: inherit; color: inherit; }
   box-shadow: 0 6px 16px color-mix(in srgb, var(--tc-accent) 34%, transparent);
 }
 .prof-hero-txt { flex: 1; min-width: 0; }
-.prof-nick { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: .01em; color: var(--tc-ink); word-break: break-word; }
+.prof-nick { margin: 0; padding-right: 66px; font-size: 20px; font-weight: 800; letter-spacing: .01em; color: var(--tc-ink); word-break: break-word; } /* 右上の編集ボタンに文字がかぶらないように */
 .prof-realname { margin: 1px 0 0; font-size: 11.5px; color: var(--tc-ink3); }
 .prof-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .prof-chip {
@@ -894,8 +894,22 @@ input, select, textarea { font: inherit; color: inherit; }
 .prof-b-ic .icon { width: 14px; height: 14px; }
 .prof-b-text { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--tc-ink); white-space: pre-wrap; word-break: break-word; }
 
-.prof-edit-btn { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 14px; }
-.prof-edit-btn .icon { width: 15px; height: 15px; }
+/* 編集は右上に小さく置く（読む画面なので、書くことを促しすぎない） */
+.prof-card { position: relative; }
+.prof-edit-mini {
+  position: absolute; top: 10px; right: 12px; z-index: 1;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--tc-surface) 82%, transparent);
+  border: 1px solid var(--tc-line);
+  font-size: 11.5px; font-weight: 700; color: var(--tc-ink3);
+  backdrop-filter: blur(4px);
+}
+.prof-edit-mini:active { transform: scale(.95); }
+.prof-edit-mini .icon { width: 13px; height: 13px; }
+.prof-rest { margin: 12px 0 0; font-size: 11.5px; color: var(--tc-ink4); text-align: center; }
+.prof-age-note { margin-top: 6px; }
+.prof-input.is-auto { color: var(--tc-ink3); background: var(--tc-surface); border-style: dashed; }
 .prof-done-btn { margin-top: 16px; }
 
 .done-row .dr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
