@@ -33,12 +33,16 @@ const ACCENTS = {
   red:    { name: 'レッド',   light: '#d6453f', dark: '#e0665f', bright: '#f08a86', ink: '#3f0d0b' },
   yellow: { name: 'イエロー', light: '#b8901a', dark: '#d0aa38', bright: '#e8c96a', ink: '#3a2c05' },
   indigo: { name: 'インディゴ', light: '#4a56c0', dark: '#6b76d8', bright: '#8f98e8', ink: '#12163f' },
+  // itemOnly: 明るすぎてアプリ全体のアクセント（白文字のボタン）には向かないので、予定・タスクの色にだけ出す
+  banana: { name: 'バナナ',   light: '#e8bb00', dark: '#f5cf3c', bright: '#ffe273', ink: '#3a2c00', itemOnly: true },
+  sakura: { name: 'パステルピンク', light: '#f094bb', dark: '#f7b4d2', bright: '#ffd2e6', ink: '#4a1226', itemOnly: true },
 };
+const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) => !a.itemOnly));
 
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v88';
+const APP_VERSION = 'v89';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -2919,8 +2923,8 @@ function renderInsights() {
 const PROFILE_FIELDS = [
   { key: 'nick', label: '呼び方（ニックネーム）', ph: '例：むらやん' },
   { key: 'relation', label: '関係性', ph: '例：大学の友だち・同僚・家族' },
+  { key: 'birthday', label: '誕生日', ph: '例：2001/12/18（年を入れると年齢を自動計算）' },
   { key: 'age', label: '年齢', ph: '例：28' },
-  { key: 'birthday', label: '誕生日', ph: '例：5/12' },
   { key: 'personality', label: '性格', ph: '例：明るい・聞き上手', multi: true, icon: 'sparkles' },
   { key: 'likes', label: '好きなところ', ph: '一緒にいて落ち着く、話が面白い…', multi: true, icon: 'heart' },
   { key: 'met', label: '出会ったきっかけ', ph: 'いつ・どこで・どうやって出会った？', multi: true, icon: 'users' },
@@ -2930,6 +2934,35 @@ const PROFILE_FIELDS = [
 // 見出しに使う「その人の顔」ぶん（ヘッダーに小さく並べる）と、読み物ぶん（ブロックで見せる）
 const PROFILE_HEAD_KEYS = ['nick', 'relation', 'age', 'birthday'];
 function profileStoryFields() { return PROFILE_FIELDS.filter((f) => !PROFILE_HEAD_KEYS.includes(f.key)); }
+/* 誕生日に「年」まで入っていれば {y,m,d} を返す（「12/18」だけなら null） */
+function parseBirthdayYMD(str) {
+  const nums = String(str || '').match(/\d+/g);
+  if (!nums || nums.length < 3) return null;
+  const [y, m, d] = nums.slice(0, 3).map((n) => parseInt(n, 10));
+  if (y < 1900 || y > 2200 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return { y, m, d };
+}
+/* 誕生日から今日時点の年齢。年が分からなければ null（＝手入力の年齢を使う） */
+function ageFromBirthday(str) {
+  const b = parseBirthdayYMD(str);
+  if (!b) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.y;
+  if ((now.getMonth() + 1) * 100 + now.getDate() < b.m * 100 + b.d) age -= 1; // 誕生日前ならまだ1つ下
+  return age >= 0 && age < 150 ? age : null;
+}
+function profileAgeText(prof) {
+  const auto = ageFromBirthday(prof.birthday);
+  if (auto !== null) return `${auto}歳`;
+  const raw = (prof.age || '').trim();
+  if (!raw) return '';
+  return /[歳才]/.test(raw) ? raw : `${raw}歳`;
+}
+/* チップに出す誕生日。年つきで入れてくれた場合は「12/18」だけ見せる（年齢は別チップに出るので） */
+function profileBirthdayText(prof) {
+  const b = parseBirthdayYMD(prof.birthday);
+  return b ? `${b.m}/${b.d}` : (prof.birthday || '').trim();
+}
 function profileFilled(name) {
   const p = (db.peopleProfiles || {})[name] || {};
   return PROFILE_FIELDS.filter((f) => (p[f.key] || '').trim());
@@ -3020,6 +3053,14 @@ function buildProfileView(name, prof) {
   const card = el('div', 'card prof-card');
   const val = (k) => (prof[k] || '').trim();
 
+  // 編集は右上に小さく。読む画面なので、書くことを促しすぎない
+  const edit = el('button', 'prof-edit-mini');
+  edit.type = 'button';
+  edit.innerHTML = ICONS.pencil;
+  edit.append(el('span', '', '編集'));
+  edit.addEventListener('click', () => { ui.personEdit = true; renderPerson(); $('#person-body').scrollIntoView({ block: 'start' }); });
+  card.append(edit);
+
   const hero = el('div', 'prof-hero');
   const av = el('span', 'prof-av', (name || '?').trim().slice(0, 1));
   hero.append(av);
@@ -3028,11 +3069,13 @@ function buildProfileView(name, prof) {
   if (val('nick')) heroText.append(el('p', 'prof-realname', name));
   const chips = el('div', 'prof-chips');
   if (val('relation')) chips.append(el('span', 'prof-chip', val('relation')));
-  if (val('age')) chips.append(el('span', 'prof-chip', `${val('age')}歳`));
-  if (val('birthday')) {
+  const ageTxt = profileAgeText(prof);
+  if (ageTxt) chips.append(el('span', 'prof-chip', ageTxt));
+  const bdTxt = profileBirthdayText(prof);
+  if (bdTxt) {
     const bd = el('span', 'prof-chip');
     bd.innerHTML = ICONS.cake;
-    bd.append(el('span', '', val('birthday')));
+    bd.append(el('span', '', bdTxt));
     chips.append(bd);
   }
   if (chips.childElementCount) heroText.append(chips);
@@ -3051,15 +3094,12 @@ function buildProfileView(name, prof) {
     blocks.append(blk);
   }
   if (blocks.childElementCount) card.append(blocks);
-  else card.append(el('p', 'hint', '呼び方などだけ書いてある状態です。「書き足す・直す」から続きを書けます。'));
+  else card.append(el('p', 'hint', '呼び方などだけ書いてある状態です。右上の「編集」から続きを書けます。'));
 
-  const rest = PROFILE_FIELDS.length - profileFilled(name).length;
-  const edit = el('button', 'cta ghost prof-edit-btn');
-  edit.type = 'button';
-  edit.innerHTML = ICONS.pencil;
-  edit.append(el('span', '', rest ? `書き足す・直す（あと${rest}項目）` : '書き直す'));
-  edit.addEventListener('click', () => { ui.personEdit = true; renderPerson(); $('#person-body').scrollIntoView({ block: 'start' }); });
-  card.append(edit);
+  let rest = PROFILE_FIELDS.length - profileFilled(name).length;
+  // 年齢は誕生日から自動で出ているなら「書いていない項目」に数えない
+  if (ageFromBirthday(prof.birthday) !== null && !val('age')) rest -= 1;
+  if (rest > 0) card.append(el('p', 'prof-rest', `まだ書いていない項目が${rest}つあります`));
   return card;
 }
 
@@ -3068,6 +3108,26 @@ function buildProfileEdit(name, prof) {
   const card = el('div', 'card');
   card.append(el('p', 'section-label', 'プロフィール帳'));
   card.append(el('p', 'hint', 'この人のことを、思い出せるように書き残しておけます（自分だけのメモ）。'));
+  const inputs = {};
+  let manualAge = prof.age || ''; // 誕生日から自動計算に切り替わっても、手入力の値は覚えておく
+  const ageNote = el('p', 'hint prof-age-note', '年齢は誕生日から自動で計算しています（誕生日の「年」を消すと手入力に戻ります）。');
+  ageNote.hidden = true;
+  const syncAge = () => {
+    const auto = ageFromBirthday(inputs.birthday ? inputs.birthday.value : '');
+    const ageIn = inputs.age;
+    if (!ageIn) return;
+    if (auto !== null) {
+      ageIn.readOnly = true;
+      ageIn.classList.add('is-auto');
+      ageIn.value = String(auto);
+      ageNote.hidden = false;
+    } else {
+      ageIn.readOnly = false;
+      ageIn.classList.remove('is-auto');
+      if (ageNote.hidden === false) ageIn.value = manualAge; // 自動から手入力に戻ったので元の値へ
+      ageNote.hidden = true;
+    }
+  };
   for (const f of PROFILE_FIELDS) {
     const wrap = el('div', 'prof-field');
     wrap.append(el('label', 'f-label', f.label));
@@ -3079,14 +3139,20 @@ function buildProfileEdit(name, prof) {
     input.value = prof[f.key] || '';
     input.maxLength = f.multi ? 2000 : 60;
     input.addEventListener('input', () => {
+      if (input.readOnly) return; // 自動計算中の年齢は保存しない（古い値が残らないように）
       const v = input.value;
+      if (f.key === 'age') manualAge = v;
       if (v.trim()) personProfile(name)[f.key] = v; else delete personProfile(name)[f.key];
+      if (f.key === 'birthday') syncAge();
       clearTimeout(input._t);
       input._t = setTimeout(save, 400);
     });
+    inputs[f.key] = input;
     wrap.append(input);
+    if (f.key === 'age') wrap.append(ageNote);
     card.append(wrap);
   }
+  syncAge();
   const done = el('button', 'cta prof-done-btn', '書けた！プロフィール帳を見る');
   done.type = 'button';
   done.addEventListener('click', () => {
@@ -3316,7 +3382,7 @@ function renderSettings() {
   });
   const grid = $('#accent-grid');
   grid.textContent = '';
-  for (const [id, a] of Object.entries(ACCENTS)) {
+  for (const [id, a] of Object.entries(APP_ACCENTS)) {
     const sw = el('button', `accent-swatch${db.settings.accent === id ? ' is-active' : ''}`);
     sw.type = 'button';
     sw.style.background = effectiveDark() ? a.dark : a.light;
