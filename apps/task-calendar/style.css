@@ -630,6 +630,35 @@ input, select, textarea { font: inherit; color: inherit; }
   padding: max(14px, env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
   animation: rise .28s cubic-bezier(.22, 1, .36, 1);
 }
+/* 横画面のときだけ隅に現在時刻（iPhoneは横向きだとステータスバーが隠れて時計が見えないため） */
+.focus-clock {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  display: none;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .06em;
+  color: var(--tc-ink3); opacity: .85;
+  pointer-events: none; z-index: 3;
+}
+/* 横画面（スマホ）は高さが足りないので、左に時計盤・右にボタンの横並びにする */
+@media (orientation: landscape) and (max-height: 640px) {
+  .focus-clock { display: block; }
+  .focus {
+    flex-direction: row; align-items: center; justify-content: center; gap: 5vw;
+    padding: max(34px, calc(env(safe-area-inset-top) + 26px)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  }
+  .focus-top {
+    position: absolute; z-index: 3; width: auto; gap: 8px;
+    top: max(6px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
+  }
+  .focus-top-pad { display: none; }
+  .focus-mid { flex: 0 1 auto; min-height: 0; }
+  .ring-wrap { width: min(270px, 40vh); }
+  .focus-time { font-size: 38px; }
+  .focus-plus { margin-top: 10px; }
+  .focus-actions { flex-direction: column; gap: 14px; margin: 0; }
+  .focus-next { position: absolute; bottom: max(8px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(360px, 70vw); }
+}
 .focus-top { display: flex; align-items: center; justify-content: space-between; width: min(440px, 100%); }
 .focus-top-pad { width: 38px; }
 .focus-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -2218,3 +2247,29 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 #focus[data-timer="bloom"] .f-btn { background: #fff; border: none; color: #6c9077; box-shadow: 0 4px 12px rgba(110,150,120,.22); }
 #focus[data-timer="bloom"] .f-main { background: linear-gradient(150deg, #6fcb89, #3f9e5c); color: #fff; box-shadow: 0 10px 24px rgba(75,165,105,.45); }
 #focus[data-timer="bloom"] .focus-plus { background: #fff; border-color: #cfe4d3; color: #6c9077; }
+
+/* 横画面の時計はタイマーデザインごとに色を合わせる */
+#focus[data-timer="neon"] #focus-clock { color: #a487cc; }
+#focus[data-timer="sand"] #focus-clock { color: #a99178; }
+#focus[data-timer="metro"] #focus-clock { color: #8a9bb8; }
+#focus[data-timer="liquid"] #focus-clock { color: #7fa3b8; }
+#focus[data-timer="turntable"] #focus-clock { color: #9a8d78; }
+#focus[data-timer="bloom"] #focus-clock { color: #8aa891; }
+
+/* 横画面（スマホ）ではタイマーデザインも高さに収まるように縮める */
+@media (orientation: landscape) and (max-height: 640px) {
+  .focus-art { width: min(340px, 40vh); }
+  .focus-art .fa-time { font-size: 34px; }
+  .focus-art .fa-task { margin-top: 8px; font-size: 13.5px; }
+  .focus-art .fa-below { margin-top: 8px; gap: 3px; }
+  .fa-sand svg { width: min(200px, 30vh); }
+  .l-cap { width: min(186px, 24vh); height: min(320px, 40vh); }
+  .b-stage { width: min(250px, 38vh); height: min(300px, 36vh); }
+  .b-pot { height: 34px; }
+  .b-rim { bottom: 28px; height: 12px; }
+  .t-wrap { width: min(290px, 48vh); }
+  #focus[data-timer="metro"] .focus-art { width: min(320px, 44vw); } /* 路線図は横幅が必要 */
+  .m-stop { height: 20px; }
+  .m-card { margin-top: 6px; padding: 7px 13px; border-radius: 13px; }
+  .fa-metro .fa-time { font-size: 26px; }
+}

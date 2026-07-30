@@ -38,7 +38,7 @@ const ACCENTS = {
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v85';
+const APP_VERSION = 'v86';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -4154,6 +4154,7 @@ function startTimer(it) {
 function startTick() {
   clearInterval(tickId);
   tickId = setInterval(() => {
+    updateFocusClock(); // 一時停止中でも隅の時計だけは進める
     const r = db.running;
     if (!r || r.paused || r.finished) return;
     if (r.endAt - Date.now() <= 0) finishTimer();
@@ -4344,6 +4345,17 @@ function updateFocusArt(progress, label) {
   }
 }
 
+// 横画面（iPhoneはステータスバーが隠れる）用に、フォーカス画面の隅へ現在時刻を出す
+function updateFocusClock() {
+  const focus = $('#focus');
+  if (!focus || focus.hidden) return;
+  const el = $('#focus-clock');
+  if (!el) return;
+  const d = new Date();
+  const t = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (el.textContent !== t) el.textContent = t;
+}
+
 function updateTimerUI() {
   const r = db.running;
   if (!r) return;
@@ -4408,6 +4420,7 @@ function openFocus() {
   buildFocusArt();
   $('#focus').hidden = false;
   document.body.style.overflow = 'hidden';
+  updateFocusClock();
 
   // 「つぎ」= 今日の未完了・時間つきタスクのうち実行中でないもの
   const next = itemsFor(todayKey()).find((i) => i.kind === 'task' && !i.done && i.minutes && i.ref.id !== r.taskId);
