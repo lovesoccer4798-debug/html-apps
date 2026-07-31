@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v91';
+const APP_VERSION = 'v92';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -313,6 +313,8 @@ function jpHolidayBase(d) {
     || (m === 3 && day === shunbun) || (m === 9 && day === shubun);
 }
 function isJpHoliday(d) {
+  // 取得ずみ（holidays-jp）の範囲は本物のデータを正とする。臨時の祝日や法改正にも追従できる
+  if (holidayCovered(d)) return Boolean(holidayName(d));
   if (jpHolidayBase(d)) return true;
   return d.getDay() === 1 && jpHolidayBase(addDays(d, -1)); // 振替休日
 }
@@ -1439,6 +1441,10 @@ function renderGrid(body) {
     h.type = 'button';
     h.append(el('span', `tg-wd${dayColorClass(d)}`, WD_JA[d.getDay()]));
     h.append(el('span', `tg-num mono${dayColorClass(d)}`, String(d.getDate())));
+    const wd = wxFor(toKey(d));
+    if (wd) { const w = el('span', 'tg-wx', wd.look.e); w.title = `${wd.look.t} ${wd.hi}°/${wd.lo}°`; h.append(w); }
+    const hn = holidayName(d);
+    if (hn && ui.gridDays === 1) h.append(el('span', 'tg-hd', hn));
     h.addEventListener('click', () => { ui.view = 'day'; ui.cursor = d; renderAll(); });
     head.append(h);
   }
@@ -2084,8 +2090,25 @@ function tgAddDraft(col, key, y) {
 
 /* ----- day（タイムライン） ----- */
 
+/* 「日」ビューの先頭に出す、その日の祝日名と天気。どちらも無ければ何も出さない */
+function buildDayInfo(d) {
+  const hn = holidayName(d);
+  const wt = wxText(toKey(d));
+  if (!hn && !wt) return null;
+  const bar = el('div', 'dayinfo');
+  if (hn) bar.append(el('span', 'dayinfo-hd', hn));
+  if (wt) {
+    const w = el('span', 'dayinfo-wx', wt);
+    if (db.weather && db.weather.name) w.title = `${db.weather.name}の天気`;
+    bar.append(w);
+  }
+  return bar;
+}
+
 function renderDay(body) {
   const key = toKey(ui.cursor);
+  const info = buildDayInfo(ui.cursor);
+  if (info) body.append(info);
   if (db.running) body.append(buildRunCard());
 
   // この日の記念日をお祝い表示（あれば）
@@ -3331,7 +3354,7 @@ function renderPeopleCard() {
 let settingsAccordionDone = false;
 const SETTINGS_CATS = [
   ['見た目・表示', ['テーマ', 'テーマ（配色）', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
-  ['カレンダー', ['マイカレンダー', 'よく会う人', 'スケジュール調整の定型文']],
+  ['カレンダー', ['マイカレンダー', 'よく会う人', '天気', 'スケジュール調整の定型文']],
   ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知']],
   ['連携・同期', ['アカウントと同期', '共有カレンダー', '思い出シェアカレンダー', 'Googleカレンダー連携', 'Notion連携']],
   ['アカウント・データ', ['あなたの名前', 'バックアップ', 'データ']],
@@ -3387,6 +3410,7 @@ function renderSettings() {
   renderSyncCard();
   renderSharedCard();
   renderMemCalCard();
+  renderWeatherCard();
   renderGcalCard();
   renderColorRuleCard();
   renderNotionCard();
@@ -7666,6 +7690,212 @@ function renderPeriodNote(container, period, periodLabel, offset = 0) {
   container.append(card);
 }
 
+
+/* ========== v92: 天気（Open-Meteo）と祝日（holidays-jp） ==========
+   どちらも APIキー不要・登録不要・無料。CORSも許可されているので中継サーバーは要らない。
+   取れなかったときは今までどおりの表示に戻るだけ（オフラインでも壊れない）。 */
+
+/* ----- 天気（Open-Meteo） ----- */
+
+const WX_PLACES = [
+  { id: 'sapporo', name: '札幌', lat: 43.06, lon: 141.35 },
+  { id: 'sendai', name: '仙台', lat: 38.27, lon: 140.87 },
+  { id: 'niigata', name: '新潟', lat: 37.90, lon: 139.02 },
+  { id: 'kanazawa', name: '金沢', lat: 36.56, lon: 136.66 },
+  { id: 'tokyo', name: '東京', lat: 35.68, lon: 139.76 },
+  { id: 'yokohama', name: '横浜', lat: 35.44, lon: 139.64 },
+  { id: 'shizuoka', name: '静岡', lat: 34.98, lon: 138.38 },
+  { id: 'nagoya', name: '名古屋', lat: 35.18, lon: 136.91 },
+  { id: 'kyoto', name: '京都', lat: 35.01, lon: 135.77 },
+  { id: 'osaka', name: '大阪', lat: 34.69, lon: 135.50 },
+  { id: 'kobe', name: '神戸', lat: 34.69, lon: 135.20 },
+  { id: 'hiroshima', name: '広島', lat: 34.39, lon: 132.46 },
+  { id: 'takamatsu', name: '高松', lat: 34.34, lon: 134.05 },
+  { id: 'fukuoka', name: '福岡', lat: 33.59, lon: 130.40 },
+  { id: 'kagoshima', name: '鹿児島', lat: 31.60, lon: 130.56 },
+  { id: 'naha', name: '那覇', lat: 26.21, lon: 127.68 },
+];
+const WX_TTL = 3 * 60 * 60 * 1000; // 3時間ごとに取り直す（無料枠にやさしく）
+let wxFetching = false;
+
+function wxCfg() { return db.settings.weather || (db.settings.weather = { on: false, place: 'tokyo' }); }
+function wxPlace() {
+  const c = wxCfg();
+  if (c.place === 'here' && typeof c.lat === 'number') return { key: `here:${c.lat.toFixed(2)},${c.lon.toFixed(2)}`, name: c.name || '現在地', lat: c.lat, lon: c.lon };
+  const p = WX_PLACES.find((x) => x.id === c.place) || WX_PLACES.find((x) => x.id === 'tokyo');
+  return { key: p.id, name: p.name, lat: p.lat, lon: p.lon };
+}
+/* WMOの天気コード → 絵文字・ことば・Notionの「天気」（晴れ／くもり／雨／雪の4択） */
+function wxLook(code) {
+  const c = Number(code);
+  if (c === 0) return { e: '☀️', t: '晴れ', n: '晴れ' };
+  if (c === 1) return { e: '🌤', t: 'おおむね晴れ', n: '晴れ' };
+  if (c === 2) return { e: '⛅️', t: '晴れときどきくもり', n: '晴れ' };
+  if (c === 3) return { e: '☁️', t: 'くもり', n: 'くもり' };
+  if (c === 45 || c === 48) return { e: '🌫', t: 'きり', n: 'くもり' };
+  if (c >= 51 && c <= 57) return { e: '🌦', t: '霧雨', n: '雨' };
+  if (c >= 61 && c <= 67) return { e: '🌧', t: '雨', n: '雨' };
+  if (c >= 71 && c <= 77) return { e: '❄️', t: '雪', n: '雪' };
+  if (c >= 80 && c <= 82) return { e: '🌦', t: 'にわか雨', n: '雨' };
+  if (c === 85 || c === 86) return { e: '🌨', t: 'にわか雪', n: '雪' };
+  if (c >= 95) return { e: '⛈', t: '雷雨', n: '雨' };
+  return { e: '🌡', t: '—', n: null };
+}
+function wxFor(key) {
+  if (!wxCfg().on) return null;
+  const w = db.weather;
+  if (!w || !w.daily) return null;
+  const d = w.daily[key];
+  return d ? { ...d, look: wxLook(d.c) } : null;
+}
+function wxText(key) { // 「☀️ 晴れ 32°/24° ☔️20%」
+  const d = wxFor(key);
+  if (!d) return '';
+  const pop = typeof d.pop === 'number' && d.pop >= 20 ? ` ☔️${d.pop}%` : '';
+  return `${d.look.e} ${d.look.t} ${d.hi}°/${d.lo}°${pop}`;
+}
+async function wxFetch(force) {
+  const c = wxCfg();
+  if (!c.on || wxFetching || !navigator.onLine) return;
+  const p = wxPlace();
+  const cache = db.weather;
+  if (!force && cache && cache.place === p.key && Date.now() - cache.at < WX_TTL) return;
+  wxFetching = true;
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}`
+      + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
+      + '&timezone=Asia%2FTokyo&forecast_days=10&past_days=3';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const d = await res.json();
+    const times = (d.daily && d.daily.time) || [];
+    if (!times.length) throw new Error('no data');
+    const daily = {};
+    times.forEach((k, i) => {
+      daily[k] = {
+        c: d.daily.weather_code[i],
+        hi: Math.round(d.daily.temperature_2m_max[i]),
+        lo: Math.round(d.daily.temperature_2m_min[i]),
+        pop: d.daily.precipitation_probability_max[i],
+      };
+    });
+    db.weather = { place: p.key, name: p.name, at: Date.now(), daily };
+    persistLocal();
+    renderAll();
+  } catch (err) {
+    console.warn('weather fetch failed', err); // 取れなくても今までどおり動く
+  } finally {
+    wxFetching = false;
+  }
+}
+function wxUseHere() { // 現在地から緯度経度を1回だけもらう（保存はこの端末のみ）
+  if (!navigator.geolocation) { flashToast('この端末では現在地を使えません'); return; }
+  flashToast('現在地を確認しています…');
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const c = wxCfg();
+    c.place = 'here';
+    c.lat = Math.round(pos.coords.latitude * 100) / 100; // 細かすぎる位置は持たない
+    c.lon = Math.round(pos.coords.longitude * 100) / 100;
+    c.name = '現在地';
+    c.on = true;
+    persistLocal();
+    wxFetch(true);
+    renderAll();
+  }, () => { flashToast('現在地を取得できませんでした（設定から地点を選んでね）'); }, { timeout: 8000, maximumAge: 30 * 60 * 1000 });
+}
+
+/* ----- 祝日（holidays-jp・APIキー不要の静的JSON） ----- */
+
+const HD_TTL = 30 * 24 * 60 * 60 * 1000; // 祝日はめったに変わらないので30日に1回でいい
+let hdFetching = false;
+function holidayName(d) {
+  const h = db.holidays;
+  if (!h || !h.map) return null;
+  const k = toKey(d);
+  if (k < h.min || k > h.max) return null; // 取得できている範囲の外は分からない
+  return h.map[k] || null;
+}
+function holidayCovered(d) {
+  const h = db.holidays;
+  if (!h || !h.map) return false;
+  const k = toKey(d);
+  return k >= h.min && k <= h.max;
+}
+async function hdFetch() {
+  if (hdFetching || !navigator.onLine) return;
+  const h = db.holidays;
+  if (h && h.at && Date.now() - h.at < HD_TTL) return;
+  hdFetching = true;
+  try {
+    const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+    if (!res.ok) throw new Error(String(res.status));
+    const map = await res.json();
+    const keys = Object.keys(map).filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+    if (!keys.length) throw new Error('no data');
+    db.holidays = { at: Date.now(), min: keys[0], max: keys[keys.length - 1], map };
+    persistLocal();
+    renderAll();
+  } catch (err) {
+    console.warn('holidays fetch failed', err); // 取れなければ従来の計算のまま
+  } finally {
+    hdFetching = false;
+  }
+}
+
+/* ----- 設定カード ----- */
+
+function renderWeatherCard() {
+  const wrap = $('#weather-body');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const c = wxCfg();
+
+  const tg = el('label', 'sync-toggle');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = !!c.on;
+  cb.addEventListener('change', () => {
+    c.on = cb.checked;
+    persistLocal();
+    if (c.on) wxFetch(true); else renderAll();
+    renderWeatherCard();
+  });
+  tg.append(cb, ' 天気を表示する');
+  wrap.append(tg);
+
+  if (!c.on) {
+    wrap.append(el('p', 'hint', 'オンにすると「日」と「時間」の画面に天気が出ます。Open-Meteo（APIキー不要・無料）から3時間おきに取得します。'));
+    return;
+  }
+
+  wrap.append(el('label', 'f-label', '地点'));
+  const sel = document.createElement('select');
+  for (const p of WX_PLACES) {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name;
+    sel.append(o);
+  }
+  if (c.place === 'here') {
+    const o = document.createElement('option');
+    o.value = 'here'; o.textContent = `現在地（${c.lat}, ${c.lon}）`;
+    sel.append(o);
+  }
+  sel.value = c.place || 'tokyo';
+  sel.addEventListener('change', () => { c.place = sel.value; persistLocal(); wxFetch(true); });
+  wrap.append(sel);
+
+  const here = el('button', 'cta ghost', '現在地から設定する');
+  here.type = 'button';
+  here.addEventListener('click', wxUseHere);
+  wrap.append(here);
+
+  const now = wxText(todayKey());
+  wrap.append(el('p', 'hint', now
+    ? `今日の${(db.weather || {}).name || ''}：${now}（${new Date(db.weather.at).toLocaleString('ja-JP')} 更新）`
+    : '天気はまだ取得できていません（オフラインのときは前回の内容を使います）。'));
+  wrap.append(el('p', 'hint', '位置情報はこの端末にだけ保存され、どこにも送りません（天気の取得に緯度経度だけを使います）。'));
+}
+
 /* ========== v15: Notion連携（Cloudflare Worker中継で日々の記録をNotionへ） ========== */
 
 let notionPushTimer = null;
@@ -7702,6 +7932,9 @@ function notionDayPayload(key) {
     wake: rec.wake || null,
     // その日にやったタスク名（設定ONのときだけ。空の日も送って前日の内容が残らないようにする）
     tasks: n.tasks ? itemsFor(key).filter((i) => i.kind === 'task' && i.done).map((i) => `・${i.title}`).join('\n') : undefined,
+    // 天気（設定ONのときだけ）。Notion側は「晴れ／くもり／雨／雪」のセレクトなので、その4つに寄せる。
+    // データが無い日は送らない＝手で選んだ天気を空で上書きしない
+    weather: (n.weather && wxCfg().on && ((wxFor(key) || {}).look || {}).n) || undefined,
   };
 }
 
@@ -7772,6 +8005,17 @@ function renderNotionCard() {
   wrap.append(tg2);
   wrap.append(el('p', 'hint', 'オンにすると、完了したタスクのタイトルだけを箇条書きでNotionの「タスク」プロパティに入れます。使う前に、Notionのデータベースに「タスク」という名前のテキスト（リッチテキスト）プロパティを追加して、Workerを最新の notion-worker.js に貼り替えてください。'));
 
+  const tg3 = el('label', 'sync-toggle');
+  const cb3 = document.createElement('input');
+  cb3.type = 'checkbox';
+  cb3.checked = !!n.weather;
+  cb3.addEventListener('change', () => { n.weather = cb3.checked; persistLocal(); renderNotionCard(); });
+  tg3.append(cb3, ' その日の天気も送る');
+  wrap.append(tg3);
+  wrap.append(el('p', 'hint', wxCfg().on
+    ? 'Notionの「天気」（晴れ／くもり／雨／雪のセレクト）に自動で入ります。手で選んだ内容は上書きされます。'
+    : '※ 先に「天気」の設定をオンにしてください（オフのあいだは送られません）。Notionの「天気」（晴れ／くもり／雨／雪のセレクト）に自動で入ります。'));
+
   const btn = el('button', 'cta', '今日の記録をNotionに送る');
   btn.type = 'button';
   btn.disabled = !notionReady();
@@ -7780,6 +8024,10 @@ function renderNotionCard() {
 
   if (n.lastPushAt) wrap.append(el('p', 'hint', `最後に送信: ${new Date(n.lastPushAt).toLocaleString('ja-JP')}`));
 }
+
+// 天気と祝日は起動の少しあとに取りにいく（初回描画を邪魔しない）
+setTimeout(() => { hdFetch(); wxFetch(); }, 1500);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { hdFetch(); wxFetch(); } });
 
 /* ========== PWA ========== */
 

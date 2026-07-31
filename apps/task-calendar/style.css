@@ -2490,3 +2490,23 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .link-sub { font-size: 11px; color: var(--tc-ink3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 天気・祝日 ---------- */
+
+.dayinfo {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 12px; padding: 9px 13px; border-radius: 14px;
+  background: var(--tc-surface); border: 1px solid var(--tc-line);
+}
+.dayinfo-hd {
+  padding: 2px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--tc-sun) 16%, transparent);
+  color: var(--tc-sun); font-size: 11.5px; font-weight: 800;
+}
+.dayinfo-wx { font-size: 13px; font-weight: 600; color: var(--tc-ink2); }
+.tg-wx { display: block; font-size: 12px; line-height: 1.1; margin-top: 1px; }
+.tg-hd { display: block; font-size: 9.5px; font-weight: 700; color: var(--tc-sun); margin-top: 1px; }
+#weather-body select {
+  width: 100%; font: inherit; font-size: 16px; color: var(--tc-ink);
+  background: var(--tc-surface2); border: 1.5px solid var(--tc-line); border-radius: 12px; padding: 10px 12px; margin-top: 4px;
+}

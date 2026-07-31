@@ -71,7 +71,7 @@ export default {
 
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: 'bad-json' }, 400, cors); }
-    const { dbId, date, title, diary, memo, doneCount, bed, wake, tasks } = body || {};
+    const { dbId, date, title, diary, memo, doneCount, bed, wake, tasks, weather } = body || {};
     if (!dbId || !date) return json({ error: 'missing dbId/date' }, 400, cors);
 
     const headers = {
@@ -91,6 +91,9 @@ export default {
     // Notion側に「タスク」というテキストプロパティが無いと書き込みでエラーになるので、
     // 送られてきたときだけ設定する）
     if (tasks != null) props['タスク'] = { rich_text: richText(tasks) };
+    // 天気（アプリ側の設定がONのときだけ）。Notion側は「晴れ／くもり／雨／雪」のセレクト。
+    // 空文字のときは選択を外す（前日の天気が残らないように）
+    if (weather != null) props['天気'] = { select: weather ? { name: String(weather) } : null };
     if (bed != null) props['就寝'] = { rich_text: [{ text: { content: String(bed) } }] };
     if (wake != null) props['起床'] = { rich_text: [{ text: { content: String(wake) } }] };
 
