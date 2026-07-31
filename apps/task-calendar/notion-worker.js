@@ -10,7 +10,7 @@
  * 3. Worker の Settings → Variables and Secrets（既存の3つに加えて、Google用に2つ追加）:
  *      NOTION_TOKEN        … Notion のトークン（ntn_xxx）〔既存〕
  *      TC_SHARED_SECRET    … アプリと合わせる合言葉〔既存〕
- *      ALLOW_ORIGIN        … https://lovesoccer4798-debug.github.io 〔既存〕
+ *      ALLOW_ORIGIN        … https://taskare.pages.dev 〔既存・アプリを開くURL〕
  *      GOOGLE_CLIENT_ID     … Google Cloud Console の OAuthクライアントID〔新規・Secret〕
  *      GOOGLE_CLIENT_SECRET … 同クライアントの「クライアント シークレット」〔新規・Secret〕
  *        （https://console.cloud.google.com/apis/credentials → 該当のOAuthクライアントを開くと表示）
@@ -19,7 +19,13 @@
  *
  * ─ Notion側の準備（初回のみ・設定済みならそのまま）─
  * - https://www.notion.so/my-integrations でトークン取得、DBに接続、プロパティ:
- *      名前（Title）／日付（Date）／日記（Text）／メモ（Text）／できたこと（Number）／就寝（Text）／起床（Text）
+ *      名前（Title）／日付（Date）／日記（Text）／メモ（Text）／できたこと（Number）
+ *      ／就寝（Text）／起床（Text）
+ *   ＋ アプリの設定でONにしたときだけ使う任意のプロパティ:
+ *      タスク（Text）        … その日に完了したタスク名の箇条書き
+ *      天気（Select）        … 晴れ／くもり／雨／雪 のいずれか
+ *   ※ アプリ側でOFFのあいだは送られないので、プロパティが無くても動く。
+ *     ONにしたのにプロパティが無いと、Notionが検証エラーを返してその日の記録ごと失敗する。
  */
 
 const NOTION_VERSION = '2022-06-28';
