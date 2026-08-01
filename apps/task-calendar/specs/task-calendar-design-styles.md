@@ -47,14 +47,22 @@ Cloud Candy と Aurora Orbit は `body::before` に画面いっぱいのグラ�
 - スクロールで下に潜った文字は、ぼかしと薄い色（`--tc-bg` 42%）で読めなくなる
 - **`backdrop-filter` は `position: fixed` の子要素の基準位置になる**ので、「上のバーだけ固定」モードでは `.appbar` ではなく、実際に `fixed` になっている `.appbar-top` の側に掛ける
 
-## ステータスバーの帯の色（v94）
+## ステータスバーの帯の色（v94→v95で修正）
 
-iPhoneのホーム画面アプリ（standalone）では、ステータスバーの帯が `<meta name="theme-color">` の色で塗られる。
+### 正しい仕組み
 
-以前は `media="(prefers-color-scheme: light/dark)"` で2つ置いていたため、**端末の設定**で色が決まっていた。アプリ側のテーマを手動でダークにしていても、端末がライトなら帯だけ明るいまま浮く（特にタイマー画面で目立つ）。
+iPhoneのホーム画面アプリ（standalone・`apple-mobile-web-app-status-bar-style` は既定）では、**`<meta name="theme-color">` は使われない**。帯は**ページの canvas（`<html>` の背景色。無ければ `<body>` から伝播した色）**で塗られる。
 
-対応: meta を1つにして、JSで塗り替える（`applyThemeColor`）。
+v94で meta を動的にしたが、iOSでは効かなかった。**v95が本当の対応**。
 
-- ふだんは「いま表示している画面の一番上の色」＝ `--tc-bg`。ただしグラデーションのテーマは開始色を別に持つ（`PALETTE_TOP`）
-- タイマー（フォーカス）画面を開いているあいだは、そのデザインの上端の色（`TIMER_TOP`）
-- テーマ・配色・端末の設定が変わったときと、タイマーを閉じたときに戻す
+### 症状の切り分け
+
+`body { background: var(--tc-bg) }` があるので、ふつうのテーマは body の色が canvas に伝播して馴染む。ところが **Cloud Candy と Aurora Orbit は `body { background: transparent }`**（グラデーションを `body::before` で描くため）にしていたので、canvas に色が無く**白いまま**になっていた。これが「テーマによって浮いたり浮かなかったりする」の正体。
+
+### 対応
+
+1. `html { background: var(--tc-bg); }` を入れて、**どのテーマでも canvas に色がある**状態にする（`--tc-bg` はどのテーマでも画面いちばん上の色＝グラデーションの開始色と一致している）
+2. タイマー（フォーカス）画面のあいだは、`applyThemeColor()` が `<html>` の背景色をそのデザインの上端の色（`TIMER_TOP`）で**インライン上書き**する。閉じたらインラインを外してCSSに戻す
+3. `theme-color` の meta も同じ色に更新し続ける（Android/Chrome では有効なため）
+
+タイマーを開いている最中にテーマや配色を変えても帯が戻らないよう、`applyThemeColor()` は「フォーカス画面が開いているか」を見てから色を決める。

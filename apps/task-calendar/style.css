@@ -5,7 +5,10 @@
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+/* iPhoneのホーム画面アプリでは、ステータスバーの帯がこの「canvas」の色で塗られる。
+   Cloud Candy / Aurora は body を transparent にしているため、ここで色を持たないと
+   帯だけ白いまま浮いてしまう（--tc-bg はどのテーマでも画面いちばん上の色） */
+html { -webkit-text-size-adjust: 100%; background: var(--tc-bg); }
 
 body {
   font-family: var(--tc-font);
