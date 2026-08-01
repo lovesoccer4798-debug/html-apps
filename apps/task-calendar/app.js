@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v93';
+const APP_VERSION = 'v94';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -574,6 +574,7 @@ function applyTheme() {
   else document.documentElement.dataset.theme = t;
   applyAccent();
   updateThemeToggle();
+  applyThemeColor();
 }
 // ヘッダーのテーマ切替（どの画面からでも 自動→ライト→ダーク を巡回）
 const THEME_CYCLE = ['auto', 'light', 'dark'];
@@ -645,6 +646,30 @@ function applyPalette() {
   if (!p || p === 'default') delete document.documentElement.dataset.palette;
   else document.documentElement.dataset.palette = p;
   applyAccent(); // 既定アクセント時はテーマ側の色を活かす（上書きを外す）
+  applyThemeColor();
+}
+
+/* iPhoneのPWAでは、ステータスバーの帯がこの色で塗られる。画面の一番上の色と合わせる。
+   背景にグラデーションを敷くテーマは --tc-bg と上端の色が違うので、そのぶんだけ別に持つ。 */
+const PALETTE_TOP = {
+  candy: { light: '#fdf4ff', dark: '#241d2e' },
+  aurora: { light: '#0b0f2b', dark: '#0b0f2b' },
+};
+// タイマー各デザインの、画面いちばん上あたりの色
+const TIMER_TOP = {
+  neon: '#1b0f2b', sand: '#fbf6ee', metro: '#f3f6fc', liquid: '#f2fbff', turntable: '#25221e', bloom: '#f6fbf3',
+};
+function screenTopColor() {
+  const pal = db.settings.palette;
+  const dark = effectiveDark();
+  if (pal && PALETTE_TOP[pal]) return PALETTE_TOP[pal][dark ? 'dark' : 'light'];
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--tc-bg').trim();
+  return v || (dark ? '#1e252d' : '#edf1f5');
+}
+function applyThemeColor(override) {
+  const m = document.getElementById('tc-theme-color');
+  if (!m) return;
+  m.setAttribute('content', override || screenTopColor());
 }
 function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手なズームを止める
   const vp = document.getElementById('tc-viewport');
@@ -654,7 +679,7 @@ function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手
     ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
     : 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); applyThemeColor(); });
 
 /* ========== undo toast ========== */
 
@@ -3724,6 +3749,7 @@ function renderTimerStyleList() {
     if (t.id === cur) { const chk = el('span', 'icon-row-check'); chk.innerHTML = ICONS.check; row.append(chk); }
     row.addEventListener('click', () => {
       db.settings.timerStyle = t.id || undefined;
+      if (!$('#focus').hidden) applyThemeColor(TIMER_TOP[t.id || '']);
       const art = $('#focus-art');
       if (art) { art.dataset.built = ''; art.innerHTML = ''; }
       const rail = document.getElementById('fa-metro-rail');
@@ -4795,6 +4821,7 @@ function openFocus() {
   $('#focus').hidden = false;
   document.body.style.overflow = 'hidden';
   updateFocusClock();
+  applyThemeColor(TIMER_TOP[timerStyleId()]); // iPhoneのステータスバーの帯もタイマーの色に合わせる
 
   // 「つぎ」= 今日の未完了・時間つきタスクのうち実行中でないもの
   const next = itemsFor(todayKey()).find((i) => i.kind === 'task' && !i.done && i.minutes && i.ref.id !== r.taskId);
@@ -4808,6 +4835,7 @@ function openFocus() {
 function closeFocus() {
   $('#focus').hidden = true;
   document.body.style.overflow = '';
+  applyThemeColor();
 }
 
 $('#focus-close').addEventListener('click', () => { closeFocus(); renderAll(); }); // タイマーは走り続ける

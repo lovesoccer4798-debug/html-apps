@@ -2559,3 +2559,28 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .tidy-tag.tag-done { border-color: var(--tc-accent-line); color: var(--tc-accent); }
 .tidy-actions { display: flex; flex-direction: column; margin-top: 6px; }
 .tidy-actions .cta:disabled { opacity: .45; }
+
+/* ---------- 背景がグラデーションのテーマでの固定ヘッダー ----------
+   Cloud Candy / Aurora Orbit は body の裏にグラデーションを敷いている。
+   固定ヘッダーとフィルタ行を不透明な単色（--tc-bg）で塗ると、下へ行くほどグラデと色がずれて
+   「中途半端な枠」に見えてしまう。透明にして背後のグラデをそのまま見せ、
+   スクロールで下に文字が潜り込むぶんだけ、すりガラス（backdrop-filter）で隠す。 */
+:root[data-palette="candy"] #scr-cal .appbar,
+:root[data-palette="aurora"] #scr-cal .appbar,
+:root[data-palette="candy"] .cal-chips,
+:root[data-palette="aurora"] .cal-chips { background: transparent; }
+/* すりガラスは「実際に固定されている要素」にだけ掛ける。
+   backdrop-filter は position:fixed の子要素の基準位置になってしまうので、
+   「上のバーだけ」固定のときは .appbar ではなく .appbar-top に掛ける */
+:root[data-palette="candy"][data-sticky="on"] #scr-cal .appbar,
+:root[data-palette="aurora"][data-sticky="on"] #scr-cal .appbar,
+:root[data-palette="candy"][data-sticky="on"] .cal-chips,
+:root[data-palette="aurora"][data-sticky="on"] .cal-chips,
+:root[data-palette="candy"][data-sticky="min"] #scr-cal .appbar-top,
+:root[data-palette="aurora"][data-sticky="min"] #scr-cal .appbar-top {
+  /* 薄く色を乗せるのは、スクロールで下に潜った文字が透けすぎないため。
+     上端はグラデの開始色＝--tc-bg なので、止まっているときはほぼ見えない */
+  background: color-mix(in srgb, var(--tc-bg) 42%, transparent);
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+}
