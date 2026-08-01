@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v94';
+const APP_VERSION = 'v95';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -667,9 +667,15 @@ function screenTopColor() {
   return v || (dark ? '#1e252d' : '#edf1f5');
 }
 function applyThemeColor(override) {
+  const focus = document.getElementById('focus');
+  const timerOpen = Boolean(focus && !focus.hidden); // 開いている最中にテーマを変えても戻らないように
+  const pick = override || (timerOpen ? (TIMER_TOP[timerStyleId()] || screenTopColor()) : null);
+  const color = pick || screenTopColor();
   const m = document.getElementById('tc-theme-color');
-  if (!m) return;
-  m.setAttribute('content', override || screenTopColor());
+  if (m) m.setAttribute('content', color); // Android/Chrome向け
+  // iPhoneのホーム画面アプリはこの meta を見ない。ステータスバーの帯は <html> の背景色（canvas）で
+  // 塗られるので、ふだんはCSS（var(--tc-bg)）に任せ、タイマー画面のあいだだけ上書きする
+  document.documentElement.style.backgroundColor = pick || '';
 }
 function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手なズームを止める
   const vp = document.getElementById('tc-viewport');
