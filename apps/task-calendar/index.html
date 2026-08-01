@@ -8,18 +8,18 @@
 <meta name="theme-color" content="#edf1f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1e252d" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=92" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=92">
-<link rel="icon" href="icons/icon-192.png?v=92" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=92">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=93" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=93">
+<link rel="icon" href="icons/icon-192.png?v=93" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=93">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=92">
-<link rel="stylesheet" href="style.css?v=92">
+<link rel="stylesheet" href="tokens.css?v=93">
+<link rel="stylesheet" href="style.css?v=93">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -70,6 +70,7 @@
       <div class="date-row">
         <h1><button class="date-title" id="cal-title" aria-label="年月を選ぶ"><span id="cal-title-text"></span><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></h1>
         <div class="date-nav">
+          <button class="pill-btn tidy-btn" id="tidy-open" hidden>整理</button>
           <button class="iconbtn" id="nav-prev" aria-label="前へ"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
           <button class="pill-btn" id="nav-today">今日</button>
           <button class="iconbtn" id="nav-next" aria-label="次へ"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -207,8 +208,13 @@
           <button data-zoom="free">自由（ピンチで拡大）</button>
         </div>
         <p class="hint">「固定」にすると、iPhoneでうっかり画面が拡大されて表示がブレるのを防げます（入力欄を開いたときの勝手なズームも止まります）。文字を大きくしたいときは上の「文字サイズ」をどうぞ。</p>
-        <label class="vis-row" style="margin-top:10px"><input type="checkbox" id="sticky-toggle"> カレンダー上部（日付・タブ・フィルタ）を固定する</label>
-        <p class="hint">オンにすると、スクロールしても日付・ビュータブ・フィルタが上部に固定されます。オフにすると全部いっしょにスクロールします。お好みでどうぞ。</p>
+        <p class="f-label" style="margin-top:12px">カレンダー上部の固定</p>
+        <div class="theme-seg" id="sticky-seg">
+          <button data-sticky="on">全部</button>
+          <button data-sticky="min">上のバーだけ</button>
+          <button data-sticky="off">固定しない</button>
+        </div>
+        <p class="hint"><strong>全部</strong>＝日付・ビュータブ・フィルタまで上に固定。<strong>上のバーだけ</strong>＝検索・テーマ・設定などが並ぶいちばん上の1行だけを残し、日付やタブはスクロールで隠れます（画面を広く使えます）。<strong>固定しない</strong>＝全部いっしょにスクロールします。</p>
         <label class="vis-row" style="margin-top:10px"><input type="checkbox" id="chip-center-toggle"> 「月」カレンダーの予定・タスクの文字を中央ぞろえ</label>
         <p class="hint">オフだと左ぞろえ（既定）。オンにすると、月表示の予定・タスクのラベルが中央ぞろえになります。</p>
       </div>
@@ -494,6 +500,18 @@
         </div>
       </div>
       <button type="button" class="opt-row" id="opt-month"><span class="opt-txt">「月」カレンダーにも表示する<span class="opt-sub">オフでも一覧・日/週などには残ります</span></span><span class="opt-toggle"></span></button>
+      <div id="f-gcal-sync" hidden>
+        <label class="f-label">Googleカレンダー連携</label>
+        <button type="button" class="opt-row" id="opt-push"><span class="opt-txt">これをGoogleカレンダーにも登録する<span class="opt-sub">くりかえしの予定・タスクは対象外です</span></span><span class="opt-toggle"></span></button>
+        <div id="f-gcal-event-only" hidden>
+          <button type="button" class="opt-row" id="opt-meet"><span class="opt-txt">Google Meet のリンクを自動発行</span><span class="opt-toggle"></span></button>
+          <label class="f-label" for="f-invite">招待するメール（任意・「、」区切り）</label>
+          <input type="text" id="f-invite" maxlength="300" placeholder="例：friend@example.com" inputmode="email">
+          <label class="f-label" for="f-invite-note">追記（招待メールに載せる補足・任意）</label>
+          <textarea id="f-invite-note" rows="2" maxlength="500" placeholder="例：当日はカメラONでお願いします！"></textarea>
+        </div>
+        <p class="hint">オンにするとGoogleカレンダーに登録します（編集・削除もGoogle側に反映）。メールを入れると、あなたのGoogleアカウントから招待メール＋Meetリンクが相手に届きます（予定のみ）。差出人名は設定の「招待メールの差出人名」を本文に反映します。</p>
+      </div>
       <div id="event-only-fields" hidden>
         <div class="f-row">
           <div class="f-col">
@@ -511,16 +529,6 @@
         <div class="who-chips" id="f-who-chips"></div>
         <input type="text" id="f-who" maxlength="120" placeholder="その他の人（「、」区切りで複数OK）">
         <div class="who-chips who-suggest-box" id="f-who-suggest"></div>
-        <div id="f-gcal-sync" hidden>
-          <label class="f-label">Googleカレンダー連携</label>
-          <button type="button" class="opt-row" id="opt-push"><span class="opt-txt">この予定をGoogleカレンダーにも登録</span><span class="opt-toggle"></span></button>
-          <button type="button" class="opt-row" id="opt-meet"><span class="opt-txt">Google Meet のリンクを自動発行</span><span class="opt-toggle"></span></button>
-          <label class="f-label" for="f-invite">招待するメール（任意・「、」区切り）</label>
-          <input type="text" id="f-invite" maxlength="300" placeholder="例：friend@example.com" inputmode="email">
-          <label class="f-label" for="f-invite-note">追記（招待メールに載せる補足・任意）</label>
-          <textarea id="f-invite-note" rows="2" maxlength="500" placeholder="例：当日はカメラONでお願いします！"></textarea>
-          <p class="hint">オンにするとGoogleカレンダーに登録します（編集・削除もGoogle側に反映・単発の予定のみ）。メールを入れると、あなたのGoogleアカウントから招待メール＋Meetリンクが相手に届きます。差出人名は設定の「招待メールの差出人名」を本文に反映します。</p>
-        </div>
         <label class="f-label" for="f-meeting">会議リンク（任意・自分で貼る場合）</label>
         <input type="url" id="f-meeting" maxlength="500" placeholder="Zoom などのURL（Meetは上の自動発行が便利）" inputmode="url">
         <div class="who-chips" id="f-meeting-btns">
@@ -814,6 +822,18 @@
   </div>
 </div>
 
+<!-- 今日の整理 -->
+<div class="sheet-scrim" id="tidy-scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="tidy-title">
+    <div class="sheet-grip"></div>
+    <button type="button" class="sheet-close" id="tidy-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 class="sheet-title" id="tidy-title">今日の整理</h2>
+    <p class="tidy-lead" id="tidy-lead"></p>
+    <div class="tidy-list" id="tidy-list"></div>
+    <div class="tidy-actions" id="tidy-actions"></div>
+  </div>
+</div>
+
 <!-- 写真の拡大表示 -->
 <div class="photo-view" id="photo-view" hidden>
   <button type="button" class="photo-close" id="photo-close" aria-label="閉じる"><svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
@@ -827,7 +847,7 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=92"></script>
-<script src="app.js?v=92"></script>
+<script src="firebase-config.js?v=93"></script>
+<script src="app.js?v=93"></script>
 </body>
 </html>

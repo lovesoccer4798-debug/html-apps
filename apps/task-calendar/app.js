@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v92';
+const APP_VERSION = 'v93';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -271,6 +271,7 @@ const ui = {
   sheetPhotos: [],          // 編集シートで選択中の写真（思い出カレンダー用）
   memCode: null,            // 「思い出」タブで表示中の思い出カレンダー
   personEdit: false,        // プロフィール帳を編集モードで開いているか（既定は読むモード）
+  tidySel: new Set(),       // 「今日の整理」で選択中の項目id
   memStampOpen: null,       // スタンプ一覧を開いている思い出のid
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
   schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
@@ -816,7 +817,7 @@ function deleteItem(it) {
   }
   const arr = it.kind === 'event' ? db.events : db.tasks;
   const index = arr.indexOf(it.ref);
-  const gcalId = it.kind === 'event' ? it.ref.gcalId : null;
+  const gcalId = it.ref.gcalId || null; // 予定・タスクどちらもGoogleに出していれば消す
   arr.splice(index, 1);
   save(); renderAll();
   if (gcalId) gcalDeleteEvent(gcalId); // Google側からも削除（元に戻すと再作成される）
@@ -1232,6 +1233,8 @@ function renderCal() {
   }
 
   if (ui.view !== 'week' && !(ui.view === 'grid' && ui.gridDays > 1)) $('#cal-title').classList.remove('small');
+  const tidyBtn = $('#tidy-open'); // 「整理」は今日の「日」ビューだけ（画面を縦に伸ばさない場所に置く）
+  if (tidyBtn) tidyBtn.hidden = !(ui.view === 'day' && toKey(ui.cursor) === todayKey());
 
   const goalLine = $('#goal-line');
   if (!goalLine.dataset.editing) {
@@ -1281,13 +1284,26 @@ function renderCal() {
 }
 
 // 上部固定のON/OFF（設定で切替。OFFなら通常スクロール）
+/* 'on' = 日付・タブ・フィルタまで全部固定 / 'min' = いちばん上のバーだけ固定 / 'off' = 固定しない
+   （旧バージョンの true / false からもそのまま読める） */
+function stickyMode() {
+  const v = db.settings.stickyHeader;
+  if (v === false || v === 'off') return 'off';
+  if (v === 'min') return 'min';
+  return 'on';
+}
 function applyStickyHeader() {
-  document.documentElement.dataset.sticky = db.settings.stickyHeader === false ? 'off' : 'on';
+  document.documentElement.dataset.sticky = stickyMode();
+  updateCalStickH();
 }
 // 固定ヘッダー（appbar全体）の高さを測って、下のフィルタチップの sticky 位置に使う
 function updateCalStickH() {
   const cs = document.querySelector('#scr-cal .appbar');
-  if (cs) document.documentElement.style.setProperty('--cal-stick-h', `${cs.offsetHeight}px`);
+  if (!cs) return;
+  document.documentElement.style.setProperty('--cal-stick-h', `${cs.offsetHeight}px`);
+  // 「上のバーだけ」固定のとき、下の中身がその行に隠れないよう高さを測っておく
+  const top = cs.querySelector('.appbar-top');
+  if (top) document.documentElement.style.setProperty('--cal-top-h', `${top.offsetHeight}px`);
 }
 window.addEventListener('resize', updateCalStickH);
 
@@ -1876,7 +1892,7 @@ function openHelp() {
   ui.screen = 'help';
   renderAll(); // renderHelp / チップの描画は renderAll 経由
 }
-const HELP_CHIPS = ['保存', '消える', '共有', 'バックアップ', 'タイマー', 'Notion', '無料'];
+const HELP_CHIPS = ['保存', '消える', '共有', 'バックアップ', 'タイマー', 'Google', '整理', 'Notion', '無料'];
 function renderHelpChips() {
   const wrap = $('#help-chips');
   if (!wrap) return;
@@ -1948,8 +1964,15 @@ const HELP_FAQ = [
   ]],
   ['連携（Google・Notion）', [
     { q: 'Googleカレンダーと連携できる？', a: 'できます。設定 →「連携・同期」→「Googleカレンダー連携」から。予定の読み込み・書き込み、Google Meetの自動発行に対応します。', more: '「その場連携」はすぐ使えますが約1時間で切れます。「常時連携」にすると自動更新で切れにくくなります（無料のCloudflare Worker設定が必要）。' },
+    { q: 'Googleに送られるのはどれ？くりかえしも送られる？', a: '「これをGoogleカレンダーにも登録する」をオンにした<strong>単発の予定・タスクだけ</strong>です。毎日・毎週などの<strong>くりかえしは対象外</strong>で、オンにしても送られません。', more: 'タスクもGoogle側では「予定」として入ります。設定 → Googleカレンダー連携の「新しい予定・タスクを、はじめからGoogleにも登録する」をオンにすると、追加画面のスイッチが最初からオンになります（1件ずつオフにもできます）。' },
+    { q: '日をまたぐ予定はGoogleでも1本になる？', a: 'なります。終了日を入れた終日の予定は、Googleでも<strong>開始日〜終了日の1本の帯</strong>で入ります。時刻つきで終了が開始より前のとき（22:00〜01:00 など）は、翌日の終了として入ります。', more: '時刻を決めた予定・タスクは、Googleにも<strong>まったく同じ時刻</strong>で入ります。開始時刻だけのときは開始〜1時間後になります（タイマーの「所要時間」は使いません）。' },
+    { q: 'Googleに送られないものは？', a: '日記・詳細（サブ項目）・リンク・色・カレンダーの分類・完了状態は送られません。タイトル・場所・メモ・誰と、は送られます（メモと誰とはGoogleの「説明」に入ります）。', more: 'Google側で予定を消したり変えたりしても、アプリには戻ってきません（アプリ→Googleの一方通行です）。逆にGoogleの予定はカレンダーに表示されますが、アプリからは編集・削除できません。' },
     { q: 'Notionに記録を残せる？', a: '残せます。設定 →「連携・同期」→「Notion連携」から、日記・メモ・できたこと・睡眠を1日1ページで自動保存できます。', more: 'Notion連携には各自のNotionデータベースと、中継用の無料Cloudflare Workerの用意が必要です。手順はアプリ内の案内とリポジトリの notion-worker.js に書いてあります。' },
     { q: 'Notion連携は友達も同じ設定が必要？', a: 'はい。Notion連携は一人ひとりが自分のNotionと自分のWorkerを用意する必要があります。', more: 'あなたのWorkerを他の人が使うと、あなたのNotionに書き込まれてしまうため、各自が自分の分をセットアップします。' },
+  ]],
+  ['今日の整理', [
+    { q: '「整理」ボタンって何？', a: '今日の「日」ビューの上に出る小さなボタンです。今日の予定・タスク・ルーティンを一覧で見て、<strong>やらないものをまとめて外したり、できたものにチェックを入れたり</strong>できます。', more: '朝は「今日やることを決める」、夜は「できたことを記録する」向きに、時間帯でボタンの並びと文言が変わります。' },
+    { q: '整理で外すと、ルーティンごと消える？', a: '消えません。外れるのは<strong>その日の分だけ</strong>です。ルーティンの設定も、ほかの日も変わりません。', more: '単発の予定・タスクは削除されますが、「元に戻す」ですぐ戻せます（まとめて戻ります）。' },
   ]],
   ['見た目・こまったとき', [
     { q: '色やデザインを変えたい', a: '設定 →「見た目・表示」から、テーマ（自動/ライト/ダーク）、配色テーマ（7種の着せ替え）、アクセントカラー、フォント、文字サイズを変えられます。', more: '配色テーマの「デフォルト」はいつでも元のデザインに戻せます。' },
@@ -3448,8 +3471,7 @@ function renderSettings() {
   renderAppIconList();
   const st = $('#sched-template');
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
-  const sh = $('#sticky-toggle');
-  if (sh) sh.checked = db.settings.stickyHeader !== false;
+  document.querySelectorAll('#sticky-seg button').forEach((b2) => b2.classList.toggle('is-active', b2.dataset.sticky === stickyMode()));
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));
   });
@@ -3646,10 +3668,13 @@ function renderEdgeCals() {
   }
 }
 
-$('#sticky-toggle').addEventListener('change', (e) => {
-  db.settings.stickyHeader = e.target.checked;
-  applyStickyHeader();
-  save();
+document.querySelectorAll('#sticky-seg button').forEach((b2) => {
+  b2.addEventListener('click', () => {
+    db.settings.stickyHeader = b2.dataset.sticky;
+    applyStickyHeader();
+    save();
+    renderSettings();
+  });
 });
 
 $('#invert-events-toggle').addEventListener('change', (e) => {
@@ -4074,7 +4099,7 @@ function openSheet(mode, { item = null, dateKey = null, time = null, timeEnd = n
     $('#f-date-end').value = '';
     $('#f-place').value = '';
     $('#f-meeting').value = '';
-    setOpt('#opt-push', false);
+    setOpt('#opt-push', Boolean(db.settings.gcalAutoPush) && gcalCanWrite()); // 設定ONなら最初からチェック済み
     setOpt('#opt-meet', false);
     setOpt('#opt-month', true);
     $('#f-invite').value = '';
@@ -4238,6 +4263,8 @@ function syncSheetType() {
   sheetEls.typeSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b.dataset.type === ui.sheetType));
   sheetEls.minutesCol.hidden = ui.sheetType !== 'task'; // 所要時間はタスクのみ（繰り返しは両方）
   $('#event-only-fields').hidden = ui.sheetType !== 'event';
+  const geo = $('#f-gcal-event-only'); // Meet・招待メールは予定だけ
+  if (geo) geo.hidden = ui.sheetType !== 'event';
 }
 
 // カスタムトグル（iOSでネイティブcheckboxがシート内で反応しづらいため自前）
@@ -4310,12 +4337,12 @@ $('#sheet-form').addEventListener('submit', (e) => {
     applyEdit(ui.editing, { title, dateKey, time, minutes, repeat, memo, diary, color, calendarId, timeEnd, place, who, meetUrl, endDate, subs, link });
     if (notePriv && notePriv !== 'open') ui.editing.ref.notePriv = notePriv; else delete ui.editing.ref.notePriv;
     if (hideMonth) ui.editing.ref.hideMonth = true; else delete ui.editing.ref.hideMonth;
+    ui.editing.ref.pushGoogle = pushGoogle;
     if (ui.editing.kind === 'event') {
-      ui.editing.ref.pushGoogle = pushGoogle;
       ui.editing.ref.attendees = attendees.length ? attendees : null;
       ui.editing.ref.inviteNote = inviteNote;
-      if (pushGoogle && gcalCanWrite()) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet };
     }
+    if (pushGoogle && gcalCanWrite() && !ui.editing.ref.repeat) syncTarget = { ev: ui.editing.ref, key: ui.editing.ref.date || dateKey, meet: autoMeet && ui.editing.kind === 'event' };
   } else if (ui.sheetType === 'event') {
     const base = { id: newId('e'), title, time, timeEnd: time ? timeEnd : null, place, who: who.length ? who : null, meetUrl, link: link || undefined, notePriv: notePriv !== 'open' ? notePriv : undefined, memo, diary, subs: subs.length ? subs : undefined, pushGoogle, attendees: attendees.length ? attendees : null, inviteNote, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     const ev = repeat
@@ -4329,9 +4356,10 @@ $('#sheet-form').addEventListener('submit', (e) => {
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
   } else {
-    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, link: link || undefined, notePriv: notePriv !== 'open' ? notePriv : undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
+    const t = { id: newId('t'), title, date: dateKey, time, timeEnd: time ? timeEnd : null, minutes, done: false, doneAt: null, memo, diary, link: link || undefined, notePriv: notePriv !== 'open' ? notePriv : undefined, subs: subs.length ? subs : undefined, color, calendarId, hideMonth: hideMonth || undefined, pushGoogle: pushGoogle || undefined, by: (fbUser && fbUser.uid) || undefined, createdAt: Date.now() };
     db.tasks.push(t);
     ui.justAddedId = `${t.id}@${dateKey}`;
+    if (pushGoogle && gcalCanWrite()) syncTarget = { ev: t, key: dateKey, meet: false };
   }
   // 写真（思い出カレンダーのみ）。保存できた予定に対して、選んだぶんをアップロードする
   const savedRef = ui.editing ? ui.editing.ref
@@ -6051,11 +6079,17 @@ function gcalEventBody(ev, key, wantMeet) {
   if (descParts.length) body.description = descParts.join('\n');
   if (ev.time) {
     const endT = ev.timeEnd || tgMinToStr(Math.min(1439, tgStrToMin(ev.time) + 60));
+    // 終了日が入っていればそこまで。無くて終了時刻が開始より前なら日をまたいだ扱いにする（例 22:00〜01:00）
+    const endDay = ev.endDate && ev.endDate > dateStr
+      ? ev.endDate
+      : (tgStrToMin(endT) <= tgStrToMin(ev.time) ? toKey(addDays(fromKey(dateStr), 1)) : dateStr);
     body.start = { dateTime: `${dateStr}T${ev.time}:00`, timeZone: TC_TZ };
-    body.end = { dateTime: `${dateStr}T${endT}:00`, timeZone: TC_TZ };
+    body.end = { dateTime: `${endDay}T${endT}:00`, timeZone: TC_TZ };
   } else {
+    // 終日は「終わりの日の翌日」がGoogleの終了日。複数日（旅行など）もそのまま帯になる
+    const last = ev.endDate && ev.endDate > dateStr ? ev.endDate : dateStr;
     body.start = { date: dateStr };
-    body.end = { date: toKey(addDays(fromKey(dateStr), 1)) };
+    body.end = { date: toKey(addDays(fromKey(last), 1)) };
   }
   if ((ev.attendees || []).length) body.attendees = ev.attendees.map((email) => ({ email }));
   if (wantMeet) body.conferenceData = { createRequest: { requestId: `tc-${Math.random().toString(36).slice(2)}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } };
@@ -6145,6 +6179,16 @@ function renderGcalCard() {
   cb.addEventListener('change', () => { g.on = cb.checked; persistLocal(); renderAll(); });
   tg.append(cb, ' Googleの予定をカレンダーに表示する');
   wrap.append(tg);
+
+  const auto = el('label', 'sync-toggle');
+  const acb = document.createElement('input');
+  acb.type = 'checkbox';
+  acb.checked = !!db.settings.gcalAutoPush;
+  acb.addEventListener('change', () => { db.settings.gcalAutoPush = acb.checked; save(); });
+  auto.append(acb, ' 新しい予定・タスクを、はじめからGoogleにも登録する');
+  wrap.append(auto);
+  wrap.append(el('p', 'hint', '追加画面の「これをGoogleカレンダーにも登録する」が最初からオンになります（1件ずつオフにもできます）。くりかえしの予定・タスクは対象外です。'));
+
   const out = el('button', 'cta ghost', '連携を解除');
   out.type = 'button';
   out.addEventListener('click', gcalDisconnect);
@@ -7331,6 +7375,170 @@ function renderMemCalCard() {
   wrap.append(fr);
   wrap.append(el('p', 'hint', '参加する側は、上の「共有カレンダー」の「招待コードで参加」からどちらの種類にも参加できます。'));
 }
+
+
+/* ========== v93: 今日の整理（朝と夜の見直し） ==========
+   朝：今日の予定・タスクを一覧で見て、やらないものをまとめて外す／足りないものを足す。
+   夜：できたものにチェックを入れて締める。
+   外すのは「その日だけ」。くりかえし（ルーティン）は exDates にこの日を足すだけなので、
+   ほかの日や設定そのものには影響しない。 */
+
+function tidyGreeting() {
+  const h = new Date().getHours();
+  if (h < 11) return { title: '朝の整理', lead: '今日やることを決めてしまおう。やらないものは外して、足りないものは足せます。' };
+  if (h >= 17) return { title: '夜の整理', lead: 'おつかれさま。できたものにチェックして、やらなかったものは今日から外しておけます。' };
+  return { title: '今日の整理', lead: '今日の予定とタスクを見直せます。外すのは「今日だけ」です。' };
+}
+function tidyItems() { return itemsFor(todayKey()).filter(passFilter); }
+function tidyKindLabel(it) {
+  if (it.kind === 'gcal') return 'Google';
+  if (it.ref.routineId || it.repeat) return 'ルーティン';
+  return it.kind === 'event' ? '予定' : 'タスク';
+}
+function tidySelectable(it) {
+  if (it.kind === 'gcal') return false; // Google側の予定はここからは触らない
+  return !isSharedCal(it.ref.calendarId) || !sharedReadOnly(it.ref.calendarId);
+}
+function sharedReadOnly(calId) {
+  if (!isSharedCal(calId)) return false;
+  const role = shRole(calId.slice(SH_PREFIX.length));
+  return !(role === 'owner' || role === 'editor');
+}
+
+function openTidy() {
+  ui.tidySel = new Set();
+  renderTidy();
+  $('#tidy-scrim').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeTidy() {
+  $('#tidy-scrim').hidden = true;
+  document.body.style.overflow = '';
+}
+
+function renderTidy() {
+  const listEl = $('#tidy-list');
+  const actEl = $('#tidy-actions');
+  if (!listEl || !actEl) return;
+  const g = tidyGreeting();
+  const d = new Date();
+  $('#tidy-title').textContent = `${g.title}（${d.getMonth() + 1}/${d.getDate()}（${WD_JA[d.getDay()]}））`;
+  $('#tidy-lead').textContent = g.lead;
+
+  const items = tidyItems();
+  const sel = ui.tidySel;
+  listEl.textContent = '';
+  if (!items.length) {
+    listEl.append(el('p', 'empty', '今日はまだ何もありません。下の「追加」から入れられます。'));
+  }
+  // 選べるものだけ「すべて選ぶ」の対象にする
+  const pickable = items.filter(tidySelectable);
+  if (pickable.length) {
+    const all = el('button', 'tidy-all');
+    all.type = 'button';
+    const allOn = pickable.every((i) => sel.has(i.id));
+    all.textContent = allOn ? 'すべて解除' : 'すべて選ぶ';
+    all.addEventListener('click', () => {
+      if (allOn) sel.clear(); else pickable.forEach((i) => sel.add(i.id));
+      renderTidy();
+    });
+    listEl.append(all);
+  }
+  for (const it of items) {
+    const can = tidySelectable(it);
+    const row = el(can ? 'button' : 'div', `tidy-row${sel.has(it.id) ? ' is-sel' : ''}${it.done ? ' is-done' : ''}${can ? '' : ' is-locked'}`);
+    if (can) row.type = 'button';
+    const box = el('span', 'tidy-box');
+    if (sel.has(it.id)) box.innerHTML = ICONS.check;
+    row.append(box);
+    const mid = el('span', 'tidy-mid');
+    const top = el('span', 'tidy-toprow');
+    if (it.time) top.append(el('span', 'tidy-time mono', it.time + (it.timeEnd ? `〜${it.timeEnd}` : '')));
+    top.append(el('span', 'tidy-ttl', it.title));
+    mid.append(top);
+    const tags = el('span', 'tidy-tags');
+    tags.append(el('span', `tidy-tag tag-${it.kind}`, tidyKindLabel(it)));
+    if (it.done) tags.append(el('span', 'tidy-tag tag-done', 'できた'));
+    if (it.kind === 'task' && it.ref.minutes) tags.append(el('span', 'tidy-tag', `${it.ref.minutes}分`));
+    mid.append(tags);
+    row.append(mid);
+    if (can) row.addEventListener('click', () => { if (sel.has(it.id)) sel.delete(it.id); else sel.add(it.id); renderTidy(); });
+    listEl.append(row);
+  }
+
+  actEl.textContent = '';
+  const picked = items.filter((i) => sel.has(i.id));
+  const pickedTasks = picked.filter((i) => i.kind === 'task' && !i.done);
+  const evening = new Date().getHours() >= 17;
+
+  const mkDone = () => {
+    const b = el('button', `cta${evening ? '' : ' ghost'}`, `選んだタスクをできたにする（${pickedTasks.length}）`);
+    b.type = 'button';
+    b.disabled = !pickedTasks.length;
+    b.addEventListener('click', () => { pickedTasks.forEach((i) => toggleItem(i)); ui.tidySel = new Set(); renderTidy(); });
+    return b;
+  };
+  const mkDrop = () => {
+    const b = el('button', `cta${evening ? ' ghost' : ''}`, `選んだものを今日だけ外す（${picked.length}）`);
+    b.type = 'button';
+    b.disabled = !picked.length;
+    b.addEventListener('click', tidyDropSelected);
+    return b;
+  };
+  // 朝は「外す」を、夜は「できた」を前に出す
+  if (evening) { actEl.append(mkDone(), mkDrop()); } else { actEl.append(mkDrop(), mkDone()); }
+
+  const add = el('button', 'cta ghost', '＋ 予定・タスクを追加');
+  add.type = 'button';
+  add.addEventListener('click', () => { closeTidy(); openSheet('add', { dateKey: todayKey() }); });
+  actEl.append(add);
+  actEl.append(el('p', 'hint', '「今日だけ外す」は、くりかえしの予定・タスクならこの日の分だけを消します。ルーティンの設定やほかの日は変わりません。'));
+}
+
+/* 選んだものを今日の予定から外す。くりかえしは exDates（この日だけ）、単発は削除。まとめて元に戻せる */
+function tidyDropSelected() {
+  const items = tidyItems();
+  const picked = items.filter((i) => ui.tidySel.has(i.id) && tidySelectable(i));
+  if (!picked.length) return;
+  const undo = [];
+  for (const it of picked) {
+    if (it.ref.repeat) {
+      it.ref.exDates = it.ref.exDates || [];
+      if (!it.ref.exDates.includes(it.key)) {
+        it.ref.exDates.push(it.key);
+        undo.push({ type: 'ex', ref: it.ref, key: it.key });
+      }
+    } else {
+      const arr = it.kind === 'event' ? db.events : db.tasks;
+      const idx = arr.indexOf(it.ref);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        undo.push({ type: 'del', arr, idx, ref: it.ref, gcalId: it.ref.gcalId || null });
+        if (it.ref.gcalId) gcalDeleteEvent(it.ref.gcalId); // Google側からも消す
+      }
+    }
+  }
+  ui.tidySel = new Set();
+  save();
+  renderAll();
+  renderTidy();
+  showUndoToast(`${picked.length}件を今日から外しました`, () => {
+    for (const u of undo) {
+      if (u.type === 'ex') u.ref.exDates = u.ref.exDates.filter((k) => k !== u.key);
+      else {
+        u.arr.splice(Math.min(u.idx, u.arr.length), 0, u.ref);
+        if (u.gcalId && u.ref.pushGoogle && gcalCanWrite()) { delete u.ref.gcalId; gcalSyncEvent(u.ref, u.ref.date, false); }
+      }
+    }
+    save();
+    renderAll();
+    renderTidy();
+  });
+}
+
+$('#tidy-open')?.addEventListener('click', openTidy);
+$('#tidy-close')?.addEventListener('click', closeTidy);
+$('#tidy-scrim')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTidy(); });
 
 /* ========== v15: ホーム表示のON/OFF（使わないビュー・タブを隠す） ========== */
 
