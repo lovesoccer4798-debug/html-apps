@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v96';
+const APP_VERSION = 'v97';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -612,16 +612,16 @@ function applyTheme() {
   updateThemeToggle();
   applyThemeColor();
 }
-// ヘッダーのテーマ切替（どの画面からでも 自動→ライト→ダーク を巡回）
-const THEME_CYCLE = ['auto', 'light', 'dark'];
-const THEME_ICON = { auto: 'sunMoon', light: 'sun', dark: 'moon' };
+// ヘッダーは日食トグルでライト／ダークを往復。OS追従は設定画面から選べる。
 const THEME_LABEL = { auto: '自動', light: 'ライト', dark: 'ダーク' };
 function updateThemeToggle() {
   const btn = document.getElementById('theme-toggle');
   if (!btn) return;
   const t = db.settings.theme || 'auto';
-  btn.innerHTML = ICONS[THEME_ICON[t] || 'sunMoon'];
-  btn.setAttribute('aria-label', `テーマ切替（今: ${THEME_LABEL[t]}）`);
+  const mode = effectiveDark() ? 'dark' : 'light';
+  btn.dataset.mode = mode;
+  btn.setAttribute('aria-pressed', String(mode === 'dark'));
+  btn.setAttribute('aria-label', `テーマ切替（今: ${THEME_LABEL[t]}、押すと${mode === 'dark' ? 'ライト' : 'ダーク'}）`);
 }
 function applyAccent() {
   const a = ACCENTS[db.settings.accent] || ACCENTS.green;
@@ -722,7 +722,7 @@ function applyZoomLock() { // 固定=ピンチ/入力フォーカス時の勝手
     ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
     : 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); applyThemeColor(); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyAccent(); updateThemeToggle(); applyThemeColor(); });
 
 /* ========== undo toast ========== */
 
@@ -1249,13 +1249,18 @@ $('#goal-line').addEventListener('click', () => {
 });
 
 $('#theme-toggle').addEventListener('click', () => {
-  const t = db.settings.theme || 'auto';
-  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(t) + 1) % THEME_CYCLE.length];
+  const btn = $('#theme-toggle');
+  const next = effectiveDark() ? 'light' : 'dark';
+  btn.dataset.direction = next;
+  btn.classList.remove('is-eclipsing');
+  void btn.offsetWidth;
+  btn.classList.add('is-eclipsing');
   db.settings.theme = next;
   applyTheme();
   save();
   syncThemeSeg();
   flashToast(`テーマ: ${THEME_LABEL[next]}`);
+  window.setTimeout(() => btn.classList.remove('is-eclipsing'), 520);
 });
 // 設定画面のテーマ選択ボタンの選択状態を、ヘッダー切替と同期
 function syncThemeSeg() {
