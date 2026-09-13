@@ -182,6 +182,121 @@
   }
 }
 
+/* G｜スカイグラス Sky Glass — 空と雲の透明感。ライトは朝空、ダークは深い夜明け前 */
+:root[data-palette="skyglass"] {
+  --tc-bg: #dff4ff; --tc-surface: rgba(255, 255, 255, .82); --tc-line: rgba(116, 171, 196, .32);
+  --tc-ink: #183044; --tc-ink2: #5f7d8f;
+  --tc-accent: #2b8fb7;
+  --tc-shadow: 0 12px 28px rgba(74, 145, 178, .14);
+  --tc-r-card: 18px; --tc-r-run: 22px; --tc-r-cell: 14px; --tc-r-sheet: 30px; --tc-r-pill: 999px;
+}
+:root[data-palette="skyglass"][data-theme="dark"] {
+  --tc-bg: #08172c; --tc-surface: rgba(13, 31, 54, .84); --tc-line: rgba(151, 205, 232, .18);
+  --tc-ink: #eef7ff; --tc-ink2: #8eb0c8;
+  --tc-accent: #7ad8ff;
+  --tc-shadow: 0 18px 40px rgba(0, 0, 0, .38);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="skyglass"]:not([data-theme="light"]) {
+    --tc-bg: #08172c; --tc-surface: rgba(13, 31, 54, .84); --tc-line: rgba(151, 205, 232, .18);
+    --tc-ink: #eef7ff; --tc-ink2: #8eb0c8;
+    --tc-accent: #7ad8ff;
+    --tc-shadow: 0 18px 40px rgba(0, 0, 0, .38);
+  }
+}
+
+/* H｜ナイトリフレクション Night Reflection — 水面に映る月明かり。ライトは薄明、ダークは夜の海 */
+:root[data-palette="nightsea"] {
+  --tc-bg: #e5f3fa; --tc-surface: rgba(255, 255, 255, .86); --tc-line: rgba(52, 95, 122, .24);
+  --tc-ink: #172c3f; --tc-ink2: #57748a;
+  --tc-accent: #197a9a;
+  --tc-shadow: 0 12px 28px rgba(30, 93, 122, .14);
+  --tc-r-card: 17px; --tc-r-run: 21px; --tc-r-cell: 13px; --tc-r-sheet: 28px; --tc-r-pill: 999px;
+}
+:root[data-palette="nightsea"][data-theme="dark"] {
+  --tc-bg: #061426; --tc-surface: rgba(13, 31, 49, .9); --tc-line: rgba(133, 206, 220, .16);
+  --tc-ink: #eaf7fb; --tc-ink2: #83a9bb;
+  --tc-accent: #71d7df;
+  --tc-shadow: 0 16px 36px rgba(0, 0, 0, .44);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="nightsea"]:not([data-theme="light"]) {
+    --tc-bg: #061426; --tc-surface: rgba(13, 31, 49, .9); --tc-line: rgba(133, 206, 220, .16);
+    --tc-ink: #eaf7fb; --tc-ink2: #83a9bb;
+    --tc-accent: #71d7df;
+    --tc-shadow: 0 16px 36px rgba(0, 0, 0, .44);
+  }
+}
+
+/* I｜ボタニカル Botanical — 木漏れ日と葉のぼかし。ライトは生成り、ダークは苔の深緑 */
+:root[data-palette="botanical"] {
+  --tc-bg: #f4f0e4; --tc-surface: rgba(255, 250, 240, .9); --tc-line: rgba(113, 122, 85, .25);
+  --tc-ink: #273323; --tc-ink2: #69745d;
+  --tc-accent: #51784a;
+  --tc-shadow: 0 10px 24px rgba(69, 87, 54, .13);
+  --tc-r-card: 18px; --tc-r-run: 22px; --tc-r-cell: 14px; --tc-r-sheet: 30px; --tc-r-pill: 999px;
+}
+:root[data-palette="botanical"][data-theme="dark"] {
+  --tc-bg: #172116; --tc-surface: rgba(31, 45, 29, .88); --tc-line: rgba(166, 190, 139, .17);
+  --tc-ink: #eef4e8; --tc-ink2: #a9ba9a;
+  --tc-accent: #9abd79;
+  --tc-shadow: 0 16px 34px rgba(0, 0, 0, .38);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="botanical"]:not([data-theme="light"]) {
+    --tc-bg: #172116; --tc-surface: rgba(31, 45, 29, .88); --tc-line: rgba(166, 190, 139, .17);
+    --tc-ink: #eef4e8; --tc-ink2: #a9ba9a;
+    --tc-accent: #9abd79;
+    --tc-shadow: 0 16px 34px rgba(0, 0, 0, .38);
+  }
+}
+
+/* J｜サンセットグラス Sunset Glass — 夕焼けの桃色グラデーション。ダークは夜に沈む紫 */
+:root[data-palette="sunsetglass"] {
+  --tc-bg: #ffe1da; --tc-surface: rgba(255, 248, 245, .84); --tc-line: rgba(214, 126, 143, .25);
+  --tc-ink: #422b38; --tc-ink2: #856776;
+  --tc-accent: #c96f97;
+  --tc-shadow: 0 12px 30px rgba(201, 111, 151, .16);
+  --tc-r-card: 18px; --tc-r-run: 22px; --tc-r-cell: 14px; --tc-r-sheet: 30px; --tc-r-pill: 999px;
+}
+:root[data-palette="sunsetglass"][data-theme="dark"] {
+  --tc-bg: #241628; --tc-surface: rgba(48, 32, 58, .88); --tc-line: rgba(255, 174, 203, .18);
+  --tc-ink: #fbedf4; --tc-ink2: #c7a2b6;
+  --tc-accent: #f29bbb;
+  --tc-shadow: 0 16px 38px rgba(0, 0, 0, .42);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="sunsetglass"]:not([data-theme="light"]) {
+    --tc-bg: #241628; --tc-surface: rgba(48, 32, 58, .88); --tc-line: rgba(255, 174, 203, .18);
+    --tc-ink: #fbedf4; --tc-ink2: #c7a2b6;
+    --tc-accent: #f29bbb;
+    --tc-shadow: 0 16px 38px rgba(0, 0, 0, .42);
+  }
+}
+
+/* K｜ミニマルアート Minimal Art — 余白と線の紙面。ダークは墨色の紙 */
+:root[data-palette="minimalart"] {
+  --tc-bg: #f2eee6; --tc-surface: rgba(255, 253, 248, .9); --tc-line: #ddd5c8;
+  --tc-ink: #252525; --tc-ink2: #6e675f;
+  --tc-accent: #252525;
+  --tc-shadow: 0 8px 22px rgba(70, 62, 52, .10);
+  --tc-r-card: 12px; --tc-r-run: 16px; --tc-r-cell: 10px; --tc-r-sheet: 24px; --tc-r-pill: 999px;
+}
+:root[data-palette="minimalart"][data-theme="dark"] {
+  --tc-bg: #181716; --tc-surface: rgba(35, 34, 32, .9); --tc-line: #3d3934;
+  --tc-ink: #f0ece5; --tc-ink2: #aba39a;
+  --tc-accent: #f0ece5;
+  --tc-shadow: 0 14px 30px rgba(0, 0, 0, .35);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="minimalart"]:not([data-theme="light"]) {
+    --tc-bg: #181716; --tc-surface: rgba(35, 34, 32, .9); --tc-line: #3d3934;
+    --tc-ink: #f0ece5; --tc-ink2: #aba39a;
+    --tc-accent: #f0ece5;
+    --tc-shadow: 0 14px 30px rgba(0, 0, 0, .35);
+  }
+}
+
 /* いずれかの配色テーマ選択時に共通で使う派生トークン（アクセント・地色から自動生成）。
    デフォルト（data-palette未指定）には一切影響しない。最後に置いて確実に適用する。 */
 :root[data-palette] {
