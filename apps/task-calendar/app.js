@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v97';
+const APP_VERSION = 'v98';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -676,6 +676,11 @@ const PALETTES = [
   { id: 'bounce', name: 'バウンスポップ', sub: 'Bounce Pop', bg: '#fff7ec', surface: '#ffffff', accent: '#ff5c5c', line: '#171310' },
   { id: 'aurora', name: 'オーロラオービット', sub: 'Aurora Orbit', bg: '#101540', surface: '#252a52', accent: '#8e7cff', line: 'rgba(255,255,255,.25)' },
   { id: 'candy', name: 'クラウドキャンディ', sub: 'Cloud Candy', bg: '#fdf4ff', surface: '#ffffff', accent: '#c9a6ff', line: '#f3e4ff' },
+  { id: 'skyglass', name: 'スカイグラス', sub: 'Sky Glass', bg: '#dff4ff', surface: '#ffffff', accent: '#2b8fb7', line: '#bfe2f0' },
+  { id: 'nightsea', name: 'ナイトリフレクション', sub: 'Night Reflection', bg: '#091d33', surface: '#102a45', accent: '#71d7df', line: '#24455f' },
+  { id: 'botanical', name: 'ボタニカル', sub: 'Botanical', bg: '#f4f0e4', surface: '#fffaf0', accent: '#51784a', line: '#ddd6c2' },
+  { id: 'sunsetglass', name: 'サンセットグラス', sub: 'Sunset Glass', bg: '#ffe1da', surface: '#fff8f5', accent: '#c96f97', line: '#f3c4c4' },
+  { id: 'minimalart', name: 'ミニマルアート', sub: 'Minimal Art', bg: '#f2eee6', surface: '#fffdf8', accent: '#252525', line: '#ddd5c8' },
 ];
 function applyPalette() {
   const p = db.settings.palette;
@@ -690,6 +695,11 @@ function applyPalette() {
 const PALETTE_TOP = {
   candy: { light: '#fdf4ff', dark: '#241d2e' },
   aurora: { light: '#0b0f2b', dark: '#0b0f2b' },
+  skyglass: { light: '#dff4ff', dark: '#08172c' },
+  nightsea: { light: '#e5f3fa', dark: '#061426' },
+  botanical: { light: '#f4f0e4', dark: '#172116' },
+  sunsetglass: { light: '#ffe1da', dark: '#241628' },
+  minimalart: { light: '#f2eee6', dark: '#181716' },
 };
 // タイマー各デザインの、画面いちばん上あたりの色
 const TIMER_TOP = {
