@@ -3,27 +3,27 @@
 /* Task Calendar service worker — オフラインでも開けるようにする（PWA）。
    スコープはこのアプリのディレクトリのみ。他のNESTアプリには影響しない。 */
 
-const CACHE_NAME = 'task-calendar-v95';
+const CACHE_NAME = 'task-calendar-v96';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=95',
-  './tokens.css?v=95',
-  './app.js?v=95',
-  './firebase-config.js?v=95',
+  './style.css?v=96',
+  './tokens.css?v=96',
+  './app.js?v=96',
+  './firebase-config.js?v=96',
   './vendor/firebase-app-compat.js?v=29',
   './vendor/firebase-auth-compat.js?v=29',
   './vendor/firebase-firestore-compat.js?v=29',
   './manifest.webmanifest',
-  './icons/icon.svg?v=95',
-  './icons/icon-dark.svg?v=95',
+  './icons/icon.svg?v=96',
+  './icons/icon-dark.svg?v=96',
   './icons/default-dark-180.png',
   './icons/logo-512.png',
   './icons/logo-dark-512.png',
   './icons/logo-180.png',
   './icons/logo-dark-180.png',
-  './icons/favicon-32.png?v=95',
-  './icons/apple-touch-icon.png?v=95',
+  './icons/favicon-32.png?v=96',
+  './icons/apple-touch-icon.png?v=96',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
