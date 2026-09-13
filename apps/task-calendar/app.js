@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v95';
+const APP_VERSION = 'v96';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -54,6 +54,9 @@ const TIMER_STYLES = [
   { id: 'liquid',    name: 'リキッドドロップ',     sub: 'Liquid Drop — カプセルの水位' },
   { id: 'turntable', name: 'ターンテーブル',       sub: 'Turntable — 回るレコード盤' },
   { id: 'bloom',     name: 'ブルーム',             sub: 'Bloom — 育つ植物（経過で成長）' },
+  { id: 'night',     name: '夜空',                 sub: 'Night Sky — 星がめぐる静かな空' },
+  { id: 'onsen',     name: '温泉',                 sub: 'Onsen — 湯けむりと満ちるお湯' },
+  { id: 'forest',    name: '森',                   sub: 'Forest — 木漏れ日と深い緑' },
 ];
 function timerStyleId() { return db.settings.timerStyle || ''; }
 
@@ -140,6 +143,39 @@ const TIMER_ART = {
     <div class="fa-below"><span class="fa-time mono"></span>
       <span class="b-bar"><span class="b-bar-track"><span class="b-bar-fill"></span></span><span class="b-pct mono"></span></span>
       <span class="fa-task"></span><span class="b-hint"></span></div>
+  </div>`,
+  night: `<div class="fa fa-night">
+    <div class="n-sky">
+      <span class="ns-star s1"></span><span class="ns-star s2"></span><span class="ns-star s3"></span><span class="ns-star s4"></span>
+      <div class="ns-orbit"><span class="ns-moon"></span></div>
+      <svg viewBox="0 0 290 290" aria-hidden="true">
+        <circle class="ns-track" cx="145" cy="145" r="124"/>
+        <circle class="ns-prog fa-prog" cx="145" cy="145" r="124"/>
+      </svg>
+      <div class="fa-center"><span class="fa-time mono"></span><span class="fa-set mono"></span></div>
+    </div>
+    <div class="fa-task"></div>
+  </div>`,
+  onsen: `<div class="fa fa-onsen">
+    <div class="o-bowl">
+      <span class="o-steam st1"></span><span class="o-steam st2"></span><span class="o-steam st3"></span>
+      <div class="o-water"><span class="o-wave w1"></span><span class="o-wave w2"></span></div>
+      <div class="fa-center"><span class="fa-time mono"></span><span class="fa-set mono"></span></div>
+    </div>
+    <div class="fa-below"><span class="o-bar"><span class="o-bar-fill"></span></span><span class="fa-task"></span></div>
+  </div>`,
+  forest: `<div class="fa fa-forest">
+    <div class="f-woods">
+      <span class="fr-sun"></span>
+      <span class="fr-ray r1"></span><span class="fr-ray r2"></span><span class="fr-ray r3"></span>
+      <svg viewBox="0 0 300 240" aria-hidden="true">
+        <path class="fr-tree t1" d="M36 208 L78 116 L120 208 Z"/><path class="fr-tree t2" d="M98 214 L150 72 L202 214 Z"/><path class="fr-tree t3" d="M184 208 L226 104 L268 208 Z"/>
+        <rect class="fr-trunk" x="145" y="172" width="10" height="48" rx="4"/>
+        <path class="fr-ground" d="M24 214 C82 196 222 196 276 214 L276 232 L24 232 Z"/>
+      </svg>
+      <div class="fa-center"><span class="fa-time mono"></span><span class="fa-set mono"></span></div>
+    </div>
+    <div class="fa-below"><span class="fr-bar"><span class="fr-bar-fill"></span></span><span class="fa-task"></span><span class="fr-hint"></span></div>
   </div>`,
 };
 
@@ -251,7 +287,7 @@ function save() {
   persistLocal();
   scheduleCloudPush(); // ログイン中ならクラウドへも（デバウンス）
   scheduleSharedPush(); // 共有カレンダーの変更も（デバウンス・差分があるときだけ書く）
-  scheduleNotionPush(); // Notion連携ONなら今日の分を（デバウンス）
+  scheduleNotionPush(); // Notion連携ONなら未反映の日を（デバウンス）
   scheduleMeetSync(); // 予約リンクの候補から、埋まった枠を外す（デバウンス）
 }
 
@@ -658,6 +694,7 @@ const PALETTE_TOP = {
 // タイマー各デザインの、画面いちばん上あたりの色
 const TIMER_TOP = {
   neon: '#1b0f2b', sand: '#fbf6ee', metro: '#f3f6fc', liquid: '#f2fbff', turntable: '#25221e', bloom: '#f6fbf3',
+  night: '#07122d', onsen: '#f7f2ea', forest: '#eef7ed',
 };
 function screenTopColor() {
   const pal = db.settings.palette;
@@ -1039,6 +1076,7 @@ $('#bottomnav').addEventListener('click', (e) => {
   if (nav === 'calendar') { ui.view = 'month'; ui.selectedKey = ui.selectedKey || todayKey(); setScreen('cal'); }
   if (nav === 'insights') { ui.insightsOffset = 0; setScreen('insights'); }
   if (nav === 'anniv') setScreen('anniv');
+  if (nav === 'people') setScreen('peoplebook');
   if (nav === 'tasks') setScreen('tasklist');
   if (nav === 'routines') setScreen('routines');
   if (nav === 'memories') setScreen('memories');
@@ -1129,8 +1167,9 @@ function renderAll() {
   $('#scr-tasklist').hidden = ui.screen !== 'tasklist';
   $('#scr-help').hidden = ui.screen !== 'help';
   $('#scr-person').hidden = ui.screen !== 'person';
+  $('#scr-peoplebook').hidden = ui.screen !== 'peoplebook';
   $('#scr-memories').hidden = ui.screen !== 'memories';
-  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person' || ui.screen === 'memories';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person' || ui.screen === 'peoplebook' || ui.screen === 'memories';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -1142,6 +1181,7 @@ function renderAll() {
       || (nav === 'calendar' && ui.screen === 'cal' && ui.view !== 'day')
       || (nav === 'insights' && ui.screen === 'insights')
       || (nav === 'anniv' && ui.screen === 'anniv')
+      || (nav === 'people' && ui.screen === 'peoplebook')
       || (nav === 'tasks' && ui.screen === 'tasklist')
       || (nav === 'routines' && ui.screen === 'routines')
       || (nav === 'memories' && ui.screen === 'memories');
@@ -1156,6 +1196,7 @@ function renderAll() {
   if (ui.screen === 'tasklist') renderTaskList();
   if (ui.screen === 'help') { renderHelpChips(); renderHelp(($('#help-search') && $('#help-search').value) || ''); }
   if (ui.screen === 'person') renderPerson();
+  if (ui.screen === 'peoplebook') renderPeopleBook();
   if (ui.screen === 'memories') renderMemories();
 }
 
@@ -1947,6 +1988,7 @@ function renderHelpChips() {
 $('#side-help').addEventListener('click', () => { closeSidebar(); openHelp(); });
 $('#help-back').addEventListener('click', () => setScreen(ui.prevScreen || 'cal'));
 $('#person-back').addEventListener('click', () => setScreen(ui.prevScreen === 'person' ? 'insights' : (ui.prevScreen || 'insights')));
+$('#peoplebook-back').addEventListener('click', () => setScreen(ui.prevScreen || 'insights'));
 $('#help-search').addEventListener('input', (e) => {
   $('#help-search-clear').hidden = !e.target.value;
   renderHelpChips();
@@ -3124,6 +3166,45 @@ function personEventList(name) { // その人と一緒の予定（全期間・�
     if ((e.who || []).includes(name)) out.push({ date: e.date, title: e.title });
   }
   return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+function allPeopleNames() {
+  const names = new Set();
+  (db.people || []).forEach((n) => { if ((n || '').trim()) names.add(n.trim()); });
+  Object.keys(db.peopleProfiles || {}).forEach((n) => { if ((n || '').trim()) names.add(n.trim()); });
+  for (const e of db.events || []) for (const n of (e.who || [])) if ((n || '').trim()) names.add(n.trim());
+  return [...names].sort((a, b) => a.localeCompare(b, 'ja'));
+}
+function renderPeopleBook() {
+  const body = $('#peoplebook-body');
+  if (!body) return;
+  body.textContent = '';
+  const names = allPeopleNames();
+  const card = el('div', 'card peoplebook-card');
+  card.append(el('p', 'section-label', `プロフィール帳（${names.length}人）`));
+  if (!names.length) {
+    card.append(el('p', 'hint', 'まだ人がいません。予定の「誰と」に名前を入れるか、設定の「人の管理」で追加するとここに並びます。'));
+    body.append(card);
+    return;
+  }
+  for (const name of names) {
+    const row = el('button', 'person-row peoplebook-row');
+    row.type = 'button';
+    const prof = (db.peopleProfiles || {})[name] || {};
+    const filled = profileFilled(name).length;
+    const evCount = personEventList(name).length;
+    row.append(el('span', 'person-av', (name || '?').trim().slice(0, 1)));
+    const main = el('span', 'peoplebook-main');
+    main.append(el('span', 'person-name', (prof.nick || '').trim() || name));
+    if ((prof.nick || '').trim()) main.append(el('span', 'peoplebook-real', name));
+    row.append(main);
+    const meta = el('span', 'peoplebook-meta');
+    meta.append(el('span', 'person-count mono', filled ? `${filled}項目` : '未記入'));
+    if (evCount) meta.append(el('span', 'peoplebook-count mono', `${evCount}件`));
+    row.append(meta, el('span', 'person-chev'));
+    row.addEventListener('click', () => openPerson(name));
+    card.append(row);
+  }
+  body.append(card);
 }
 function renderPeopleSection(container, keys, periodLabel) {
   const counts = peopleCountsInPeriod(keys);
@@ -4692,12 +4773,16 @@ function updateFocusArt(progress, label) {
   art.querySelectorAll('.fa-set').forEach((e) => { e.textContent = setTxt; });
   art.querySelectorAll('.fa-task').forEach((e) => { e.textContent = (r && r.title) || ''; });
 
-  if (st === 'neon' || st === 'turntable') { // リング系: 円周に対する残りぶん
-    const circ = st === 'neon' ? 766.5 : 842;
+  if (st === 'neon' || st === 'turntable' || st === 'night') { // リング系: 円周に対する残りぶん
+    const circ = st === 'neon' ? 766.5 : st === 'night' ? 779 : 842;
     art.querySelectorAll('.fa-prog').forEach((c) => {
       c.style.strokeDasharray = String(circ);
       c.style.strokeDashoffset = String(circ * (1 - progress));
     });
+  }
+  if (st === 'night') {
+    const orbit = art.querySelector('.ns-orbit');
+    if (orbit) orbit.style.transform = `rotate(${done * 360}deg)`;
   }
   if (st === 'turntable') { // トーンアームは進むほど内側へ
     const arm = $('#fa-tt-arm');
@@ -4714,6 +4799,12 @@ function updateFocusArt(progress, label) {
   if (st === 'liquid') { // 水位＝残り
     const w = art.querySelector('.l-water');
     if (w) w.style.height = `${Math.max(0, Math.min(100, progress * 100))}%`;
+  }
+  if (st === 'onsen') {
+    const w = art.querySelector('.o-water');
+    if (w) w.style.height = `${Math.max(22, Math.min(82, 22 + done * 60))}%`;
+    const fill = art.querySelector('.o-bar-fill');
+    if (fill) fill.style.width = `${done * 100}%`;
   }
   if (st === 'metro') { // 電車が終点へ進む
     const rail = $('#fa-metro-rail');
@@ -4740,6 +4831,13 @@ function updateFocusArt(progress, label) {
       const left = [...leaves].filter((el) => !el.classList.contains('is-on')).length;
       hint.textContent = done >= 0.995 ? '咲きました！' : left ? `あと${left}枚の葉っぱで開花` : 'もうすぐ開花';
     }
+  }
+  if (st === 'forest') {
+    const fill = art.querySelector('.fr-bar-fill');
+    if (fill) fill.style.width = `${done * 100}%`;
+    const hint = art.querySelector('.fr-hint');
+    if (hint) hint.textContent = done >= 0.995 ? '森を抜けました' : `${Math.round(done * 100)}%`;
+    art.querySelectorAll('.fr-ray').forEach((ray, i) => ray.classList.toggle('is-on', done >= (i + 1) / 4));
   }
 }
 
@@ -7577,8 +7675,8 @@ $('#tidy-scrim')?.addEventListener('click', (e) => { if (e.target === e.currentT
 /* ========== v15: ホーム表示のON/OFF（使わないビュー・タブを隠す） ========== */
 
 const HIDE_VIEWS = [['week', '週ビュー'], ['grid', '時間ビュー'], ['year', '年ビュー']];
-const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['tasks', 'タスク'], ['routines', 'ルーティン'], ['memories', '思い出']];
-const NAV_SCREEN = { tasks: 'tasklist', memories: 'memories' }; // data-nav と画面名が違うものだけ対応表
+const HIDE_NAVS = [['insights', '振り返り'], ['anniv', '記念日'], ['people', 'プロフィール帳'], ['tasks', 'タスク'], ['routines', 'ルーティン'], ['memories', '思い出']];
+const NAV_SCREEN = { people: 'peoplebook', tasks: 'tasklist', memories: 'memories' }; // data-nav と画面名が違うものだけ対応表
 // 日ビューに出るカード（後から追加された機能ぶんも隠せるように）
 function hideSections() { return [['sleep', '睡眠の記録'], ['daylog', dayLogName()]]; }
 function sectionHidden(key) { return !!(db.settings.hidden || {})[`section:${key}`]; }
@@ -8141,6 +8239,7 @@ function renderWeatherCard() {
 /* ========== v15: Notion連携（Cloudflare Worker中継で日々の記録をNotionへ） ========== */
 
 let notionPushTimer = null;
+let notionBacklogRunning = false;
 function notionCfg() { return db.settings.notion || (db.settings.notion = { url: '', secret: '', dbId: '', on: false }); }
 function notionReady() { const n = notionCfg(); return Boolean(n.url && n.secret && n.dbId); }
 
@@ -8180,14 +8279,56 @@ function notionDayPayload(key) {
   };
 }
 
+function notionPayloadSig(payload) {
+  return JSON.stringify(payload);
+}
+function notionDayMeaningful(key, payload = notionDayPayload(key)) {
+  return Boolean(payload.diary || payload.memo || payload.doneCount || payload.bed || payload.wake || payload.tasks);
+}
+function notionCandidateKeysThrough(untilKey = todayKey()) {
+  const keys = new Set([todayKey()]);
+  const add = (k) => { if (k && k <= untilKey) keys.add(k); };
+  Object.keys(db.notes || {}).forEach(add);
+  Object.keys(db.dayLogs || {}).forEach(add);
+  Object.keys(db.sleep || {}).forEach(add);
+  const addPerDay = (obj) => Object.keys(obj || {}).forEach(add);
+  for (const t of db.tasks || []) {
+    if (t.repeat) {
+      addPerDay(t.doneDates);
+      addPerDay(t.memoDates);
+      addPerDay(t.diaryDates);
+      addPerDay(t.subsDates);
+    } else if (t.date && (t.done || t.memo || t.diary || (t.subs || []).length)) add(t.date);
+  }
+  for (const e of db.events || []) {
+    if (e.repeat) {
+      addPerDay(e.memoDates);
+      addPerDay(e.diaryDates);
+      addPerDay(e.subsDates);
+    } else if (e.date && (e.memo || e.diary || (e.subs || []).length)) add(e.date);
+  }
+  return [...keys].filter((k) => k <= untilKey).sort();
+}
+function notionUnsyncedKeys(untilKey = todayKey()) {
+  const n = notionCfg();
+  n.syncedDays = n.syncedDays || {};
+  return notionCandidateKeysThrough(untilKey).filter((key) => {
+    const payload = notionDayPayload(key);
+    if (!notionDayMeaningful(key, payload)) return false;
+    return n.syncedDays[key] !== notionPayloadSig(payload);
+  });
+}
+
 async function notionPush(key, { silent = true } = {}) {
   const n = notionCfg();
   if (!notionReady()) { if (!silent) flashToast('先にNotion連携の設定（URL・合言葉・DB ID）を入れてね'); return false; }
+  const payload = notionDayPayload(key);
+  if (!notionDayMeaningful(key, payload)) { if (!silent) flashToast('この日はNotionに送る記録がまだありません'); return false; }
   try {
     const res = await fetch(n.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-TC-Secret': n.secret },
-      body: JSON.stringify(notionDayPayload(key)),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.error) {
@@ -8195,9 +8336,12 @@ async function notionPush(key, { silent = true } = {}) {
       if (!silent) flashToast(`Notionへ送れませんでした（${code}）`);
       return false;
     }
+    n.syncedDays = n.syncedDays || {};
+    n.syncedDays[key] = notionPayloadSig(payload);
     n.lastPushAt = Date.now();
+    n.lastPushKey = key;
     persistLocal();
-    if (!silent) flashToast(data.updated ? 'Notionの今日のページを更新しました' : 'Notionに今日のページを作成しました');
+    if (!silent) flashToast(data.updated ? 'Notionのページを更新しました' : 'Notionにページを作成しました');
     if (ui.screen === 'settings') renderNotionCard();
     return true;
   } catch (err) {
@@ -8205,11 +8349,28 @@ async function notionPush(key, { silent = true } = {}) {
     return false;
   }
 }
-// 保存後の自動送信（ON時・今日の分だけ・8秒デバウンスで無料枠にやさしく）
+async function notionPushBacklog({ silent = true } = {}) {
+  if (notionBacklogRunning) return false;
+  if (!notionReady()) { if (!silent) flashToast('先にNotion連携の設定（URL・合言葉・DB ID）を入れてね'); return false; }
+  const keys = notionUnsyncedKeys(todayKey());
+  if (!keys.length) { if (!silent) flashToast('Notionに未反映の日はありません'); return true; }
+  notionBacklogRunning = true;
+  let ok = 0;
+  for (const key of keys) {
+    const pushed = await notionPush(key, { silent: true });
+    if (!pushed) break;
+    ok += 1;
+  }
+  notionBacklogRunning = false;
+  if (!silent) flashToast(ok === keys.length ? `${ok}日分をNotionに反映しました` : `${ok}/${keys.length}日分を反映しました（途中で止まりました）`);
+  if (ui.screen === 'settings') renderNotionCard();
+  return ok === keys.length;
+}
+// 保存後の自動送信（ON時・未反映の日だけ・8秒デバウンスで無料枠にやさしく）
 function scheduleNotionPush() {
   if (!notionCfg().on || !notionReady()) return;
   clearTimeout(notionPushTimer);
-  notionPushTimer = setTimeout(() => notionPush(todayKey(), { silent: true }), 8000);
+  notionPushTimer = setTimeout(() => notionPushBacklog({ silent: true }), 8000);
 }
 
 function renderNotionCard() {
@@ -8235,7 +8396,7 @@ function renderNotionCard() {
   cb.type = 'checkbox';
   cb.checked = n.on !== false && !!n.on;
   cb.addEventListener('change', () => { n.on = cb.checked; persistLocal(); });
-  tg.append(cb, ' 保存時に自動でNotionへ送る（今日の分）');
+  tg.append(cb, ' 保存時に自動でNotionへ送る（未反映の日）');
   wrap.append(tg);
 
   const tg2 = el('label', 'sync-toggle');
@@ -8264,7 +8425,14 @@ function renderNotionCard() {
   btn.addEventListener('click', () => notionPush(todayKey(), { silent: false }));
   wrap.append(btn);
 
-  if (n.lastPushAt) wrap.append(el('p', 'hint', `最後に送信: ${new Date(n.lastPushAt).toLocaleString('ja-JP')}`));
+  const unsynced = notionReady() ? notionUnsyncedKeys(todayKey()) : [];
+  const allBtn = el('button', 'cta ghost', unsynced.length ? `未反映の${unsynced.length}日分をNotionに送る` : '未反映の日を確認する');
+  allBtn.type = 'button';
+  allBtn.disabled = !notionReady();
+  allBtn.addEventListener('click', () => notionPushBacklog({ silent: false }));
+  wrap.append(allBtn);
+
+  if (n.lastPushAt) wrap.append(el('p', 'hint', `最後に送信: ${new Date(n.lastPushAt).toLocaleString('ja-JP')}${n.lastPushKey ? `（${n.lastPushKey}）` : ''}`));
 }
 
 // 天気と祝日は起動の少しあとに取りにいく（初回描画を邪魔しない）
