@@ -24,6 +24,13 @@
 
 ## 作業ログ
 
+### 2026-09-13（v97 = タイマー3種追加・プロフィール帳一覧・Notion未反映日同期）
+
+- タイマー（フォーカス）デザインに「夜空」「温泉」「森」を追加。`TIMER_STYLES` / `TIMER_ART` / `#focus[data-timer]` CSS / 横向き縮小 / focus-link色 / theme-color を追加し、APP_VERSION・Service Workerキャッシュを v97 に更新
+- 下部ナビに「プロフィール」を追加。`scr-peoplebook` で `db.people`・予定の `who`・`peopleProfiles` を統合一覧化し、既存の人ページ（読む/編集モード）へ入れる導線を追加。表示ON/OFF対象にも追加
+- Notion連携を「今日だけ」から「今日以前の未反映日だけ」へ拡張。送信内容の指紋を `settings.notion.syncedDays` に保存し、日記・メモ・睡眠・完了タスクなど送る中身がある日だけをまとめて upsert。設定に手動まとめ送信ボタンを追加
+- `CHANGELOG.md`、`specs/task-calendar-people.md`、`specs/task-calendar-notion.md` を更新
+
 ### 2026-09-13（v1.69.0 / アプリ内 v96 = Eclipseテーマトグル）
 
 - 画面上部のテーマボタンを、ライトでは太陽、ダークでは星空と三日月になる横長のEclipseトグルへ変更
