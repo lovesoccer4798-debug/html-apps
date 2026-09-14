@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v98';
+const APP_VERSION = 'v99';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -211,6 +211,9 @@ const ICONS = {
   clock: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
   trash: `<svg ${ICON_ATTRS}><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   pencil: `<svg ${ICON_ATTRS}><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
+  star: `<svg ${ICON_ATTRS}><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.751a.53.53 0 0 1 .294.904l-3.738 3.644a2.12 2.12 0 0 0-.611 1.878l.882 5.145a.53.53 0 0 1-.77.559l-4.62-2.429a2.12 2.12 0 0 0-1.973 0l-4.62 2.43a.53.53 0 0 1-.77-.56l.882-5.145a2.12 2.12 0 0 0-.611-1.878L2.16 9.79a.53.53 0 0 1 .294-.904l5.166-.751a2.12 2.12 0 0 0 1.595-1.16z"/></svg>`,
+  folder: `<svg ${ICON_ATTRS}><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>`,
+  x: `<svg ${ICON_ATTRS}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
   repeat: `<svg ${ICON_ATTRS}><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>`,
   pin: `<svg ${ICON_ATTRS}><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`,
   link: `<svg ${ICON_ATTRS}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
@@ -242,7 +245,7 @@ const ICONS = {
 const PRESET_DEFAULT = { 'view:grid': true, 'view:year': true, 'nav:anniv': true, 'nav:routines': true, 'section:sleep': true };
 
 function defaultDb() {
-  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', timerStyle: '', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', memShowInCal: {}, userName: '', senderName: '', notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
+  return { tasks: [], events: [], notes: {}, routines: [], goals: {}, sleep: {}, dayLogs: {}, calendars: [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }], boards: [], boardItems: [], sharedJoined: [], sharedCache: {}, people: [], peopleProfiles: {}, anniversaries: [], colorRules: [], packages: [], periodNotes: {}, settings: { theme: 'auto', accent: 'green', font: 'gothic', monthStyle: 'dots', fontSize: 'large', calendarFilter: 'all', sleepMode: 'evening', zoomLock: true, timerNotify: false, styleVariant: 'round', monthEdge: false, stickyHeader: true, monthHideRoutines: false, invertEvents: false, monthChipCenter: false, startView: 'day', timerStyle: '', mirrorShared: false, notePrivDefault: 'open', appIcon: 'default', memShowInCal: {}, userName: '', senderName: '', peopleGroups: [], notion: { url: '', secret: '', dbId: '', on: false } }, running: null };
 }
 
 function loadDb() {
@@ -307,6 +310,9 @@ const ui = {
   sheetPhotos: [],          // 編集シートで選択中の写真（思い出カレンダー用）
   memCode: null,            // 「思い出」タブで表示中の思い出カレンダー
   personEdit: false,        // プロフィール帳を編集モードで開いているか（既定は読むモード）
+  peopleQuery: '',          // プロフィール帳一覧の検索語（保存しない）
+  peopleGroup: 'all',       // 'all' | 'favorite' | 'none' | group name
+  peopleKana: '',           // '' | 'a'...'wa' | 'other'
   tidySel: new Set(),       // 「今日の整理」で選択中の項目id
   memStampOpen: null,       // スタンプ一覧を開いている思い出のid
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
@@ -3189,35 +3195,240 @@ function allPeopleNames() {
   for (const e of db.events || []) for (const n of (e.who || [])) if ((n || '').trim()) names.add(n.trim());
   return [...names].sort((a, b) => a.localeCompare(b, 'ja'));
 }
+function personMeta(name) {
+  const prof = personProfile(name);
+  prof._meta = prof._meta && typeof prof._meta === 'object' ? prof._meta : {};
+  prof._meta.groups = Array.isArray(prof._meta.groups) ? prof._meta.groups.filter(Boolean) : [];
+  return prof._meta;
+}
+function peopleGroups() {
+  db.settings.peopleGroups = Array.isArray(db.settings.peopleGroups) ? db.settings.peopleGroups.filter(Boolean) : [];
+  const set = new Set(db.settings.peopleGroups.map((g) => String(g || '').trim()).filter(Boolean));
+  Object.keys(db.peopleProfiles || {}).forEach((name) => {
+    const meta = ((db.peopleProfiles || {})[name] || {})._meta || {};
+    (Array.isArray(meta.groups) ? meta.groups : []).forEach((g) => { if ((g || '').trim()) set.add(g.trim()); });
+  });
+  db.settings.peopleGroups = [...set].sort((a, b) => a.localeCompare(b, 'ja'));
+  return db.settings.peopleGroups;
+}
+function addPeopleGroup(raw) {
+  const name = String(raw || '').trim().slice(0, 32);
+  if (!name) return false;
+  const groups = peopleGroups();
+  if (!groups.includes(name)) groups.push(name);
+  db.settings.peopleGroups = [...new Set(groups)].sort((a, b) => a.localeCompare(b, 'ja'));
+  save();
+  return true;
+}
+function togglePeopleFavorite(name) {
+  const meta = personMeta(name);
+  meta.favorite = !meta.favorite;
+  save();
+  renderPeopleBook();
+}
+function togglePeopleGroup(name, group) {
+  const meta = personMeta(name);
+  const set = new Set(meta.groups || []);
+  if (set.has(group)) set.delete(group); else set.add(group);
+  meta.groups = [...set].sort((a, b) => a.localeCompare(b, 'ja'));
+  save();
+  renderPeopleBook();
+}
+const PEOPLE_KANA_BUCKETS = [
+  ['a', 'あ'], ['ka', 'か'], ['sa', 'さ'], ['ta', 'た'], ['na', 'な'],
+  ['ha', 'は'], ['ma', 'ま'], ['ya', 'や'], ['ra', 'ら'], ['wa', 'わ'], ['other', '他'],
+];
+function kanaBucket(name) {
+  let ch = String(name || '').trim().charAt(0);
+  if (!ch) return 'other';
+  const code = ch.charCodeAt(0);
+  if (code >= 0x30a1 && code <= 0x30f6) ch = String.fromCharCode(code - 0x60); // カタカナ→ひらがな
+  if ('あいうえおぁぃぅぇぉ'.includes(ch)) return 'a';
+  if ('かきくけこがぎぐげご'.includes(ch)) return 'ka';
+  if ('さしすせそざじずぜぞ'.includes(ch)) return 'sa';
+  if ('たちつてとだぢづでどっ'.includes(ch)) return 'ta';
+  if ('なにぬねの'.includes(ch)) return 'na';
+  if ('はひふへほばびぶべぼぱぴぷぺぽ'.includes(ch)) return 'ha';
+  if ('まみむめも'.includes(ch)) return 'ma';
+  if ('やゆよゃゅょ'.includes(ch)) return 'ya';
+  if ('らりるれろ'.includes(ch)) return 'ra';
+  if ('わをん'.includes(ch)) return 'wa';
+  return 'other';
+}
+function peopleSearchText(name, prof, groups) {
+  return [name, prof.nick, prof.relation, prof.birthday, prof.age, prof.personality, prof.likes, prof.met, prof.next, prof.memory, ...(groups || [])]
+    .join(' ')
+    .toLowerCase();
+}
 function renderPeopleBook() {
   const body = $('#peoplebook-body');
   if (!body) return;
   body.textContent = '';
   const names = allPeopleNames();
+  const groups = peopleGroups();
+
+  const tools = el('div', 'card peoplebook-tools');
+  const toolHead = el('div', 'peoplebook-tools-head');
+  const countLabel = el('p', 'section-label', `プロフィール帳（${names.length}人）`);
+  toolHead.append(countLabel);
+  const addWrap = el('div', 'peoplebook-addgroup');
+  const groupInput = document.createElement('input');
+  groupInput.type = 'text';
+  groupInput.placeholder = 'グループ名を追加';
+  groupInput.maxLength = 32;
+  groupInput.className = 'peoplebook-group-input';
+  const addBtn = el('button', 'peoplebook-add-btn');
+  addBtn.type = 'button';
+  addBtn.innerHTML = ICONS.plus;
+  addBtn.append(el('span', '', '追加'));
+  addBtn.addEventListener('click', () => {
+    if (addPeopleGroup(groupInput.value)) {
+      ui.peopleGroup = groupInput.value.trim().slice(0, 32);
+      renderPeopleBook();
+    } else {
+      flashToast('グループ名を入力してください');
+    }
+  });
+  groupInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addBtn.click(); });
+  addWrap.append(groupInput, addBtn);
+  toolHead.append(addWrap);
+  tools.append(toolHead);
+
+  const search = el('label', 'peoplebook-search');
+  search.innerHTML = ICONS.search;
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.id = 'peoplebook-search';
+  searchInput.placeholder = '名前・呼び方・関係性・メモから検索';
+  searchInput.value = ui.peopleQuery || '';
+  searchInput.addEventListener('input', () => {
+    ui.peopleQuery = searchInput.value;
+    renderPeopleBook();
+    requestAnimationFrame(() => {
+      const next = $('#peoplebook-search');
+      if (next) { next.focus(); next.setSelectionRange(next.value.length, next.value.length); }
+    });
+  });
+  search.append(searchInput);
+  if (ui.peopleQuery) {
+    const clear = el('button', 'peoplebook-clear');
+    clear.type = 'button';
+    clear.innerHTML = ICONS.x;
+    clear.addEventListener('click', () => { ui.peopleQuery = ''; renderPeopleBook(); });
+    search.append(clear);
+  }
+  tools.append(search);
+
+  const groupChips = el('div', 'peoplebook-filter-row');
+  const chip = (key, label, icon) => {
+    const btn = el('button', `peoplebook-filter${ui.peopleGroup === key ? ' is-active' : ''}`);
+    btn.type = 'button';
+    if (icon) btn.innerHTML = icon;
+    btn.append(el('span', '', label));
+    btn.addEventListener('click', () => { ui.peopleGroup = key; renderPeopleBook(); });
+    return btn;
+  };
+  groupChips.append(chip('all', 'すべて'));
+  groupChips.append(chip('favorite', 'お気に入り', ICONS.star));
+  groupChips.append(chip('none', '未分類', ICONS.folder));
+  groups.forEach((g) => groupChips.append(chip(g, g, ICONS.folder)));
+  tools.append(groupChips);
+
+  const kanaRow = el('div', 'peoplebook-kana-row');
+  const allKana = el('button', `peoplebook-kana${!ui.peopleKana ? ' is-active' : ''}`, '全部');
+  allKana.type = 'button';
+  allKana.addEventListener('click', () => { ui.peopleKana = ''; renderPeopleBook(); });
+  kanaRow.append(allKana);
+  PEOPLE_KANA_BUCKETS.forEach(([key, label]) => {
+    const btn = el('button', `peoplebook-kana${ui.peopleKana === key ? ' is-active' : ''}`, label);
+    btn.type = 'button';
+    btn.addEventListener('click', () => { ui.peopleKana = key; renderPeopleBook(); });
+    kanaRow.append(btn);
+  });
+  tools.append(kanaRow);
+  body.append(tools);
+
   const card = el('div', 'card peoplebook-card');
-  card.append(el('p', 'section-label', `プロフィール帳（${names.length}人）`));
   if (!names.length) {
     card.append(el('p', 'hint', 'まだ人がいません。予定の「誰と」に名前を入れるか、設定の「人の管理」で追加するとここに並びます。'));
     body.append(card);
     return;
   }
-  for (const name of names) {
-    const row = el('button', 'person-row peoplebook-row');
-    row.type = 'button';
+  const query = (ui.peopleQuery || '').trim().toLowerCase();
+  const entries = names.map((name) => {
     const prof = (db.peopleProfiles || {})[name] || {};
+    const meta = personMeta(name);
+    const itemGroups = meta.groups || [];
     const filled = profileFilled(name).length;
     const evCount = personEventList(name).length;
-    row.append(el('span', 'person-av', (name || '?').trim().slice(0, 1)));
+    return { name, prof, meta, groups: itemGroups, filled, evCount, kana: kanaBucket(name), search: peopleSearchText(name, prof, itemGroups) };
+  }).filter((it) => {
+    if (query && !it.search.includes(query)) return false;
+    if (ui.peopleGroup === 'favorite' && !it.meta.favorite) return false;
+    if (ui.peopleGroup === 'none' && it.groups.length) return false;
+    if (ui.peopleGroup && !['all', 'favorite', 'none'].includes(ui.peopleGroup) && !it.groups.includes(ui.peopleGroup)) return false;
+    if (ui.peopleKana && it.kana !== ui.peopleKana) return false;
+    return true;
+  }).sort((a, b) => {
+    if (!!b.meta.favorite !== !!a.meta.favorite) return Number(!!b.meta.favorite) - Number(!!a.meta.favorite);
+    return a.name.localeCompare(b.name, 'ja');
+  });
+
+  if (!entries.length) {
+    card.append(el('p', 'hint', '条件に合う人が見つかりませんでした。検索語やグループを変えてみてください。'));
+    body.append(card);
+    return;
+  }
+
+  const rowFor = (it) => {
+    const { name, prof, meta: pmeta, filled, evCount } = it;
+    const row = el('div', `person-row peoplebook-row${pmeta.favorite ? ' is-favorite' : ''}`);
+    const star = el('button', `peoplebook-star${pmeta.favorite ? ' is-on' : ''}`);
+    star.type = 'button';
+    star.setAttribute('aria-label', pmeta.favorite ? `${name}のお気に入りを外す` : `${name}をお気に入りにする`);
+    star.innerHTML = ICONS.star;
+    star.addEventListener('click', () => togglePeopleFavorite(name));
+    row.append(star, el('span', 'person-av', (name || '?').trim().slice(0, 1)));
+
+    const open = el('button', 'peoplebook-open');
+    open.type = 'button';
     const main = el('span', 'peoplebook-main');
     main.append(el('span', 'person-name', (prof.nick || '').trim() || name));
     if ((prof.nick || '').trim()) main.append(el('span', 'peoplebook-real', name));
-    row.append(main);
+    if ((prof.relation || '').trim()) main.append(el('span', 'peoplebook-real', prof.relation.trim()));
+    open.append(main);
     const meta = el('span', 'peoplebook-meta');
     meta.append(el('span', 'person-count mono', filled ? `${filled}項目` : '未記入'));
     if (evCount) meta.append(el('span', 'peoplebook-count mono', `${evCount}件`));
-    row.append(meta, el('span', 'person-chev'));
-    row.addEventListener('click', () => openPerson(name));
-    card.append(row);
+    open.append(meta, el('span', 'person-chev'));
+    open.addEventListener('click', () => openPerson(name));
+    row.append(open);
+
+    if (groups.length) {
+      const picker = el('div', 'peoplebook-groups');
+      groups.forEach((g) => {
+        const on = (personMeta(name).groups || []).includes(g);
+        const btn = el('button', `peoplebook-group-chip${on ? ' is-on' : ''}`);
+        btn.type = 'button';
+        btn.innerHTML = ICONS.folder;
+        btn.append(el('span', '', g));
+        btn.addEventListener('click', () => togglePeopleGroup(name, g));
+        picker.append(btn);
+      });
+      row.append(picker);
+    }
+    return row;
+  };
+
+  const favorites = entries.filter((it) => it.meta.favorite);
+  const others = entries.filter((it) => !it.meta.favorite);
+  if (favorites.length && ui.peopleGroup !== 'favorite') {
+    card.append(el('p', 'peoplebook-section-title', 'お気に入り'));
+    favorites.forEach((it) => card.append(rowFor(it)));
+    if (others.length) card.append(el('p', 'peoplebook-section-title', 'すべて'));
+    others.forEach((it) => card.append(rowFor(it)));
+  } else {
+    for (const it of entries) card.append(rowFor(it));
   }
   body.append(card);
 }
