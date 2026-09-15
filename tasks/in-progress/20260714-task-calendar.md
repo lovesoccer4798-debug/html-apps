@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-09-15（v101 = プロフィール帳SNSリンク・本人回答リンク）
+
+- プロフィール帳に `peopleProfiles[名前]._links` を追加し、Instagram / X / note / TikTok / その他URLを保存・表示できるようにした。`@username` やID入力は各サービスのURLへ正規化
+- 人ページの読むモードに「本人に書いてもらうリンク」を追加。Firebaseログイン中に `profileRequests/{code}` を作成し、相手は `?profwrite=コード` から未ログインで回答できる
+- 回答は持ち主側で `peopleProfiles[名前]._guestbook[]` に取り込み、自分で書くプロフィール本文とは別枠で表示
+- Firestoreルールに `profileRequests/{code}` の `get/create/update/delete` を追加する必要があるため、`specs/task-calendar-firebase-sync.md` にルール例を追記
+- `APP_VERSION`、HTMLのクエリ、Service Workerキャッシュを v101 に更新
+
 ### 2026-09-15（v99 = PC全幅カレンダー・プロフィール帳整理）
 
 - PC幅1100px以上で、左サイドバー固定＋カレンダー全幅のレイアウトへ追加上書き。スマホPWAの480px基準・下タブは維持

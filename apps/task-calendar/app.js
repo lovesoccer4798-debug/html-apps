@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v99';
+const APP_VERSION = 'v101';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -3134,9 +3134,52 @@ const PROFILE_FIELDS = [
   { key: 'next', label: '次に会ったらしたいこと', ph: '例：あの店に行く・旅行の話をする', multi: true, icon: 'party' },
   { key: 'memory', label: '思い出・エピソード', ph: '一緒に過ごした思い出を自由に書けます', multi: true, icon: 'image' },
 ];
+const PROFILE_SOCIAL_FIELDS = [
+  { key: 'instagram', label: 'Instagram', ph: 'URL または @username', base: 'https://www.instagram.com/' },
+  { key: 'x', label: 'X', ph: 'URL または @username', base: 'https://x.com/' },
+  { key: 'note', label: 'note', ph: 'URL または note ID', base: 'https://note.com/' },
+  { key: 'tiktok', label: 'TikTok', ph: 'URL または @username', base: 'https://www.tiktok.com/@' },
+  { key: 'website', label: 'その他リンク', ph: 'URL', base: '' },
+];
+const PROFILE_GUESTBOOK_FIELDS = [
+  { key: 'fromName', label: '名前・呼ばれ方', ph: '例：むらやん' },
+  { key: 'nickname', label: 'みんなから何て呼ばれてた？', ph: '例：むらやん、先生、ボス' },
+  { key: 'currentMood', label: '最近ハマっていること', ph: '最近の自分っぽいものを教えて' },
+  { key: 'favorite', label: '好きなもの・推し', ph: '食べ物、場所、曲、人、なんでも' },
+  { key: 'personality', label: '自分をひとことで言うと？', ph: '例：考えすぎる陽キャ' },
+  { key: 'secretCrush', label: '好きな人はいる？', ph: '秘密でもOK。懐かしプロフィール帳ノリでどうぞ' },
+  { key: 'bigFail', label: '過去一の失敗', ph: '今だから笑える話も歓迎' },
+  { key: 'happyMemory', label: '最近うれしかったこと', ph: '小さいことでもOK' },
+  { key: 'future', label: 'いつかやってみたいこと', ph: '旅行、挑戦、夢、野望など' },
+  { key: 'message', label: '最後にひとこと', ph: '自由にどうぞ' },
+];
 // 見出しに使う「その人の顔」ぶん（ヘッダーに小さく並べる）と、読み物ぶん（ブロックで見せる）
 const PROFILE_HEAD_KEYS = ['nick', 'relation', 'age', 'birthday'];
 function profileStoryFields() { return PROFILE_FIELDS.filter((f) => !PROFILE_HEAD_KEYS.includes(f.key)); }
+function profileLinks(prof) {
+  prof._links = prof._links && typeof prof._links === 'object' ? prof._links : {};
+  return prof._links;
+}
+function normalizeProfileUrl(kind, raw) {
+  let v = String(raw || '').trim();
+  if (!v) return '';
+  const field = PROFILE_SOCIAL_FIELDS.find((f) => f.key === kind);
+  if (!/^https?:\/\//i.test(v)) {
+    v = v.replace(/^@+/, '');
+    if (field && field.base) v = `${field.base}${encodeURIComponent(v)}`;
+    else v = `https://${v}`;
+  }
+  try {
+    const u = new URL(v);
+    return /^https?:$/.test(u.protocol) ? u.href : '';
+  } catch (e) {
+    return '';
+  }
+}
+function profileGuestbook(prof) {
+  prof._guestbook = Array.isArray(prof._guestbook) ? prof._guestbook : [];
+  return prof._guestbook;
+}
 /* 誕生日に「年」まで入っていれば {y,m,d} を返す（「12/18」だけなら null） */
 function parseBirthdayYMD(str) {
   const nums = String(str || '').match(/\d+/g);
@@ -3256,7 +3299,9 @@ function kanaBucket(name) {
   return 'other';
 }
 function peopleSearchText(name, prof, groups) {
-  return [name, prof.nick, prof.relation, prof.birthday, prof.age, prof.personality, prof.likes, prof.met, prof.next, prof.memory, ...(groups || [])]
+  const links = profileLinks(prof);
+  const guest = profileGuestbook(prof).flatMap((r) => Object.values(r.answers || {}));
+  return [name, prof.nick, prof.relation, prof.birthday, prof.age, prof.personality, prof.likes, prof.met, prof.next, prof.memory, ...Object.values(links), ...guest, ...(groups || [])]
     .join(' ')
     .toLowerCase();
 }
@@ -3529,6 +3574,22 @@ function buildProfileView(name, prof) {
   hero.append(heroText);
   card.append(hero);
 
+  const links = PROFILE_SOCIAL_FIELDS.map((f) => ({ ...f, url: normalizeProfileUrl(f.key, profileLinks(prof)[f.key]) })).filter((x) => x.url);
+  if (links.length) {
+    const linkRow = el('div', 'prof-links');
+    links.forEach((x) => {
+      const a = document.createElement('a');
+      a.className = 'prof-link';
+      a.href = x.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.innerHTML = ICONS.link;
+      a.append(el('span', '', x.label));
+      linkRow.append(a);
+    });
+    card.append(linkRow);
+  }
+
   const blocks = el('div', 'prof-blocks');
   for (const f of profileStoryFields()) {
     const v = val(f.key);
@@ -3547,7 +3608,37 @@ function buildProfileView(name, prof) {
   // 年齢は誕生日から自動で出ているなら「書いていない項目」に数えない
   if (ageFromBirthday(prof.birthday) !== null && !val('age')) rest -= 1;
   if (rest > 0) card.append(el('p', 'prof-rest', `まだ書いていない項目が${rest}つあります`));
+  const invite = el('button', 'cta ghost prof-ask-btn', '本人に書いてもらうリンクを作る');
+  invite.type = 'button';
+  invite.addEventListener('click', () => issueProfileRequest(name));
+  card.append(invite);
+  const guest = buildProfileGuestbookView(name, prof);
+  if (guest) card.append(guest);
   return card;
+}
+
+function buildProfileGuestbookView(name, prof) {
+  const rows = profileGuestbook(prof).slice().sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+  if (!rows.length) return null;
+  const wrap = el('div', 'prof-guestbook');
+  wrap.append(el('p', 'prof-guestbook-title', '本人に書いてもらったプロフィール帳'));
+  rows.forEach((r) => {
+    const ans = r.answers || {};
+    const card = el('div', 'prof-guest-card');
+    const who = ans.fromName || name;
+    card.append(el('p', 'prof-guest-from', who));
+    if (r.submittedAt) card.append(el('p', 'prof-guest-date mono', new Date(r.submittedAt).toLocaleDateString('ja-JP')));
+    PROFILE_GUESTBOOK_FIELDS.filter((f) => f.key !== 'fromName').forEach((f) => {
+      const v = String(ans[f.key] || '').trim();
+      if (!v) return;
+      const blk = el('div', 'prof-guest-answer');
+      blk.append(el('span', 'prof-guest-q', f.label));
+      blk.append(el('p', 'prof-guest-a', v));
+      card.append(blk);
+    });
+    wrap.append(card);
+  });
+  return wrap;
 }
 
 /* 書くためのプロフィール帳（入力しながら自動保存） */
@@ -3599,6 +3690,38 @@ function buildProfileEdit(name, prof) {
     if (f.key === 'age') wrap.append(ageNote);
     card.append(wrap);
   }
+  const linkHead = el('p', 'section-label prof-link-head', 'SNS・リンク');
+  card.append(linkHead);
+  card.append(el('p', 'hint', 'Instagram、X、note、TikTokなど、その人のページを開けるリンクを残せます。'));
+  const links = profileLinks(prof);
+  for (const f of PROFILE_SOCIAL_FIELDS) {
+    const wrap = el('div', 'prof-field');
+    wrap.append(el('label', 'f-label', f.label));
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'prof-input';
+    input.placeholder = f.ph || '';
+    input.value = links[f.key] || '';
+    input.maxLength = 300;
+    input.addEventListener('input', () => {
+      const p = personProfile(name);
+      const box = profileLinks(p);
+      const v = input.value.trim();
+      if (v) box[f.key] = v; else delete box[f.key];
+      clearTimeout(input._t);
+      input._t = setTimeout(save, 400);
+    });
+    input.addEventListener('blur', () => {
+      const normalized = normalizeProfileUrl(f.key, input.value);
+      if (normalized) {
+        input.value = normalized;
+        profileLinks(personProfile(name))[f.key] = normalized;
+        save();
+      }
+    });
+    wrap.append(input);
+    card.append(wrap);
+  }
   syncAge();
   const done = el('button', 'cta prof-done-btn', '書けた！プロフィール帳を見る');
   done.type = 'button';
@@ -3612,6 +3735,157 @@ function buildProfileEdit(name, prof) {
   card.append(done);
   return card;
 }
+
+function profileRequestDocRef(code) { return window.firebase.firestore().collection('profileRequests').doc(code); }
+function profileRequestUrl(code) { return `${location.origin}${location.pathname}?profwrite=${code}`; }
+function profileRequestLocalList() {
+  const list = [];
+  Object.keys(db.peopleProfiles || {}).forEach((personName) => {
+    const prof = personProfile(personName);
+    prof._requests = Array.isArray(prof._requests) ? prof._requests : [];
+    prof._requests.forEach((r) => {
+      r.personName = r.personName || personName;
+      list.push(r);
+    });
+  });
+  return list;
+}
+async function issueProfileRequest(name) {
+  if (!fbReady || !fbUser) { flashToast('リンク発行にはログインが必要です（設定→アカウントと同期）'); return; }
+  const code = Math.random().toString(36).slice(2, 10);
+  const owner = (db.settings.userName || db.settings.senderName || '').trim() || '友だち';
+  const doc = {
+    v: 1,
+    ownerUid: fbUser.uid,
+    owner,
+    personName: name,
+    status: 'open',
+    questions: PROFILE_GUESTBOOK_FIELDS.map((f) => ({ key: f.key, label: f.label, ph: f.ph || '' })),
+    responses: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  try {
+    await profileRequestDocRef(code).set(doc);
+    const url = profileRequestUrl(code);
+    const prof = personProfile(name);
+    prof._requests = Array.isArray(prof._requests) ? prof._requests : [];
+    prof._requests.unshift({ code, personName: name, url, createdAt: Date.now(), importedIds: [] });
+    save();
+    profileRequestWatch(code);
+    await copyText(`${name}さんへ\n懐かしプロフィール帳を書いてもらえるとうれしいです！\n${url}`, 'リンクをコピーしました。LINEなどで送ってね');
+    renderPerson();
+  } catch (err) {
+    console.warn('profile request issue failed', err);
+    flashToast('リンク発行に失敗しました（Firestoreルールの設定を確認してね）');
+  }
+}
+function importProfileResponses(req, data) {
+  if (!req || !data || data.ownerUid !== (fbUser && fbUser.uid)) return 0;
+  const imported = new Set(req.importedIds || []);
+  const fresh = (data.responses || []).filter((r) => r && r.id && !imported.has(r.id));
+  if (!fresh.length) return 0;
+  const prof = personProfile(req.personName || data.personName || '未設定');
+  const book = profileGuestbook(prof);
+  fresh.forEach((r) => {
+    book.push({ id: r.id, answers: r.answers || {}, submittedAt: r.submittedAt || Date.now(), requestCode: req.code });
+    imported.add(r.id);
+  });
+  req.importedIds = [...imported];
+  save();
+  if (ui.screen === 'person' && ui.personName === (req.personName || data.personName)) renderPerson();
+  return fresh.length;
+}
+const profileRequestWatched = {};
+function profileRequestWatch(code) {
+  if (!fbReady || !fbUser || profileRequestWatched[code]) return;
+  const req = profileRequestLocalList().find((x) => x.code === code);
+  if (!req) return;
+  profileRequestWatched[code] = true;
+  profileRequestDocRef(code).onSnapshot((snap) => {
+    const d = snap.data();
+    const n = importProfileResponses(req, d);
+    if (n) flashToast(`${req.personName}さんのプロフィール帳回答が届きました`);
+  }, (err) => console.warn('profile request listen failed', code, err));
+}
+setInterval(() => {
+  if (fbReady && fbUser) profileRequestLocalList().forEach((r) => profileRequestWatch(r.code));
+}, 5000);
+
+// ─ 相手側: ?profwrite=コード で開いたら、本人が書くプロフィール帳フォームを出す ─
+(() => {
+  const code = new URLSearchParams(location.search).get('profwrite');
+  if (!code) return;
+  const scrim = el('div', 'meet-scrim prof-public-scrim');
+  const card = el('div', 'meet-card prof-public-card');
+  card.append(el('p', 'meet-title', 'プロフィール帳を書く'));
+  const bodyEl = el('div', 'meet-body');
+  bodyEl.append(el('p', 'hint', '読み込み中…'));
+  card.append(bodyEl);
+  scrim.append(card);
+  document.body.append(scrim);
+  let submitted = false;
+  const start = async () => {
+    let ok = false;
+    try { ok = await ensureFirebase(); } catch (e) { ok = false; }
+    if (!ok) { bodyEl.textContent = ''; bodyEl.append(el('p', 'hint', '読み込めませんでした（通信環境を確認してください）。')); return; }
+    profileRequestDocRef(code).onSnapshot((snap) => {
+      const d = snap.data();
+      bodyEl.textContent = '';
+      if (submitted) {
+        bodyEl.append(el('p', 'meet-sub', '送信しました。ありがとう！'));
+        bodyEl.append(el('p', 'hint', 'このページは閉じて大丈夫です。'));
+        return;
+      }
+      if (!d) { bodyEl.append(el('p', 'hint', 'このリンクは見つかりませんでした。')); return; }
+      if (d.status !== 'open') { bodyEl.append(el('p', 'hint', 'このプロフィール帳リンクは締め切られています。')); return; }
+      bodyEl.append(el('p', 'meet-sub', `${d.owner || '友だち'}さんに届く、懐かしプロフィール帳です。答えたいところだけでOK。`));
+      const form = el('div', 'prof-public-form');
+      const inputs = {};
+      (d.questions || PROFILE_GUESTBOOK_FIELDS).forEach((q) => {
+        const wrap = el('div', 'prof-field');
+        wrap.append(el('label', 'f-label', q.label));
+        const input = q.key === 'fromName' ? document.createElement('input') : document.createElement('textarea');
+        if (q.key === 'fromName') input.type = 'text'; else input.rows = 2;
+        input.className = 'prof-input';
+        input.placeholder = q.ph || '';
+        input.maxLength = q.key === 'fromName' ? 60 : 600;
+        inputs[q.key] = input;
+        wrap.append(input);
+        form.append(wrap);
+      });
+      const submit = el('button', 'cta meet-slot', '送信する');
+      submit.type = 'button';
+      submit.addEventListener('click', async () => {
+        const answers = {};
+        Object.keys(inputs).forEach((k) => {
+          const v = inputs[k].value.trim();
+          if (v) answers[k] = v;
+        });
+        if (!Object.keys(answers).length) { flashToast('どこか1つ書いてから送ってね'); return; }
+        const resp = { id: newId('pr'), answers, submittedAt: Date.now() };
+        submit.disabled = true;
+        try {
+          await profileRequestDocRef(code).update({
+            responses: window.firebase.firestore.FieldValue.arrayUnion(resp),
+            updatedAt: Date.now(),
+          });
+          submitted = true;
+          bodyEl.textContent = '';
+          bodyEl.append(el('p', 'meet-sub', '送信しました。ありがとう！'));
+          bodyEl.append(el('p', 'hint', 'このページは閉じて大丈夫です。'));
+        } catch (err) {
+          console.warn('profile response submit failed', err);
+          submit.disabled = false;
+          flashToast('送信できませんでした。少し待ってもう一度お試しください');
+        }
+      });
+      form.append(submit);
+      bodyEl.append(form);
+    }, () => { bodyEl.textContent = ''; bodyEl.append(el('p', 'hint', '読み込めませんでした（通信環境を確認してください）。')); });
+  };
+  setTimeout(start, 0);
+})();
 
 /* ----- settings ----- */
 

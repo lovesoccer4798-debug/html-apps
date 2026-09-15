@@ -1088,6 +1088,21 @@ input, select, textarea { font: inherit; color: inherit; }
   font-size: 11.5px; font-weight: 700; color: var(--tc-accent);
 }
 .prof-chip .icon { width: 13px; height: 13px; }
+.prof-links {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  padding: 12px 0 4px;
+}
+.prof-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--tc-accent-line);
+  background: var(--tc-accent-soft);
+  color: var(--tc-accent);
+  border-radius: var(--tc-r-pill);
+  padding: 6px 10px;
+  font-size: 12px; font-weight: 800;
+  text-decoration: none;
+}
+.prof-link .icon { width: 14px; height: 14px; }
 
 .prof-blocks { display: flex; flex-direction: column; margin-top: 6px; }
 .prof-block { padding: 12px 0; border-bottom: 1px dashed var(--tc-line); }
@@ -1116,6 +1131,34 @@ input, select, textarea { font: inherit; color: inherit; }
 .prof-rest { margin: 12px 0 0; font-size: 11.5px; color: var(--tc-ink4); text-align: center; }
 .prof-age-note { margin-top: 6px; }
 .prof-input.is-auto { color: var(--tc-ink3); background: var(--tc-surface); border-style: dashed; }
+.prof-link-head { margin-top: 18px; }
+.prof-ask-btn { margin-top: 14px; }
+.prof-guestbook {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--tc-line);
+}
+.prof-guestbook-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  color: var(--tc-ink3);
+}
+.prof-guest-card {
+  border: 1px solid var(--tc-line);
+  background: var(--tc-surface2);
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 9px;
+}
+.prof-guest-from { margin: 0; font-size: 15px; font-weight: 900; color: var(--tc-ink); }
+.prof-guest-date { margin: 2px 0 8px; font-size: 11px; color: var(--tc-ink4); }
+.prof-guest-answer { padding: 9px 0; border-top: 1px dashed var(--tc-line); }
+.prof-guest-q { display: block; font-size: 11px; font-weight: 800; color: var(--tc-ink3); }
+.prof-guest-a { margin: 3px 0 0; font-size: 14px; line-height: 1.65; color: var(--tc-ink); white-space: pre-wrap; word-break: break-word; }
+.prof-public-card { max-width: 560px; }
+.prof-public-form { display: flex; flex-direction: column; gap: 2px; }
 .prof-done-btn { margin-top: 16px; }
 
 .done-row .dr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
