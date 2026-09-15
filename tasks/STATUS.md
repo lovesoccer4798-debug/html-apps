@@ -5,7 +5,7 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-09-15
-- **更新者メモ**: TaskARE v100。プロフィール帳検索のスマホ入力安定化、通常予定/タスクの月カレンダー優先表示、ルーティン新規追加項目の追加日以降反映を実装。PR作成予定
+- **更新者メモ**: TaskARE v101。v100のプロフィール検索安定化・月カレンダー優先表示に続き、プロフィール帳にSNSリンクと本人に書いてもらうプロフィール帳リンクを追加。Firestoreルール追記が必要
 
 ## ワークスペース全体の状態
 
@@ -17,14 +17,14 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 日／週／月／年＋タイマー＋繰り返し＋予定＋メモ＋ルーティンパッケージの個人用タスクカレンダー（PWA・共有カレンダー／思い出シェアカレンダー対応・アプリ内表示は v100） |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 日／週／月／年＋タイマー＋繰り返し＋予定＋メモ＋ルーティンパッケージの個人用タスクカレンダー（PWA・共有カレンダー／思い出シェアカレンダー対応・アプリ内表示は v101） |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（本体はv100のPR作成予定。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（本体はv101のPRレビュー待ち。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 

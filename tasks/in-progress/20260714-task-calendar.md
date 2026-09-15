@@ -24,6 +24,14 @@
 
 ## 作業ログ
 
+### 2026-09-15（v101 = プロフィール帳SNSリンク・本人回答リンク）
+
+- プロフィール帳に `peopleProfiles[名前]._links` を追加し、Instagram / X / note / TikTok / その他URLを保存・表示できるようにした。`@username` やID入力は各サービスのURLへ正規化
+- 人ページの読むモードに「本人に書いてもらうリンク」を追加。Firebaseログイン中に `profileRequests/{code}` を作成し、相手は `?profwrite=コード` から未ログインで回答できる
+- 回答は持ち主側で `peopleProfiles[名前]._guestbook[]` に取り込み、自分で書くプロフィール本文とは別枠で表示
+- Firestoreルールに `profileRequests/{code}` の `get/create/update/delete` を追加する必要があるため、`specs/task-calendar-firebase-sync.md` にルール例を追記
+- `APP_VERSION`、HTMLのクエリ、Service Workerキャッシュを v101 に更新
+
 ### 2026-09-15（v100 = プロフィール検索安定化・通常予定の優先表示・ルーティン追加日制御）
 
 - プロフィール帳一覧の検索で、入力のたびに検索欄ごと再描画していた処理を、結果カードだけ更新する形へ変更。スマホ入力中のフォーカス崩れ・カーソル飛びの原因を抑制

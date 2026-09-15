@@ -74,6 +74,19 @@ service cloud.firestore {
             && request.resource.data.slots == resource.data.slots);
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
+    // プロフィール帳を「本人に書いてもらう」リンク。
+    // 持ち主はログインして作成。相手はログインなしで読む/回答する（コードを知っている人だけ）。
+    match /profileRequests/{code} {
+      allow get: if true;
+      allow create: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if resource.data.status == 'open'
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.personName == resource.data.personName
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.questions == resource.data.questions
+        && request.resource.data.responses.size() == resource.data.responses.size() + 1;
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }
 ```
