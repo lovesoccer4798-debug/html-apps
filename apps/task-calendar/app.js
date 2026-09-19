@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v101';
+const APP_VERSION = 'v102';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -694,10 +694,13 @@ const PALETTES = [
   { id: 'aurora', name: 'オーロラオービット', sub: 'Aurora Orbit', bg: '#101540', surface: '#252a52', accent: '#8e7cff', line: 'rgba(255,255,255,.25)' },
   { id: 'candy', name: 'クラウドキャンディ', sub: 'Cloud Candy', bg: '#fdf4ff', surface: '#ffffff', accent: '#c9a6ff', line: '#f3e4ff' },
   { id: 'skyglass', name: 'スカイグラス', sub: 'Sky Glass', bg: '#dff4ff', surface: '#ffffff', accent: '#2b8fb7', line: '#bfe2f0' },
-  { id: 'nightsea', name: 'ナイトリフレクション', sub: 'Night Reflection', bg: '#091d33', surface: '#102a45', accent: '#71d7df', line: '#24455f' },
+  { id: 'nightsea', name: 'ナイトリフレクション', sub: 'Night Reflection', bg: '#13151c', surface: '#20242e', accent: '#d6c6f2', line: '#454d60' },
   { id: 'botanical', name: 'ボタニカル', sub: 'Botanical', bg: '#f4f0e4', surface: '#fffaf0', accent: '#51784a', line: '#ddd6c2' },
   { id: 'sunsetglass', name: 'サンセットグラス', sub: 'Sunset Glass', bg: '#ffe1da', surface: '#fff8f5', accent: '#c96f97', line: '#f3c4c4' },
   { id: 'minimalart', name: 'ミニマルアート', sub: 'Minimal Art', bg: '#f2eee6', surface: '#fffdf8', accent: '#252525', line: '#ddd5c8' },
+  { id: 'editorial', name: 'エディトリアル', sub: 'Editorial', bg: '#f6f6f3', surface: '#ffffff', accent: '#ae2949', line: '#d5d5cf' },
+  { id: 'harbor', name: 'ハーバー', sub: 'Harbor', bg: '#eaf2ef', surface: '#fcfefd', accent: '#176b56', line: '#bed4cc' },
+  { id: 'atelier', name: 'アトリエ', sub: 'Atelier', bg: '#f1f1f1', surface: '#ffffff', accent: '#f2cf45', line: '#292929' },
 ];
 function applyPalette() {
   const p = db.settings.palette;
@@ -713,7 +716,7 @@ const PALETTE_TOP = {
   candy: { light: '#fdf4ff', dark: '#241d2e' },
   aurora: { light: '#0b0f2b', dark: '#0b0f2b' },
   skyglass: { light: '#dff4ff', dark: '#08172c' },
-  nightsea: { light: '#e5f3fa', dark: '#061426' },
+  nightsea: { light: '#eef0f3', dark: '#13151c' },
   botanical: { light: '#f4f0e4', dark: '#172116' },
   sunsetglass: { light: '#ffe1da', dark: '#241628' },
   minimalart: { light: '#f2eee6', dark: '#181716' },
@@ -733,7 +736,8 @@ function screenTopColor() {
 function applyThemeColor(override) {
   const focus = document.getElementById('focus');
   const timerOpen = Boolean(focus && !focus.hidden); // 開いている最中にテーマを変えても戻らないように
-  const pick = override || (timerOpen ? (TIMER_TOP[timerStyleId()] || screenTopColor()) : null);
+  const style = db.running?.mode === 'countup' ? '' : timerStyleId();
+  const pick = override || (timerOpen ? (TIMER_TOP[style] || screenTopColor()) : null);
   const color = pick || screenTopColor();
   const m = document.getElementById('tc-theme-color');
   if (m) m.setAttribute('content', color); // Android/Chrome向け
@@ -1065,12 +1069,12 @@ function buildItemCard(it, { compact = false, showTime = false } = {}) {
     c.append(` ${it.minutes}分`);
     card.append(c);
   }
-  if (it.kind === 'task' && it.minutes && !it.done) {
+  if (it.kind === 'task' && !it.done) {
     const play = el('button', 'play-btn');
     play.type = 'button';
     play.setAttribute('aria-label', `「${it.title}」のタイマーを開始`);
     play.innerHTML = ICONS.play;
-    play.addEventListener('click', (e) => { e.stopPropagation(); startTimer(it); });
+    play.addEventListener('click', (e) => { e.stopPropagation(); it.minutes ? startTimer(it) : chooseTaskTimer(it); });
     card.append(play);
   }
 
@@ -3288,6 +3292,66 @@ function togglePeopleGroup(name, group) {
   save();
   renderPeopleBook();
 }
+function openGroupMembers(group) {
+  const { body, close } = openUtilityDialog(`${group}に人を追加`);
+  const selected = new Set();
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.placeholder = '名前で検索';
+  search.setAttribute('aria-label', '追加する人を検索');
+  const list = el('div', 'group-member-list');
+  const candidates = allPeopleNames().filter((name) => !personMeta(name).groups.includes(group));
+  candidates.forEach((name) => {
+    const label = el('label', 'sync-toggle');
+    label.dataset.search = `${name} ${personProfile(name).nick || ''}`.toLowerCase();
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.addEventListener('change', () => {
+      if (input.checked) selected.add(name); else selected.delete(name);
+      submit.textContent = selected.size ? `${selected.size}人を追加` : '追加';
+      submit.disabled = !selected.size;
+    });
+    label.append(input, document.createTextNode(name));
+    list.append(label);
+  });
+  search.addEventListener('input', () => {
+    [...list.children].forEach((row) => { row.hidden = !row.dataset.search.includes(search.value.trim().toLowerCase()); });
+  });
+  const submit = el('button', 'cta', '追加');
+  submit.type = 'button';
+  submit.disabled = true;
+  submit.addEventListener('click', () => {
+    selected.forEach((name) => {
+      const meta = personMeta(name);
+      meta.groups = [...new Set([...meta.groups, group])];
+    });
+    save(); close(); renderPeopleBook();
+  });
+  body.append(search, list);
+  if (!candidates.length) body.append(el('p', 'hint', '全員がこのグループに所属しています。'));
+  body.append(submit);
+}
+
+function openUtilityDialog(title) {
+  const previousFocus = document.activeElement;
+  const dialog = document.createElement('dialog');
+  dialog.className = 'utility-dialog';
+  dialog.setAttribute('aria-label', title);
+  const close = () => { dialog.close(); };
+  dialog.addEventListener('close', () => { dialog.remove(); previousFocus?.focus(); });
+  const head = el('div', 'utility-dialog-head');
+  const dismiss = el('button', 'iconbtn');
+  dismiss.type = 'button';
+  dismiss.innerHTML = ICONS.x;
+  dismiss.setAttribute('aria-label', '閉じる');
+  dismiss.addEventListener('click', close);
+  head.append(el('h2', '', title), dismiss);
+  const body = el('div', 'utility-dialog-body');
+  dialog.append(head, body);
+  document.body.append(dialog);
+  dialog.showModal();
+  return { body, close };
+}
 const PEOPLE_KANA_BUCKETS = [
   ['a', 'あ'], ['ka', 'か'], ['sa', 'さ'], ['ta', 'た'], ['na', 'な'],
   ['ha', 'は'], ['ma', 'ま'], ['ya', 'や'], ['ra', 'ら'], ['wa', 'わ'], ['other', '他'],
@@ -3392,6 +3456,12 @@ function renderPeopleBook() {
   groupChips.append(chip('none', '未分類', ICONS.folder));
   groups.forEach((g) => groupChips.append(chip(g, g, ICONS.folder)));
   tools.append(groupChips);
+  if (groups.includes(ui.peopleGroup)) {
+    const addPerson = el('button', 'cta ghost', '人を追加');
+    addPerson.type = 'button';
+    addPerson.addEventListener('click', () => openGroupMembers(ui.peopleGroup));
+    tools.append(addPerson);
+  }
 
   const kanaRow = el('div', 'peoplebook-kana-row');
   const allKana = el('button', `peoplebook-kana${!ui.peopleKana ? ' is-active' : ''}`, '全部');
@@ -3473,15 +3543,12 @@ function renderPeopleBookResults(names = allPeopleNames(), groups = peopleGroups
     open.addEventListener('click', () => openPerson(name));
     row.append(open);
 
-    if (groups.length) {
+    if (it.groups.length) {
       const picker = el('div', 'peoplebook-groups');
-      groups.forEach((g) => {
-        const on = (personMeta(name).groups || []).includes(g);
-        const btn = el('button', `peoplebook-group-chip${on ? ' is-on' : ''}`);
-        btn.type = 'button';
+      it.groups.forEach((g) => {
+        const btn = el('span', 'peoplebook-group-chip is-on');
         btn.innerHTML = ICONS.folder;
         btn.append(el('span', '', g));
-        btn.addEventListener('click', () => togglePeopleGroup(name, g));
         picker.append(btn);
       });
       row.append(picker);
@@ -3669,6 +3736,22 @@ function buildProfileGuestbookView(name, prof) {
 function buildProfileEdit(name, prof) {
   const card = el('div', 'card');
   card.append(el('p', 'section-label', 'プロフィール帳'));
+  const membership = el('fieldset', 'profile-membership');
+  membership.append(el('legend', 'f-label', 'グループ'));
+  peopleGroups().forEach((group) => {
+    const label = el('label', 'sync-toggle');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = personMeta(name).groups.includes(group);
+    input.addEventListener('change', () => {
+      const meta = personMeta(name);
+      meta.groups = input.checked ? [...new Set([...meta.groups, group])] : meta.groups.filter((g) => g !== group);
+      save();
+    });
+    label.append(input, document.createTextNode(group));
+    membership.append(label);
+  });
+  if (membership.children.length > 1) card.append(membership);
   card.append(el('p', 'hint', 'この人のことを、思い出せるように書き残しておけます（自分だけのメモ）。'));
   const inputs = {};
   let manualAge = prof.age || ''; // 誕生日から自動計算に切り替わっても、手入力の値は覚えておく
@@ -5140,19 +5223,42 @@ function fmtMs(ms) {
 function remainingMs() {
   const r = db.running;
   if (!r) return 0;
+  if (r.mode === 'countup') return (r.elapsedMs || 0) + (r.paused || r.finished ? 0 : Math.max(0, Date.now() - r.segmentAt));
   return r.paused || r.finished ? (r.remainingMs || 0) : Math.max(0, r.endAt - Date.now());
 }
 
-function startTimer(it) {
+function chooseTaskTimer(it) {
+  const { body, close } = openUtilityDialog(it.title);
+  body.append(el('p', 'section-label', 'タイマー'));
+  const choices = el('div', 'timer-choices');
+  [10, 20, 30, 40, 50, 60].forEach((minutes) => {
+    const button = el('button', 'timer-choice mono', `${minutes}分`);
+    button.type = 'button';
+    button.addEventListener('click', () => { close(); startTimer({ ...it, minutes }); });
+    choices.append(button);
+  });
+  const up = el('button', 'cta ghost', 'カウントアップ · 0秒から');
+  up.type = 'button';
+  up.addEventListener('click', () => { close(); startTimer(it, 'countup'); });
+  body.append(choices, up);
+}
+
+function startTimer(it, mode = 'countdown') {
+  if (db.running && !window.confirm('実行中のタイマーを終了して、このタスクを始めますか？')) return;
   ensureAudio();
+  const now = Date.now();
+  const totalMs = mode === 'countup' ? 0 : it.minutes * 60000;
   db.running = {
+    mode,
+    elapsedMs: 0,
+    segmentAt: now,
     taskId: it.ref.id,
     dateKey: it.key,
     title: it.title,
     time: it.time || null,
-    totalMs: it.minutes * 60 * 1000,
-    startedAt: Date.now(), // タイマーを始めた実時刻（完了時の逆算に使う）
-    endAt: Date.now() + it.minutes * 60 * 1000,
+    totalMs,
+    startedAt: now,
+    endAt: mode === 'countup' ? null : now + totalMs,
     remainingMs: null,
     paused: false,
     finished: false,
@@ -5171,7 +5277,7 @@ function startTick() {
     updateFocusClock(); // 一時停止中でも隅の時計だけは進める
     const r = db.running;
     if (!r || r.paused || r.finished) return;
-    if (r.endAt - Date.now() <= 0) finishTimer();
+    if (r.mode !== 'countup' && r.endAt - Date.now() <= 0) finishTimer();
     updateTimerUI();
   }, 200);
 }
@@ -5179,7 +5285,8 @@ function startTick() {
 function pauseTimer() {
   const r = db.running;
   if (!r || r.paused || r.finished) return;
-  r.remainingMs = Math.max(0, r.endAt - Date.now());
+  if (r.mode === 'countup') r.elapsedMs = remainingMs();
+  else r.remainingMs = Math.max(0, r.endAt - Date.now());
   r.endAt = null;
   r.paused = true;
   save();
@@ -5188,6 +5295,12 @@ function pauseTimer() {
 function resumeTimer() {
   const r = db.running;
   if (!r) return;
+  if (r.mode === 'countup') {
+    r.segmentAt = Date.now();
+    r.paused = false;
+    save(); updateTimerUI();
+    return;
+  }
   if (r.finished) { r.finished = false; r.remainingMs = r.totalMs; } // もう一度
   r.endAt = Date.now() + (r.remainingMs ?? r.totalMs);
   r.remainingMs = null;
@@ -5198,7 +5311,7 @@ function resumeTimer() {
 // タイマーを n 分のばす（実行中でも一時停止中でも、終了後の再開でも足せる）
 function addTimerMinutes(n) {
   const r = db.running;
-  if (!r) return;
+  if (!r || r.mode === 'countup') return;
   const add = n * 60000;
   r.totalMs = Math.max(0, (r.totalMs || 0) + add);
   if (r.finished) { // 時間になったあとに足したら、その分だけまた動き出す
@@ -5269,7 +5382,7 @@ function completeRunning() {
 
 // 選んだデザインの中身を組み立てる（フォーカス画面を開いたとき・設定を変えたとき）
 function buildFocusArt() {
-  const st = timerStyleId();
+  const st = db.running?.mode === 'countup' ? '' : timerStyleId();
   const art = $('#focus-art');
   const ring = $('#focus-ring');
   const focus = $('#focus');
@@ -5391,8 +5504,8 @@ function updateTimerUI() {
   const r = db.running;
   if (!r) return;
   const rem = remainingMs();
-  const label = fmtMs(rem);
-  const progress = r.totalMs > 0 ? rem / r.totalMs : 0;
+  const label = fmtMs(r.mode === 'countup' ? Math.floor(rem / 1000) * 1000 : rem);
+  const progress = r.mode === 'countup' ? 1 : r.totalMs > 0 ? Math.min(1, rem / r.totalMs) : 0;
   document.title = r.paused ? BASE_TITLE : `${label}｜${BASE_TITLE}`;
 
   const focus = $('#focus');
@@ -5402,7 +5515,8 @@ function updateTimerUI() {
     focus.classList.toggle('is-paused', r.paused && !r.finished);
     focus.classList.toggle('is-finished', r.finished);
     $('#timer-toggle').innerHTML = (r.paused || r.finished) ? ICONS.play : ICONS.pause;
-    $('#focus-set').textContent = r.finished
+    $('#timer-plus1').hidden = r.mode === 'countup';
+    $('#focus-set').textContent = r.mode === 'countup' ? (r.paused ? 'カウントアップ · 一時停止中' : 'カウントアップ') : r.finished
       ? 'おつかれさま！'
       : `SET ${Math.round(r.totalMs / 60000)}分${r.time ? ` ・ ${r.time}` : ''}`;
     updateFocusArt(progress, label);
@@ -5430,7 +5544,7 @@ function buildRunCard() {
     <span class="run-info">
       <span class="run-title"></span>
       <div class="run-time mono">--:--</div>
-      <span class="run-set mono">SET ${Math.round(r.totalMs / 60000)}分${r.finished ? ' ・ 時間になりました' : r.paused ? ' ・ 一時停止中' : ''}</span>
+      <span class="run-set mono">${r.mode === 'countup' ? 'カウントアップ' : `SET ${Math.round(r.totalMs / 60000)}分`}${r.finished ? ' ・ 時間になりました' : r.paused ? ' ・ 一時停止中' : ''}</span>
     </span>
     <button class="run-expand" aria-label="フォーカス画面を開く">${ICONS.maximize}</button>`;
   card.querySelector('.run-title').textContent = r.title;
@@ -5460,7 +5574,7 @@ function openFocus() {
   $('#focus').hidden = false;
   document.body.style.overflow = 'hidden';
   updateFocusClock();
-  applyThemeColor(TIMER_TOP[timerStyleId()]); // iPhoneのステータスバーの帯もタイマーの色に合わせる
+  applyThemeColor(r.mode === 'countup' ? screenTopColor() : TIMER_TOP[timerStyleId()]);
 
   // 「つぎ」= 今日の未完了・時間つきタスクのうち実行中でないもの
   const next = itemsFor(todayKey()).find((i) => i.kind === 'task' && !i.done && i.minutes && i.ref.id !== r.taskId);
@@ -8790,6 +8904,7 @@ function notionDayPayload(key) {
   const note = db.notes[key];
   if (note) diaries.push(`【ひとこと】${note}`);
   for (const it of itemsFor(key)) {
+    if (it.kind === 'event') memos.push(`【予定】${it.time ? `${it.time} ` : ''}${it.title}`);
     const dv = diaryFor(it);
     if (dv) diaries.push(`【${it.title}】${dv}`);
     const mv = memoFor(it);
@@ -8823,28 +8938,7 @@ function notionDayMeaningful(key, payload = notionDayPayload(key)) {
   return Boolean(payload.diary || payload.memo || payload.doneCount || payload.bed || payload.wake || payload.tasks);
 }
 function notionCandidateKeysThrough(untilKey = todayKey()) {
-  const keys = new Set([todayKey()]);
-  const add = (k) => { if (k && k <= untilKey) keys.add(k); };
-  Object.keys(db.notes || {}).forEach(add);
-  Object.keys(db.dayLogs || {}).forEach(add);
-  Object.keys(db.sleep || {}).forEach(add);
-  const addPerDay = (obj) => Object.keys(obj || {}).forEach(add);
-  for (const t of db.tasks || []) {
-    if (t.repeat) {
-      addPerDay(t.doneDates);
-      addPerDay(t.memoDates);
-      addPerDay(t.diaryDates);
-      addPerDay(t.subsDates);
-    } else if (t.date && (t.done || t.memo || t.diary || (t.subs || []).length)) add(t.date);
-  }
-  for (const e of db.events || []) {
-    if (e.repeat) {
-      addPerDay(e.memoDates);
-      addPerDay(e.diaryDates);
-      addPerDay(e.subsDates);
-    } else if (e.date && (e.memo || e.diary || (e.subs || []).length)) add(e.date);
-  }
-  return [...keys].filter((k) => k <= untilKey).sort();
+  return Array.from({ length: 10 }, (_, i) => toKey(addDays(fromKey(untilKey), -i)));
 }
 function notionUnsyncedKeys(untilKey = todayKey()) {
   const n = notionCfg();
@@ -8868,13 +8962,17 @@ async function notionPush(key, { silent = true } = {}) {
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.error) {
+    if (!res.ok || data.error || data.ok !== true) {
       const code = [data.error || res.status, data.status].filter(Boolean).join(' ');
+      n.syncErrors = n.syncErrors || {};
+      n.syncErrors[key] = `送信エラー (${code})`;
+      persistLocal();
       if (!silent) flashToast(`Notionへ送れませんでした（${code}）`);
       return false;
     }
     n.syncedDays = n.syncedDays || {};
     n.syncedDays[key] = notionPayloadSig(payload);
+    if (n.syncErrors) delete n.syncErrors[key];
     n.lastPushAt = Date.now();
     n.lastPushKey = key;
     persistLocal();
@@ -8882,6 +8980,9 @@ async function notionPush(key, { silent = true } = {}) {
     if (ui.screen === 'settings') renderNotionCard();
     return true;
   } catch (err) {
+    n.syncErrors = n.syncErrors || {};
+    n.syncErrors[key] = '通信に失敗しました';
+    persistLocal();
     if (!silent) flashToast('Notionへの送信に失敗しました（Worker URLを確認してね）');
     return false;
   }
@@ -8893,13 +8994,15 @@ async function notionPushBacklog({ silent = true } = {}) {
   if (!keys.length) { if (!silent) flashToast('Notionに未反映の日はありません'); return true; }
   notionBacklogRunning = true;
   let ok = 0;
-  for (const key of keys) {
-    const pushed = await notionPush(key, { silent: true });
-    if (!pushed) break;
-    ok += 1;
+  try {
+    for (const key of keys) {
+      const pushed = await notionPush(key, { silent: true });
+      if (pushed) ok += 1;
+    }
+  } finally {
+    notionBacklogRunning = false;
   }
-  notionBacklogRunning = false;
-  if (!silent) flashToast(ok === keys.length ? `${ok}日分をNotionに反映しました` : `${ok}/${keys.length}日分を反映しました（途中で止まりました）`);
+  if (!silent) flashToast(ok === keys.length ? `${ok}日分をNotionに反映しました` : `${ok}/${keys.length}日分を反映しました（失敗日は再送できます）`);
   if (ui.screen === 'settings') renderNotionCard();
   return ok === keys.length;
 }
@@ -8963,11 +9066,15 @@ function renderNotionCard() {
   wrap.append(btn);
 
   const unsynced = notionReady() ? notionUnsyncedKeys(todayKey()) : [];
-  const allBtn = el('button', 'cta ghost', unsynced.length ? `未反映の${unsynced.length}日分をNotionに送る` : '未反映の日を確認する');
+  const allBtn = el('button', 'cta ghost', unsynced.length ? `直近10日間の未反映${unsynced.length}日分を送る` : '直近10日間の未反映を確認');
   allBtn.type = 'button';
   allBtn.disabled = !notionReady();
   allBtn.addEventListener('click', () => notionPushBacklog({ silent: false }));
   wrap.append(allBtn);
+  wrap.append(el('p', 'hint', '対象は今日を含む10日間。あのね。ノートはNotionの「日記」に入ります。'));
+  for (const key of unsynced) {
+    if (n.syncErrors?.[key]) wrap.append(el('p', 'hint', `${key}：${n.syncErrors[key]}`));
+  }
 
   if (n.lastPushAt) wrap.append(el('p', 'hint', `最後に送信: ${new Date(n.lastPushAt).toLocaleString('ja-JP')}${n.lastPushKey ? `（${n.lastPushKey}）` : ''}`));
 }
