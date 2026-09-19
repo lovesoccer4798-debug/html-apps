@@ -3337,3 +3337,75 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   .peoplebook-card > .peoplebook-section-title { grid-column: 1 / -1; }
   .peoplebook-row { border-bottom: 1px solid var(--tc-line); }
 }
+
+.utility-dialog {
+  width: min(460px, calc(100% - 32px)); max-height: 82dvh; box-sizing: border-box;
+  margin: auto; padding: 22px; border: 1px solid var(--tc-line); border-radius: 8px;
+  background: var(--tc-surface); color: var(--tc-ink); overflow-y: auto;
+}
+.utility-dialog::backdrop { background: var(--tc-scrim); }
+.utility-dialog-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 20px; }
+.utility-dialog-head h2 { font-size: 18px; margin: 0; overflow-wrap: anywhere; }
+.utility-dialog-head button { flex: 0 0 40px; }
+.utility-dialog-body { display: grid; gap: 16px; }
+.utility-dialog .cta:disabled { opacity: .45; cursor: default; }
+.utility-dialog input[type="search"] { width: 100%; min-width: 0; font-size: 16px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--tc-line); border-radius: 4px; color: var(--tc-ink); background: var(--tc-surface2); }
+.group-member-list { display: grid; gap: 4px; max-height: 42dvh; overflow-y: auto; }
+.group-member-list .sync-toggle { min-height: 44px; border-bottom: 1px solid var(--tc-line); overflow-wrap: anywhere; }
+.group-member-list [hidden] { display: none; }
+.profile-membership { border: 0; padding: 0; margin: 16px 0; }
+.profile-membership .sync-toggle { min-height: 44px; overflow-wrap: anywhere; }
+.peoplebook-group-chip { max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .peoplebook-tools-head { flex-wrap: wrap; }
+  .peoplebook-tools-head > .section-label { flex-basis: 100%; }
+  .peoplebook-addgroup { width: 100%; }
+  .peoplebook-addgroup .peoplebook-group-input { flex: 1; width: auto; min-width: 0; }
+}
+.timer-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.timer-choice { min-height: 64px; border: 1px solid var(--tc-line); border-radius: 8px; color: var(--tc-ink); background: var(--tc-surface2); font-size: 20px; cursor: pointer; }
+.timer-choice:hover, .timer-choice:focus-visible { border-color: var(--tc-accent); background: var(--tc-accent-soft); }
+
+/* Night Reflection: a silver horizon, distinct from Sky Glass. */
+:root[data-palette="nightsea"] body::before,
+:root[data-palette="nightsea"]:not([data-theme="light"]) body::before,
+:root[data-palette="nightsea"][data-theme] body::before {
+  background: linear-gradient(180deg, var(--tc-bg) 0 32%, var(--tc-line) 32% 32.2%, var(--tc-bg) 45%, var(--tc-surface2));
+}
+:root[data-palette="nightsea"] body::after,
+:root[data-palette="nightsea"]:not([data-theme="light"]) body::after,
+:root[data-palette="nightsea"][data-theme] body::after {
+  background: repeating-linear-gradient(180deg, transparent 0 65px, var(--tc-line) 66px, transparent 67px);
+  top: 44%; opacity: .22;
+}
+:root[data-palette="nightsea"] .date-title { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+:root[data-palette="nightsea"] .card { border-color: var(--tc-line); backdrop-filter: none; }
+
+/* Editorial: restrained print hierarchy and fine rules. */
+:root[data-palette="editorial"] .date-title,
+:root[data-palette="editorial"] .prof-nick { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+:root[data-palette="editorial"] .appbar-top { border-bottom: 2px solid var(--tc-ink); }
+:root[data-palette="editorial"] .section-label { color: var(--tc-accent); }
+:root[data-palette="editorial"] .card { border: 1px solid var(--tc-line); }
+:root[data-palette="editorial"] .item { border-left: 3px solid var(--tc-line); }
+:root[data-palette="editorial"] .seg { border-radius: 4px; background: transparent; border-bottom: 1px solid var(--tc-line); }
+:root[data-palette="editorial"] .seg-btn { border-radius: 0; }
+:root[data-palette="editorial"] .seg-btn.is-active { box-shadow: inset 0 -2px var(--tc-accent); }
+
+/* Harbor: green surfaces, vermilion details, clear navigation. */
+:root[data-palette="harbor"] .appbar-top { border-top: 3px solid #d96651; }
+:root[data-palette="harbor"] .card { border: 1px solid var(--tc-line); border-top: 2px solid var(--tc-accent); }
+:root[data-palette="harbor"] .person-av { border-radius: 8px; border-bottom: 3px solid #d96651; }
+:root[data-palette="harbor"] .section-label { color: var(--tc-accent); }
+:root[data-palette="harbor"] #bottomnav { border-top: 2px solid var(--tc-accent); }
+
+/* Atelier: a yellow marker on a monochrome working surface. */
+:root[data-palette="atelier"] .appbar-top { border-bottom: 4px solid #f2cf45; }
+:root[data-palette="atelier"] .card { border: 1px solid var(--tc-line); }
+:root[data-palette="atelier"] .fab { background: #f2cf45; color: #242424; border-radius: 4px; box-shadow: 3px 3px 0 var(--tc-ink); }
+:root[data-palette="atelier"] .section-label { border-left: 4px solid #f2cf45; padding-left: 10px; }
+:root[data-palette="atelier"] .person-av { border-radius: 4px; background: #f2cf45; color: #242424; }
+:root:is([data-palette="editorial"], [data-palette="harbor"], [data-palette="atelier"]) .peoplebook-tools,
+:root:is([data-palette="editorial"], [data-palette="harbor"], [data-palette="atelier"]) .peoplebook-card { border: 0; background: transparent; padding-inline: 0; }
+:root:is([data-palette="editorial"], [data-palette="harbor"], [data-palette="atelier"], [data-palette="nightsea"]) .mo-chip:not([style]):not(.is-event-chip) { color: var(--tc-accent-ink); }
+:root:is([data-palette="editorial"], [data-palette="harbor"], [data-palette="atelier"], [data-palette="nightsea"]) .mo-chip.is-event-chip:not([style]) { color: var(--tc-bg); }
