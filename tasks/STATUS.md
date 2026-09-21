@@ -24,7 +24,7 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v102のPR #86はマージ済み。v103原点ノートのPR準備。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v103原点ノート: [PR #87](https://github.com/lovesoccer4798-debug/html-apps/pull/87) レビュー待ち。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 
