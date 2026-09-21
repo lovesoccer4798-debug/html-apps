@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v102';
+const APP_VERSION = 'v103';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -204,6 +204,7 @@ function applyAppIcon() {
 }
 
 const ICONS = {
+  chevronLeft: `<svg ${ICON_ATTRS}><path d="m15 18-6-6 6-6"/></svg>`,
   check: `<svg ${ICON_ATTRS}><path d="M20 6 9 17l-5-5"/></svg>`,
   plus: `<svg ${ICON_ATTRS}><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
   play: `<svg ${ICON_ATTRS}><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>`,
@@ -273,6 +274,7 @@ function loadDb() {
 }
 
 let db = loadDb(); // バックアップ復元でまるごと入れ替えることがあるため let
+if (!Array.isArray(db.originNotes)) db.originNotes = [];
 if (!Array.isArray(db.calendars) || db.calendars.length === 0) {
   db.calendars = [{ id: 'c-default', name: 'マイカレンダー', color: 'green', order: 0 }];
 }
@@ -1199,8 +1201,9 @@ function renderAll() {
   $('#scr-help').hidden = ui.screen !== 'help';
   $('#scr-person').hidden = ui.screen !== 'person';
   $('#scr-peoplebook').hidden = ui.screen !== 'peoplebook';
+  $('#scr-origin').hidden = ui.screen !== 'origin';
   $('#scr-memories').hidden = ui.screen !== 'memories';
-  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person' || ui.screen === 'peoplebook' || ui.screen === 'memories';
+  $('#fab').hidden = ui.screen === 'settings' || ui.screen === 'routines' || ui.screen === 'anniv' || ui.screen === 'help' || ui.screen === 'person' || ui.screen === 'peoplebook' || ui.screen === 'memories' || ui.screen === 'origin';
 
   const streak = String(streakDays());
   $('#chip-streak').textContent = streak;
@@ -1228,6 +1231,7 @@ function renderAll() {
   if (ui.screen === 'help') { renderHelpChips(); renderHelp(($('#help-search') && $('#help-search').value) || ''); }
   if (ui.screen === 'person') renderPerson();
   if (ui.screen === 'peoplebook') renderPeopleBook();
+  if (ui.screen === 'origin') renderOrigin();
   if (ui.screen === 'memories') renderMemories();
 }
 
@@ -1977,6 +1981,212 @@ setInterval(() => { if (fbReady && fbUser) (db.settings.meetOffers || []).filter
 })();
 
 /* ----- サイドバー（メニュー） ----- */
+
+const ORIGIN_KINDS = {
+  value: { label: '大切にしたいこと', icon: 'heart', reason: 'なぜ大切にしたい？' },
+  stop: { label: 'やめたい行動', icon: 'pause', reason: 'なぜやめたい？' },
+};
+function originNotes() {
+  if (!Array.isArray(db.originNotes)) db.originNotes = [];
+  return db.originNotes;
+}
+function originUrl(raw) {
+  if (!String(raw || '').trim()) return '';
+  try {
+    const url = new URL(String(raw).trim());
+    return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+  } catch (_) { return null; }
+}
+function originIconButton(icon, label, action) {
+  const button = el('button', 'iconbtn');
+  button.type = 'button';
+  button.innerHTML = ICONS[icon];
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.addEventListener('click', action);
+  return button;
+}
+function openOrigin() {
+  ui.originPrevious = ui.screen === 'origin' ? (ui.originPrevious || 'cal') : ui.screen;
+  setScreen('origin');
+}
+function renderOrigin() {
+  const kind = ui.originKind === 'stop' ? 'stop' : 'value';
+  const tabs = $('#origin-tabs');
+  tabs.textContent = '';
+  Object.entries(ORIGIN_KINDS).forEach(([key, info], index) => {
+    const tab = el('button', `seg-btn${kind === key ? ' is-active' : ''}`);
+    tab.type = 'button';
+    tab.id = `origin-tab-${key}`;
+    tab.dataset.kind = key;
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', String(kind === key));
+    tab.setAttribute('aria-controls', 'origin-list');
+    tab.tabIndex = kind === key ? 0 : -1;
+    tab.innerHTML = ICONS[info.icon];
+    tab.append(el('span', '', info.label));
+    const count = originNotes().filter((n) => n.kind === key).length;
+    tab.append(el('span', 'origin-count mono', String(count)));
+    tab.addEventListener('click', () => { ui.originKind = key; renderOrigin(); });
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      ui.originKind = event.key === 'Home' ? 'value' : event.key === 'End' ? 'stop' : index ? 'value' : 'stop';
+      renderOrigin(); $('#origin-tab-' + ui.originKind).focus();
+    });
+    tabs.append(tab);
+  });
+  const list = $('#origin-list');
+  list.textContent = '';
+  list.dataset.kind = kind;
+  list.setAttribute('aria-labelledby', `origin-tab-${kind}`);
+  const notes = originNotes().filter((n) => n.kind === kind)
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (b.createdAt || 0) - (a.createdAt || 0));
+  if (!notes.length) {
+    const empty = el('div', 'origin-empty');
+    empty.innerHTML = ICONS[ORIGIN_KINDS[kind].icon];
+    empty.append(el('h2', '', kind === 'value' ? '大切にしたいこと' : '手放したいこと'));
+    const add = el('button', 'cta', '最初のノートを書く');
+    add.type = 'button'; add.addEventListener('click', () => editOrigin());
+    empty.append(add); list.append(empty);
+    return;
+  }
+  notes.forEach((note) => {
+    const article = el('article', 'origin-entry');
+    article.dataset.id = note.id;
+    const head = el('div', 'origin-entry-head');
+    const badge = el('span', 'origin-badge');
+    badge.innerHTML = ICONS[ORIGIN_KINDS[kind].icon];
+    badge.append(document.createTextNode(ORIGIN_KINDS[kind].label));
+    const actions = el('div', 'origin-actions');
+    const pin = originIconButton('pin', note.pinned ? '固定を外す' : '上に固定', () => {
+      note.pinned = !note.pinned; note.updatedAt = Date.now(); save(); renderOrigin();
+    });
+    pin.setAttribute('aria-pressed', String(!!note.pinned));
+    actions.append(pin, originIconButton('pencil', 'ノートを編集', () => editOrigin(note)));
+    head.append(badge, actions);
+    article.append(head, el('h2', 'origin-words', note.title));
+    if (note.reason) {
+      const reason = el('div', 'origin-reason');
+      reason.append(el('h3', '', ORIGIN_KINDS[kind].reason), el('p', '', note.reason));
+      article.append(reason);
+    }
+    if ((note.sources || []).length) {
+      const sources = el('div', 'origin-sources');
+      sources.append(el('h3', '', '参考にしたもの'));
+      note.sources.forEach((source) => {
+        const url = originUrl(source.url);
+        const item = el(url ? 'a' : 'span', 'origin-source');
+        if (url) { item.href = url; item.target = '_blank'; item.rel = 'noopener noreferrer'; }
+        item.innerHTML = ICONS.link;
+        item.append(el('span', '', source.title || (url ? new URL(url).hostname : '参考資料')));
+        sources.append(item);
+      });
+      article.append(sources);
+    }
+    if (note.reflection) {
+      const reflection = el('div', 'origin-reflection');
+      reflection.append(el('h3', '', '今の自分からひとこと'), el('p', '', note.reflection));
+      article.append(reflection);
+    }
+    const foot = el('div', 'origin-entry-foot');
+    foot.append(el('span', 'origin-date', `${new Date(note.updatedAt || note.createdAt).toLocaleDateString('ja-JP')} 更新`));
+    foot.append(originIconButton('trash', 'ノートを削除', () => {
+      if (!window.confirm('このノートを削除しますか？')) return;
+      db.originNotes = originNotes().filter((n) => n.id !== note.id);
+      save(); renderOrigin();
+      showUndoToast('ノートを削除しました', () => {
+        if (!originNotes().some((n) => n.id === note.id)) db.originNotes.push(note);
+        save(); if (ui.screen === 'origin') renderOrigin();
+      });
+    }));
+    article.append(foot); list.append(article);
+  });
+}
+function editOrigin(note = null) {
+  let dirty = false;
+  const { body, close, dialog } = openUtilityDialog(note ? 'ノートを編集' : '原点ノートを書く', {
+    canClose: () => !dirty || window.confirm('保存していない変更を破棄しますか？'),
+  });
+  dialog.classList.add('origin-editor');
+  const form = el('form', 'origin-form');
+  form.addEventListener('input', () => { dirty = true; });
+  const kindLabel = el('label', 'f-label', '種類');
+  const kind = document.createElement('select');
+  Object.entries(ORIGIN_KINDS).forEach(([key, value]) => {
+    const option = el('option', '', value.label); option.value = key; kind.append(option);
+  });
+  kind.value = note?.kind || ui.originKind || 'value';
+  kindLabel.append(kind); form.append(kindLabel);
+  const field = (label, value, maxLength, multiline = false) => {
+    const wrapper = el('label', 'f-label', label);
+    const input = document.createElement(multiline ? 'textarea' : 'input');
+    if (!multiline) input.type = 'text'; else input.rows = 4;
+    input.value = value || ''; input.maxLength = maxLength;
+    wrapper.append(input); form.append(wrapper);
+    return input;
+  };
+  const title = field('言葉・行動', note?.title, 120);
+  title.required = true;
+  const reason = field('理由', note?.reason, 4000, true);
+  reason.placeholder = ORIGIN_KINDS[kind.value].reason;
+  kind.addEventListener('change', () => { dirty = true; reason.placeholder = ORIGIN_KINDS[kind.value].reason; });
+  const sources = el('fieldset', 'origin-source-fields');
+  sources.append(el('legend', 'f-label', '参考にしたもの'));
+  const rows = el('div', 'origin-source-rows');
+  const addSource = el('button', 'cta ghost', '参考資料を追加');
+  addSource.type = 'button';
+  const addRow = (source = {}) => {
+    const row = el('div', 'origin-source-row');
+    const nameLabel = el('label', 'f-label', '書名・ページ名');
+    const name = document.createElement('input');
+    name.type = 'text'; name.maxLength = 160; name.value = source.title || '';
+    nameLabel.append(name);
+    const urlLabel = el('label', 'f-label', 'URL（任意）');
+    const url = document.createElement('input');
+    url.type = 'url'; url.maxLength = 2000; url.placeholder = 'https://'; url.value = source.url || '';
+    url.addEventListener('input', () => url.setCustomValidity(''));
+    urlLabel.append(url);
+    const remove = originIconButton('x', '参考資料を外す', () => { row.remove(); dirty = true; addSource.disabled = false; });
+    row.append(nameLabel, urlLabel, remove); rows.append(row);
+    addSource.disabled = rows.children.length >= 5;
+  };
+  (note?.sources || []).slice(0, 5).forEach(addRow);
+  addSource.addEventListener('click', () => { if (rows.children.length < 5) { addRow(); dirty = true; } });
+  sources.append(rows, addSource); form.append(sources);
+  const reflection = field('今の自分からひとこと（任意）', note?.reflection, 2000, true);
+  const pinLabel = el('label', 'sync-toggle');
+  const pin = document.createElement('input');
+  pin.type = 'checkbox'; pin.checked = !!note?.pinned;
+  pinLabel.append(pin, document.createTextNode('上に固定')); form.append(pinLabel);
+  const submit = el('button', 'cta', '保存'); submit.type = 'submit'; form.append(submit);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!title.value.trim()) { title.setCustomValidity('言葉・行動を入力してください'); title.reportValidity(); return; }
+    const savedSources = [];
+    for (const row of rows.children) {
+      const [name, url] = row.querySelectorAll('input');
+      const normalized = originUrl(url.value);
+      if (normalized === null) { url.setCustomValidity('http:// または https:// のURLを入力してください'); url.reportValidity(); return; }
+      if (name.value.trim() || normalized) savedSources.push({ title: name.value.trim(), url: normalized });
+    }
+    const now = Date.now();
+    const saved = { id: note?.id || newId('origin'), kind: kind.value, title: title.value.trim(), reason: reason.value.trim(), sources: savedSources,
+      reflection: reflection.value.trim(), pinned: pin.checked, createdAt: note?.createdAt || now, updatedAt: now };
+    const index = originNotes().findIndex((n) => n.id === saved.id);
+    if (index < 0) db.originNotes.push(saved); else db.originNotes[index] = saved;
+    ui.originKind = saved.kind; save(); dirty = false; close(true); renderOrigin();
+  });
+  title.addEventListener('input', () => title.setCustomValidity(''));
+  body.append(form);
+  title.focus();
+}
+$('#origin-add').innerHTML = ICONS.plus;
+$('#origin-add').addEventListener('click', () => editOrigin());
+$('#origin-back').innerHTML = ICONS.chevronLeft;
+$('#origin-back').addEventListener('click', () => setScreen(ui.originPrevious || 'cal'));
+$('#side-origin .origin-menu-icon').innerHTML = ICONS.heart;
+$('#side-origin').addEventListener('click', () => { closeSidebar(); openOrigin(); });
 
 function openSidebar() { $('#side-scrim').hidden = false; requestAnimationFrame(() => $('#side-scrim').classList.add('is-open')); }
 function closeSidebar() {
@@ -3332,25 +3542,26 @@ function openGroupMembers(group) {
   body.append(submit);
 }
 
-function openUtilityDialog(title) {
+function openUtilityDialog(title, { canClose = () => true } = {}) {
   const previousFocus = document.activeElement;
   const dialog = document.createElement('dialog');
   dialog.className = 'utility-dialog';
   dialog.setAttribute('aria-label', title);
-  const close = () => { dialog.close(); };
+  const close = (force = false) => { if (force || canClose()) dialog.close(); };
+  dialog.addEventListener('cancel', (event) => { if (!canClose()) event.preventDefault(); });
   dialog.addEventListener('close', () => { dialog.remove(); previousFocus?.focus(); });
   const head = el('div', 'utility-dialog-head');
   const dismiss = el('button', 'iconbtn');
   dismiss.type = 'button';
   dismiss.innerHTML = ICONS.x;
   dismiss.setAttribute('aria-label', '閉じる');
-  dismiss.addEventListener('click', close);
+  dismiss.addEventListener('click', () => close());
   head.append(el('h2', '', title), dismiss);
   const body = el('div', 'utility-dialog-body');
   dialog.append(head, body);
   document.body.append(dialog);
   dialog.showModal();
-  return { body, close };
+  return { body, close, dialog };
 }
 const PEOPLE_KANA_BUCKETS = [
   ['a', 'あ'], ['ka', 'か'], ['sa', 'さ'], ['ta', 'た'], ['na', 'な'],
@@ -6980,7 +7191,7 @@ function renderGcalCard() {
 
 /* ========== v9: クラウド同期（Firebase Phase A — ログイン＋自分のデータのバックアップ/復元） ========== */
 
-const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules', 'packages'];
+const SYNC_KEYS_ARR = ['tasks', 'events', 'routines', 'calendars', 'boards', 'boardItems', 'sharedJoined', 'people', 'anniversaries', 'colorRules', 'packages', 'originNotes'];
 const SYNC_KEYS_OBJ = ['notes', 'goals', 'sleep', 'periodNotes', 'dayLogs', 'peopleProfiles'];
 const SH_PREFIX = 's:'; // 共有カレンダー所属の calendarId は 's:招待コード'
 function isSharedCal(id) { return typeof id === 'string' && id.startsWith(SH_PREFIX); }
@@ -7139,7 +7350,7 @@ async function cloudPullOrPush() {
 async function cloudPush() {
   if (!fbReady || !fbUser) return;
   const payload = { updatedAt: db.updatedAt || Date.now() };
-  SYNC_KEYS_ARR.forEach((k) => { payload[k] = (k === 'tasks' || k === 'events') ? db[k].filter((x) => !isSharedCal(x.calendarId)) : db[k]; });
+  SYNC_KEYS_ARR.forEach((k) => { payload[k] = (k === 'tasks' || k === 'events') ? db[k].filter((x) => !isSharedCal(x.calendarId)) : (db[k] || []); });
   SYNC_KEYS_OBJ.forEach((k) => { payload[k] = db[k]; });
   await userDocRef().set(payload);
   db.settings.lastSyncAt = Date.now();

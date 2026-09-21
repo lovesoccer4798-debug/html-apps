@@ -4,8 +4,8 @@
 > どのAI・どのセッションでも、作業を終えるときに必ず更新すること（`AGENTS.md` 参照）。
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
-- **最終更新**: 2026-09-20
-- **更新者メモ**: TaskARE v102実装・ローカル検証完了。プロフィール所属管理、時間未設定タイマー・カウントアップ、テーマ3種、Notion直近10日同期。原点ノートは提案のみ。本番Notion疎通とiPhone実機は未検証
+- **最終更新**: 2026-09-21
+- **更新者メモ**: TaskARE v103「原点ノート」実装・検証完了。専用ページに大切なこと/やめたい行動・理由・参考リンクを記録。個人同期・バックアップ対応。iPhone実機と本番Firebase同期は未検証
 
 ## ワークスペース全体の状態
 
@@ -17,14 +17,14 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 日／週／月／年＋タイマー＋繰り返し＋予定＋メモ＋ルーティンパッケージの個人用タスクカレンダー（PWA・共有カレンダー／思い出シェアカレンダー対応・アプリ内表示は v102） |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 日／週／月／年＋タイマー＋繰り返し＋予定＋メモ＋ルーティンパッケージの個人用タスクカレンダー（PWA・共有カレンダー／思い出シェアカレンダー対応・アプリ内表示は v103） |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v102: [PR #86](https://github.com/lovesoccer4798-debug/html-apps/pull/86) レビュー待ち。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v102のPR #86はマージ済み。v103原点ノートのPR準備。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 
