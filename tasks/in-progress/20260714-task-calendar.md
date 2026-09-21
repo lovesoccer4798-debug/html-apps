@@ -24,6 +24,16 @@
 
 ## 作業ログ
 
+### 2026-09-21（v103 = 原点ノート、実装完了）
+
+- オーナーから専用ページでの実装承認。大切にしたい言葉/やめたい行動、それぞれの理由、本・YouTube等の参考資料、任意のひとことを記録する
+- 仕様: `apps/task-calendar/specs/task-calendar-origin.md`。個人同期・バックアップに含め、共有やNotionには送らない
+- 作業ブランチ: `codex/taskare-origin-notebook`。PR #86マージ済みのmainから開始
+- メニューから専用ページへ。全文を読む1列レイアウト、2分類のタブ、理由、参考資料最大5件（書名だけでも可）、ひとこと、固定/編集/削除取り消しを実装。未保存の破棄確認つき
+- `tests/origin.cjs` PASS: 追加/編集/リンク/不正URL拒否/変更破棄/削除取り消し/再読込/固定/HTMLエスケープ/個人同期ペイロード/保存。スマホ390px・PC1440pxの明暗×2分類8画面を確認
+- 既存 `tests/v102.cjs` 回帰PASS。JavaScript構文・差分検査PASS。iPhone実機と本番Firebase同期は未実行
+- PR: https://github.com/lovesoccer4798-debug/html-apps/pull/87 。マージ・本番データ操作は行っていない
+
 ### 2026-09-20（v102 = プロフィール整理・タイマー・テーマ・Notion）
 
 - オーナー依頼を既存アプリ改善として実装。仕様: `apps/task-calendar/specs/task-calendar-v102.md`、ADR: `docs/adr/20260920-taskare-timer-recent-sync.md`
