@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v103';
+const APP_VERSION = 'v104';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -687,6 +687,9 @@ function applyStyle() { // スタイル変更（まる/カクカク/くっきり
 }
 // 配色テーマ（着せ替え）。未指定＝デフォルト（今のデザイン）。トークンの値だけ差し替える
 const PALETTES = [
+  { id: 'collage', name: 'コラージュ手帳', sub: 'Paper & Memories', bg: '#e8f2ef', surface: '#fff', accent: '#b32f36', line: '#78988f' },
+  { id: 'letterpress', name: '活版ポスター', sub: 'Daily Press', bg: '#efefec', surface: '#fff', accent: '#b82430', line: '#242424' },
+  { id: 'gallery', name: 'ギャラリー', sub: 'Everyday Exhibition', bg: '#eeeef0', surface: '#fff', accent: '#17614d', line: '#bcb8bb' },
   { id: '', name: 'デフォルト', sub: '今のデザイン', bg: '#edf1f5', surface: '#ffffff', accent: '#2f9e6e', line: '#dde4eb' },
   { id: 'deepink', name: '深海インク', sub: 'Deep Ink', bg: '#eef1f0', surface: '#ffffff', accent: '#0e7c6b', line: '#dce4e2' },
   { id: 'apricot', name: 'サンセット', sub: 'Warm Apricot', bg: '#fbf3ea', surface: '#ffffff', accent: '#e4703a', line: '#efe1d2' },
@@ -2449,6 +2452,10 @@ function buildDayInfo(d) {
 
 function renderDay(body) {
   const key = toKey(ui.cursor);
+  if (key === todayKey()) {
+    const due = TaskareReminders.due(db.anniversaries, key);
+    if (due.length) body.append(el('p', 'reminder-today', due.map((a) => `${a.title}：${a.days ? `あと${a.days}日` : '今日'}`).join(' / ')));
+  }
   const info = buildDayInfo(ui.cursor);
   if (info) body.append(info);
   if (db.running) body.append(buildRunCard());
@@ -2458,7 +2465,7 @@ function renderDay(body) {
   for (const a of db.anniversaries) {
     if (!annivOccursOn(a, cur)) continue;
     const [ay] = a.date.split('-').map(Number);
-    const years = annivRepeat(a) === 'yearly' ? cur.getFullYear() - ay : null;
+    const years = !a.holiday && annivRepeat(a) === 'yearly' ? cur.getFullYear() - ay : null;
     const banner = el('div', 'anniv-banner');
     banner.innerHTML = ICONS[annivIconName(a)];
     banner.append(el('span', '', `「${a.title}」${years ? `（${years}周年）` : ''}`));
@@ -2540,6 +2547,11 @@ function buildDayLogCard(key) {
     });
     card.append(ta);
     const acts = el('div', 'daylog-acts');
+    const linkB = el('button', 'iconbtn', '');
+    linkB.type = 'button'; linkB.innerHTML = ICONS.link;
+    linkB.setAttribute('aria-label', 'リンクを挿入'); linkB.title = 'リンクを挿入';
+    linkB.addEventListener('click', () => insertDayLogLink(ta));
+    acts.append(linkB);
     const saveB = el('button', 'cta', '保存');
     saveB.type = 'button';
     saveB.addEventListener('click', () => { ui.dayLogEditKey = null; renderAll(); });
@@ -2554,7 +2566,9 @@ function buildDayLogCard(key) {
     card.append(acts);
     setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 0);
   } else if (text) {
-    card.append(el('div', 'daylog-preview', text)); // 全文表示（改行そのまま・省略しない）
+    const preview = el('div', 'daylog-preview');
+    appendNoteLinks(preview, text);
+    card.append(preview);
     const editB = el('button', 'cta ghost daylog-edit', '編集');
     editB.type = 'button';
     editB.addEventListener('click', () => { ui.dayLogEditKey = key; renderAll(); });
@@ -3216,6 +3230,7 @@ function renderInsights() {
 
   // 期間のふりかえりメモ（週・月・年ごとに書き溜めて、あとから見返せる）
   renderPeriodNote(body, period, periodLabel, offset);
+  renderRecordHighlights(body, keys);
 
   // 完了の棒グラフ（週=曜日別／月=週別／年=月別）
   let cols;
@@ -4308,7 +4323,7 @@ let settingsAccordionDone = false;
 const SETTINGS_CATS = [
   ['見た目・表示', ['テーマ', 'テーマ（配色）', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
   ['カレンダー', ['マイカレンダー', 'よく会う人', '天気', 'スケジュール調整の定型文']],
-  ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知']],
+  ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知', '大切な日の通知']],
   ['連携・同期', ['アカウントと同期', '共有カレンダー', '思い出シェアカレンダー', 'Googleカレンダー連携', 'Notion連携']],
   ['アカウント・データ', ['あなたの名前', 'バックアップ', 'データ']],
 ];
@@ -4367,6 +4382,7 @@ function renderSettings() {
   renderGcalCard();
   renderColorRuleCard();
   renderNotionCard();
+  renderReminderSettings();
   document.querySelectorAll('#theme-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.themeOpt === db.settings.theme);
   });
@@ -4447,6 +4463,7 @@ function renderPaletteGrid() {
   const cur = db.settings.palette || '';
   for (const p of PALETTES) {
     const card = el('button', `palette-card${cur === p.id ? ' is-active' : ''}`);
+    card.dataset.material = p.id;
     card.type = 'button';
     const sw = el('span', 'palette-sw');
     sw.style.background = p.bg;
@@ -8664,30 +8681,17 @@ function renderVisibilityCard() {
 
 function annivRepeat(a) { return a.repeat || (a.yearly === false ? 'once' : 'yearly'); } // 旧データ互換
 function annivNext(a) { // 次の到来日と残り日数
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const [y, m, d] = a.date.split('-').map(Number);
-  const rep = annivRepeat(a);
-  let next;
-  if (rep === 'yearly') {
-    next = new Date(today.getFullYear(), m - 1, d);
-    if (next < today) next = new Date(today.getFullYear() + 1, m - 1, d);
-  } else if (rep === 'monthly') {
-    next = new Date(today.getFullYear(), today.getMonth(), d);
-    if (next < today) next = new Date(today.getFullYear(), today.getMonth() + 1, d);
-  } else {
-    next = new Date(y, m - 1, d);
+  const nextKey = TaskareReminders.next(a, todayKey());
+  if (nextKey) {
+    const next = fromKey(nextKey);
+    return { next, days: Math.round((TaskareReminders.parse(nextKey) - TaskareReminders.parse(todayKey())) / 86400000),
+      years: a.holiday ? null : next.getFullYear() - Number(a.date.slice(0, 4)), rep: annivRepeat(a) };
   }
-  const days = Math.round((next - today) / 86400000);
-  const years = rep === 'yearly' ? next.getFullYear() - y : null;
-  return { next, days, years, rep };
+  return { next: null, days: Infinity, years: null, rep: annivRepeat(a) };
 }
 // この日付に記念日が当たるか（月カレンダーの星印用・繰り返しを考慮）
 function annivOccursOn(a, dateObj) {
-  const [y, m, d] = a.date.split('-').map(Number);
-  const rep = annivRepeat(a);
-  if (rep === 'monthly') return dateObj.getDate() === d;
-  if (rep === 'yearly') return dateObj.getMonth() === m - 1 && dateObj.getDate() === d;
-  return dateObj.getFullYear() === y && dateObj.getMonth() === m - 1 && dateObj.getDate() === d;
+  return TaskareReminders.occurs(a, toKey(dateObj));
 }
 function dayHasAnniv(dateObj) { return db.anniversaries.some((a) => annivOccursOn(a, dateObj)); }
 const ANNIV_ICONS = ['sparkles', 'heart', 'cake', 'party'];
@@ -8702,6 +8706,13 @@ function renderAnniv() {
   add.addEventListener('click', () => openAnnivSheet());
   body.append(add);
 
+  const notify = el('button', 'cta ghost', '通知の設定');
+  notify.type = 'button';
+  notify.addEventListener('click', () => { setScreen('settings'); $('#reminder-settings').closest('.acc')?.classList.add('is-open'); $('#reminder-settings').scrollIntoView({ block: 'center' }); });
+  body.append(notify);
+  const due = TaskareReminders.due(db.anniversaries, todayKey());
+  if (due.length) body.append(el('p', 'reminder-today', due.map((a) => `${a.title}：${a.days ? `あと${a.days}日` : '今日'}`).join(' / ')));
+
   const list = db.anniversaries
     .map((a) => ({ a, ...annivNext(a) }))
     .sort((x, y) => x.days - y.days);
@@ -8711,6 +8722,10 @@ function renderAnniv() {
   }
   const REP_LABEL = { yearly: '毎年', monthly: '毎月', once: '単発' };
   for (const { a, days, years, next, rep } of list) {
+    if (!next) {
+      const repair = el('button', 'cta ghost', `${a.title}：日付を確認`);
+      repair.onclick = () => openAnnivSheet(a); body.append(repair); continue;
+    }
     const card = el('div', 'anniv-card');
     const ic = el('span', 'anniv-ic');
     ic.innerHTML = ICONS[annivIconName(a)];
@@ -8719,9 +8734,10 @@ function renderAnniv() {
     main.append(el('span', 'anniv-title', a.title));
     const sub = `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日（${WD_JA[next.getDay()]}）・${REP_LABEL[rep]}${rep === 'yearly' && years ? `・${years}周年` : ''}`;
     main.append(el('span', 'anniv-sub', sub));
+    if (a.reminders?.length) main.append(el('span', 'anniv-sub', `通知：${a.reminders.map((n) => n ? `${n}日前` : '当日').join('・')}`));
     card.append(main);
     const badge = el('div', `anniv-badge${days === 0 ? ' is-today' : ''}`);
-    badge.innerHTML = days === 0 ? '<b>当日</b>' : `あと<b>${days}</b>日`;
+    badge.innerHTML = days === 0 ? '<b>当日</b>' : days < 0 ? `<b>${-days}</b>日前` : `あと<b>${days}</b>日`;
     card.append(badge);
     card.addEventListener('click', () => openAnnivSheet(a)); // タップで編集（削除はシート内のボタン）
     body.append(card);
@@ -8735,6 +8751,23 @@ function openAnnivSheet(a = null) {
   $('#a-title').value = a ? a.title : '';
   $('#a-date').value = a ? a.date : todayKey();
   $('#a-repeat').value = a ? annivRepeat(a) : 'yearly';
+  const holidaySelect = $('#a-holiday');
+  holidaySelect.replaceChildren(new Option('日付を指定', ''));
+  Object.entries(TaskareReminders.holidays).forEach(([id, h]) => holidaySelect.add(new Option(h[0], id)));
+  holidaySelect.value = a?.holiday || '';
+  $('#anniv-date-fields').hidden = !!holidaySelect.value;
+  holidaySelect.onchange = () => {
+    $('#anniv-date-fields').hidden = !!holidaySelect.value;
+    if (!$('#a-title').value.trim() && holidaySelect.value) $('#a-title').value = TaskareReminders.holidays[holidaySelect.value][0];
+  };
+  $('#a-reminders').replaceChildren();
+  TaskareReminders.offsets.forEach((n) => {
+    const label = el('label', 'reminder-choice');
+    const input = document.createElement('input'); input.type = 'checkbox'; input.value = n;
+    input.checked = !!a?.reminders?.includes(n);
+    label.append(input, document.createTextNode(n === 7 ? '1週間前' : n ? `${n}日前` : '当日'));
+    $('#a-reminders').append(label);
+  });
   setAnnivIconSel(a ? a.icon : 'sparkles');
   $('#anniv-delete').hidden = !a;
   $('#anniv-scrim').hidden = false;
@@ -8743,10 +8776,10 @@ function openAnnivSheet(a = null) {
 function deleteAnniv(a) {
   const idx = db.anniversaries.indexOf(a);
   db.anniversaries.splice(idx, 1);
-  save(); renderAnniv();
+  save(); scheduleReminderSync(); renderAnniv();
   showUndoToast(`「${a.title}」を削除しました`, () => {
     db.anniversaries.splice(Math.min(idx, db.anniversaries.length), 0, a);
-    save(); renderAnniv();
+    save(); scheduleReminderSync(); renderAnniv();
   });
 }
 // 記念日アイコンの選択UI（絵文字ではなく線アイコン）
@@ -8774,17 +8807,21 @@ $('#anniv-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const title = $('#a-title').value.trim();
   if (!title) { $('#a-title').focus(); return; }
-  const date = $('#a-date').value || todayKey();
-  const repeat = $('#a-repeat').value;
+  const holiday = $('#a-holiday').value;
+  const date = holiday ? TaskareReminders.holiday(holiday, new Date().getFullYear()) : $('#a-date').value || todayKey();
+  const repeat = holiday ? 'yearly' : $('#a-repeat').value;
+  const reminders = [...document.querySelectorAll('#a-reminders input:checked')].map((input) => Number(input.value));
   const icon = getAnnivIconSel();
   if (annivEditing) {
     annivEditing.title = title; annivEditing.date = date; annivEditing.repeat = repeat; annivEditing.icon = icon;
+    annivEditing.holiday = holiday; annivEditing.reminders = reminders;
     delete annivEditing.yearly;
   } else {
-    db.anniversaries.push({ id: newId('a'), title, date, repeat, icon });
+    db.anniversaries.push({ id: newId('a'), title, date, repeat, icon, holiday, reminders });
   }
   save();
   $('#anniv-scrim').hidden = true;
+  scheduleReminderSync();
   annivEditing = null;
   renderAnniv();
 });
@@ -9326,6 +9363,11 @@ if (db.running) {
   startTick();
 }
 ui.selectedKey = todayKey();
+if (new URLSearchParams(location.search).get('reminders') === '1') {
+  db.settings.hidden = db.settings.hidden || {};
+  delete db.settings.hidden['nav:anniv'];
+  ui.screen = 'anniv';
+}
 // 起動時に開くビュー（設定。既定は「日」。隠しているビューなら applyVisibility が安全に「日」へ退避）
 ui.view = db.settings.startView || 'day';
 applyAppIcon();
