@@ -19,6 +19,12 @@ GitHub Pages で公開している場合は **PWA** として使える：スマ�
 
 ## テスト・動作確認の方法
 
+v104の追加機能: `node tests/v104.cjs`（下記と同じPlaywright環境）。通知日の保存・ノートのリンク安全性・語句抽出・3テーマのスマホ/PC明暗12画面を確認します。通知サーバーのテストは `reminder-worker/` 内で `npm ci` → `npm test`。
+
+端末登録の失敗・解除・別端末の予定保護は `node --test tests/reminder-client.cjs`（外部通信なし）で確認できます。
+
+**閉じたアプリへの通知は初期設定前には届きません。** [通知サーバーの設定手順](reminder-worker/README.md)を参照。アプリの公開だけでは配信は始まらず、専用サーバー・通知許可・実機受信の確認が必要です。
+
 v102の回帰テストは `node tests/v102.cjs`（アプリディレクトリ内で実行）。PlaywrightとChromiumが必要。既存ブラウザを使う場合は `TASKARE_BROWSER` に実行ファイルのパスを指定する。外部通信を遮断した独立ブラウザと架空データで実行し、スクリーンショットは `/tmp/taskare-v102` に出力する。
 
 原点ノートの回帰テスト: `node tests/origin.cjs`（同じPlaywright環境）。専用ページはメニューの「原点ノート」から開く。分類・理由・参考リンク・固定・削除取り消し・個人同期を確認し、画面を `/tmp/taskare-origin` に出力する。

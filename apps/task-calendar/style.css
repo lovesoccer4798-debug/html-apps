@@ -3467,3 +3467,21 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 :root[data-theme="dark"] #scr-origin { --origin-value: #8dcbb2; --origin-stop: #d0addb; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #scr-origin { --origin-value: #8dcbb2; --origin-stop: #d0addb; } }
+/* Important dates and record excerpts. */
+.reminder-options { border: 0; margin: 16px 0; padding: 0; min-width: 0; }
+.reminder-options legend { font-weight: 700; margin-bottom: 8px; }
+#a-reminders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.reminder-choice { display: flex; gap: 6px; align-items: center; min-height: 44px; font-size: 14px; }
+.reminder-choice input { width: 20px; height: 20px; accent-color: var(--tc-accent); }
+.reminder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.reminder-actions button { min-height: 44px; white-space: normal; }
+.reminder-connection input { width: 100%; min-width: 0; }
+.reminder-connection summary { cursor: pointer; padding: 8px 0; }
+.reminder-today { border-left: 3px solid var(--tc-accent); padding: 12px; background: var(--tc-surface); }
+.record-highlights { padding: 20px 0; border-top: 1px solid var(--tc-line); }
+.record-highlights h3 { margin: 0; font-size: 18px; }
+.record-highlight { padding: 16px 0; border-bottom: 1px solid var(--tc-line); }
+.record-highlight h4 { margin: 0 0 10px; font-size: 14px; color: var(--tc-accent); }
+.record-highlight blockquote { margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--tc-line); line-height: 1.8; overflow-wrap: anywhere; white-space: pre-wrap; }
+.record-source { background: transparent; color: var(--tc-ink2); text-decoration: underline; border: 0; padding: 12px 0 0; min-height: 44px; text-align: left; overflow-wrap: anywhere; }
+.daylog-preview a { color: var(--tc-accent); text-decoration: underline; overflow-wrap: anywhere; }

@@ -8,18 +8,19 @@
 <!-- iPhoneのPWAでは、この色がステータスバーの帯に使われる。テーマ・配色・タイマー画面に合わせてJSで塗り替える -->
 <meta name="theme-color" content="#edf1f5" id="tc-theme-color">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=103" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=103">
-<link rel="icon" href="icons/icon-192.png?v=103" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=103">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=104" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=104">
+<link rel="icon" href="icons/icon-192.png?v=104" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=104">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=103">
-<link rel="stylesheet" href="style.css?v=103">
+<link rel="stylesheet" href="tokens.css?v=104">
+<link rel="stylesheet" href="style.css?v=104">
+<link rel="stylesheet" href="expressive-themes.css?v=104">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -341,6 +342,8 @@
         <p class="hint">データはこの端末のブラウザ内にだけ保存されます。</p>
       </div>
 
+      <p class="section-label">大切な日の通知</p>
+      <div class="card" id="reminder-settings"></div>
       <p class="app-version" id="app-version"></p>
     </div>
   </section>
@@ -738,7 +741,9 @@
         <button type="button" data-icon="cake" aria-label="ケーキ"></button>
         <button type="button" data-icon="party" aria-label="お祝い"></button>
       </div>
-      <div class="f-row">
+      <label class="f-label" for="a-holiday">日付の指定</label>
+      <select id="a-holiday"><option value="">日付を指定</option></select>
+      <div class="f-row" id="anniv-date-fields">
         <div class="f-col">
           <label class="f-label" for="a-date">日付</label>
           <input type="date" id="a-date" class="mono">
@@ -752,6 +757,8 @@
           </select>
         </div>
       </div>
+      <fieldset class="reminder-options"><legend>リマインド</legend><div id="a-reminders"></div></fieldset>
+      <p class="hint">通知は日本時間の朝9時。設定の「大切な日の通知」で端末の通知登録が必要です。</p>
       <button type="submit" class="cta" id="anniv-save">保存</button>
       <button type="button" class="cta danger" id="anniv-delete" hidden>削除</button>
     </form>
@@ -885,7 +892,10 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=103"></script>
-<script src="app.js?v=103"></script>
+<script src="firebase-config.js?v=104"></script>
+<script src="reminder-core.js?v=104"></script>
+<script src="reminder-client.js?v=104"></script>
+<script src="record-tools.js?v=104"></script>
+<script src="app.js?v=104"></script>
 </body>
 </html>
