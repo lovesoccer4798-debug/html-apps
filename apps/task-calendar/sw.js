@@ -91,14 +91,15 @@ self.addEventListener('push', (event) => {
     body: String(data.body || '大切な日を確認しましょう。').slice(0, 800),
     icon: new URL('./icons/icon-192.png', self.registration.scope).href,
     tag: String(data.tag || 'taskare-reminder').slice(0, 100),
-    data: { url: new URL('./?reminders=1', self.registration.scope).href },
+    data: { destination: 'reminders' },
   }));
 });
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = new URL('./?reminders=1', self.registration.scope).href;
+  const url = new URL(event.notification.data?.destination === 'reminders' ? './?reminders=1' : './', self.registration.scope).href;
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
     const existing = clients.find((client) => client.url.startsWith(self.registration.scope));
     if (existing) { await existing.navigate(url); return existing.focus(); }
     return self.clients.openWindow(url);
   }));
+});

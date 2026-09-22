@@ -30,7 +30,8 @@
 - 中断時の画像未配置・版不統一を解消しv104へ統一。記念日のチェックボックス保存不具合、祝日の周年誤表示、ダークテーマの日付/操作/予定文字の視認性を修正。
 - `reminder-worker` の4テスト成功（年またぎ/うるう日/祝日、認証/入力/古い予定拒否、再送/重複/失効、実際のWeb Push暗号化）。Wrangler公開なしdry-run成功。`npm install`時の監査は脆弱性0件。
 - `tests/v104.cjs` 成功（追加操作、リンクXSS防止、ハイライト原文/日数、390px/1440px明暗12枚）。`tests/v102.cjs`、`tests/origin.cjs` も成功。実ユーザーデータ/外部APIへ送信せず検証。
-- 端末登録の応答が失敗した場合を「未確認」として解除可能にし、`tests/reminder-client.cjs` の2テストで確認。オフラインキャッシュ対象28件の存在確認・構文チェック・diff checkも成功。
+- 端末登録の応答が失敗した場合を「未確認」として解除可能にし、`tests/reminder-client.cjs` の3テストで確認。通知タップの記念日/従来タイマーの遷移を分離。Service Workerの末尾欠落も修正し、全新規JSの構文チェック成功。
+- `tests/offline.cjs` で実際のローカルHTTP上のService Worker有効化・28資材のキャッシュ・オフライン再起動に成功。外部通信・本番データアクセスなし。diff checkも成功。
 - 新しいWorkerは未デプロイ・VAPID未生成。サーバー設定を今回進めるか質問中。無料枠の本番CPU時間とiPhone閉鎖時の受信は未確認。これらを完了扱いにしない。セットアップ手順: `apps/task-calendar/reminder-worker/README.md`、判断: `docs/adr/20260923-taskare-reminders-highlights.md`。
 - 既存 `task-calendar-api` のビルド問題は変更対象外。mainとの差分取り込み不要をfetch後に確認。PR作成後にリンクを追記。
 

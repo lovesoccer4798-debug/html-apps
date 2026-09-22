@@ -55,3 +55,16 @@ test('new device does not replace existing schedule during registration', async 
   assert.equal(s.calls.filter((c) => c.path === '/schedule').length, 1);
   assert.equal(s.run('reminderConfig().fingerprint'), 'next');
 });
+test('push clicks open reminders without redirecting timer notifications', async () => {
+  const handlers = {}, opened = [];
+  const self = { registration: { scope: 'https://example.org/taskare/' },
+    addEventListener(name, handler) { handlers[name] = handler; },
+    clients: { async matchAll() { return []; }, async openWindow(url) { opened.push(url); } } };
+  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname, '../sw.js'), 'utf8'), { self, URL });
+  for (const data of [{ destination: 'reminders' }, undefined]) {
+    let pending;
+    handlers.notificationclick({ notification: { data, close() {} }, waitUntil(promise) { pending = promise; } });
+    await pending;
+  }
+  assert.deepEqual(opened, ['https://example.org/taskare/?reminders=1', 'https://example.org/taskare/']);
+});

@@ -23,6 +23,8 @@ v104の追加機能: `node tests/v104.cjs`（下記と同じPlaywright環境）�
 
 端末登録の失敗・解除・別端末の予定保護は `node --test tests/reminder-client.cjs`（外部通信なし）で確認できます。
 
+PWA更新・28資材のキャッシュ・オフライン再起動は `node tests/offline.cjs`（Playwright環境）で確認できます。一時HTTPサーバーはテスト終了時に停止します。
+
 **閉じたアプリへの通知は初期設定前には届きません。** [通知サーバーの設定手順](reminder-worker/README.md)を参照。アプリの公開だけでは配信は始まらず、専用サーバー・通知許可・実機受信の確認が必要です。
 
 v102の回帰テストは `node tests/v102.cjs`（アプリディレクトリ内で実行）。PlaywrightとChromiumが必要。既存ブラウザを使う場合は `TASKARE_BROWSER` に実行ファイルのパスを指定する。外部通信を遮断した独立ブラウザと架空データで実行し、スクリーンショットは `/tmp/taskare-v102` に出力する。
