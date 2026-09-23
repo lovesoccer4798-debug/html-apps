@@ -42,11 +42,13 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v105';
+const APP_VERSION = 'v106';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
 const TIMER_STYLES = [
+  { id: 'cosmos', name: '銀河航行', sub: 'Stellar Voyage' },
+  { id: 'woodland', name: '森の深呼吸', sub: 'Forest Breathing' },
   { id: 'aquarium', name: 'アクアリウム', sub: 'Aquarium' },
   { id: '',          name: '標準（リング）',       sub: 'いまのデザイン' },
   { id: 'neon',      name: 'ネオンパルス',         sub: 'Neon Pulse — 発光するネオン管' },
@@ -63,6 +65,8 @@ function timerStyleId() { return db.settings.timerStyle || ''; }
 
 // 各デザインの中身（見た目だけ。時間の値は updateFocusArt が毎回書き込む）
 const TIMER_ART = {
+  cosmos: `<div class="fa fa-aquarium"><span class="fa-time mono">--:--</span><span class="fa-set mono"></span><div class="aq-track" aria-hidden="true"><span class="aq-fill"></span></div><div class="fa-task"></div></div>`,
+  woodland: `<div class="fa fa-aquarium"><span class="fa-time mono">--:--</span><span class="fa-set mono"></span><div class="aq-track" aria-hidden="true"><span class="aq-fill"></span></div><div class="fa-task"></div></div>`,
   aquarium: `<div class="fa fa-aquarium"><span class="fa-time mono">--:--</span><span class="fa-set mono"></span><div class="aq-track" aria-hidden="true"><span class="aq-fill"></span></div><div class="fa-task"></div></div>`,
   neon: `<div class="fa fa-neon">
     <div class="fa-ring">
@@ -733,6 +737,7 @@ const PALETTE_TOP = {
 };
 // タイマー各デザインの、画面いちばん上あたりの色
 const TIMER_TOP = {
+  cosmos: '#17131f', woodland: '#152a20',
   neon: '#1b0f2b', sand: '#fbf6ee', metro: '#f3f6fc', liquid: '#f2fbff', turntable: '#25221e', bloom: '#f6fbf3',
   night: '#07122d', onsen: '#f7f2ea', forest: '#eef7ed', aquarium: '#082d32',
 };
@@ -1142,8 +1147,11 @@ $('#nav-today').addEventListener('click', () => {
   let horiz = null;    // 横ジェスチャーと確定したか（縦スクロールとの取り合い防止）
 
   const reset = () => { body.style.transition = 'transform .16s ease, opacity .16s ease'; body.style.transform = ''; body.style.opacity = ''; };
+  const editing = () => document.activeElement?.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || !window.getSelection()?.isCollapsed;
+  const cancel = () => { active = false; horiz = null; reset(); };
+  document.addEventListener('selectionchange', () => { if (active && editing()) cancel(); });
   body.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.swipe, .tg-draft, .tg-handle')) { active = false; return; }
+    if (e.touches.length !== 1 || editing() || e.target.closest('.swipe, .tg-draft, .tg-handle, .daylog-card, input, textarea, select, button, a, label, [contenteditable]')) { cancel(); return; }
     active = true;
     horiz = null;
     sx = e.touches[0].clientX;
@@ -1151,6 +1159,7 @@ $('#nav-today').addEventListener('click', () => {
   }, { passive: true });
   body.addEventListener('touchmove', (e) => {
     if (!active) return;
+    if (e.touches.length !== 1 || editing()) { cancel(); return; }
     const dx = e.touches[0].clientX - sx;
     const dy = e.touches[0].clientY - sy;
     if (horiz === null && (Math.abs(dx) > 14 || Math.abs(dy) > 14)) horiz = Math.abs(dx) > Math.abs(dy) * 1.4;
@@ -1162,6 +1171,7 @@ $('#nav-today').addEventListener('click', () => {
   }, { passive: true });
   body.addEventListener('touchend', (e) => {
     if (!active) return;
+    if (editing() || e.touches.length) { cancel(); return; }
     active = false;
     if (!horiz) return;
     const dx = e.changedTouches[0].clientX - sx;
@@ -5649,7 +5659,7 @@ function updateFocusArt(progress, label) {
   if (!art || art.hidden) return;
   const r = db.running;
   const done = Math.max(0, Math.min(1, 1 - progress)); // 経過の割合
-  if (st === 'aquarium') {
+  if (['aquarium', 'cosmos', 'woodland'].includes(st)) {
     const fill = art.querySelector('.aq-fill');
     if (fill) fill.style.width = `${done * 100}%`;
     $('#focus').classList.toggle('aq-paused', !!r?.paused || !!r?.finished);
@@ -8744,6 +8754,7 @@ function renderAnniv() {
     main.append(el('span', 'anniv-title', a.title));
     const sub = `${next.getFullYear()}年${next.getMonth() + 1}月${next.getDate()}日（${WD_JA[next.getDay()]}）・${REP_LABEL[rep]}${rep === 'yearly' && years ? `・${years}周年` : ''}`;
     main.append(el('span', 'anniv-sub', sub));
+    if (a.memo) main.append(el('p', 'anniv-memo', a.memo));
     if (a.reminders?.length) main.append(el('span', 'anniv-sub', `通知：${a.reminders.map((n) => n ? `${n}日前` : '当日').join('・')}`));
     card.append(main);
     const badge = el('div', `anniv-badge${days === 0 ? ' is-today' : ''}`);
@@ -8759,6 +8770,7 @@ function openAnnivSheet(a = null) {
   annivEditing = a;
   $('#anniv-sheet-title').textContent = a ? '記念日を編集' : '記念日を追加';
   $('#a-title').value = a ? a.title : '';
+  $('#a-memo').value = a?.memo || '';
   $('#a-date').value = a ? a.date : todayKey();
   $('#a-repeat').value = a ? annivRepeat(a) : 'yearly';
   const holidaySelect = $('#a-holiday');
@@ -8822,12 +8834,14 @@ $('#anniv-form').addEventListener('submit', (e) => {
   const repeat = holiday ? 'yearly' : $('#a-repeat').value;
   const reminders = [...document.querySelectorAll('#a-reminders input:checked')].map((input) => Number(input.value));
   const icon = getAnnivIconSel();
+  const memo = $('#a-memo').value.trim();
   if (annivEditing) {
     annivEditing.title = title; annivEditing.date = date; annivEditing.repeat = repeat; annivEditing.icon = icon;
     annivEditing.holiday = holiday; annivEditing.reminders = reminders;
+    annivEditing.memo = memo;
     delete annivEditing.yearly;
   } else {
-    db.anniversaries.push({ id: newId('a'), title, date, repeat, icon, holiday, reminders });
+    db.anniversaries.push({ id: newId('a'), title, date, repeat, icon, holiday, reminders, memo });
   }
   save();
   $('#anniv-scrim').hidden = true;

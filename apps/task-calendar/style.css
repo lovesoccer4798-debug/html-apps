@@ -99,14 +99,14 @@ input, select, textarea { font: inherit; color: inherit; }
 
 /* 指先で小さな日食を起こす、ヘッダーのライト／ダーク切り替え */
 .eclipse-toggle {
-  --eclipse-track: #efd09d;
-  --eclipse-orb: #fff4bd;
+  --eclipse-track: color-mix(in srgb, var(--tc-surface) 75%, var(--tc-accent));
+  --eclipse-orb: #ffffff;
   position: relative;
   width: 54px;
   height: 30px;
   flex: none;
   overflow: hidden;
-  border: 1px solid rgba(112, 85, 45, .16);
+  border: 1px solid var(--tc-line);
   border-radius: 999px;
   background: var(--eclipse-track);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, .28), 0 3px 10px rgba(32, 25, 15, .12);
@@ -134,7 +134,7 @@ input, select, textarea { font: inherit; color: inherit; }
   height: 24px;
   border-radius: 50%;
   background: var(--eclipse-orb);
-  box-shadow: 0 0 10px rgba(255, 239, 170, .8);
+  box-shadow: 0 0 10px rgba(255, 255, 255, .85);
   transition: transform .5s cubic-bezier(.65, 0, .25, 1), background .4s ease, box-shadow .4s ease;
 }
 .eclipse-stars { position: absolute; inset: 0; opacity: 0; transition: opacity .25s ease .18s; }
