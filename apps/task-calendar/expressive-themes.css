@@ -22,7 +22,7 @@
   --palette-accent-ink-light: #ffffff; --palette-accent-ink-dark: #182c23;
   --theme-material: url('./assets/gallery.png');
 }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) {
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) {
   --tc-bg: var(--palette-bg-light); --tc-surface: var(--palette-surface-light);
   --tc-ink: var(--palette-ink-light); --tc-ink2: var(--palette-muted-light); --tc-ink3: var(--tc-ink2); --tc-ink4: var(--tc-ink2);
   --tc-line: var(--palette-line-light); --tc-accent: var(--palette-accent-light); --tc-accent-ink: var(--palette-accent-ink-light);
@@ -33,29 +33,29 @@
   --tc-deep: var(--tc-surface); --tc-deep-ink: var(--tc-ink); --tc-deep-sub: var(--tc-ink2); --tc-deep-track: var(--tc-line);
   --tc-shadow: 0 2px 0 var(--tc-line); --material-opacity: .95;
 }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"])[data-theme="dark"] {
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"])[data-theme="dark"] {
   --tc-bg: var(--palette-bg-dark); --tc-surface: var(--palette-surface-dark); --tc-ink: var(--palette-ink-dark);
   --tc-ink2: var(--palette-muted-dark); --tc-line: var(--palette-line-dark); --tc-accent: var(--palette-accent-dark);
   --tc-accent-ink: var(--palette-accent-ink-dark); --material-opacity: .22;
 }
 @media (prefers-color-scheme: dark) {
-  :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]):not([data-theme="light"]) {
+  :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]):not([data-theme="light"]) {
     --tc-bg: var(--palette-bg-dark); --tc-surface: var(--palette-surface-dark); --tc-ink: var(--palette-ink-dark);
     --tc-ink2: var(--palette-muted-dark); --tc-line: var(--palette-line-dark); --tc-accent: var(--palette-accent-dark);
     --tc-accent-ink: var(--palette-accent-ink-dark); --material-opacity: .22;
   }
 }
-:root:is([data-palette="collage"], [data-palette="gallery"]) body { background: var(--tc-bg); isolation: isolate; }
-:root:is([data-palette="collage"], [data-palette="gallery"]) body::before {
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) body { background: var(--tc-bg); isolation: isolate; }
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) body::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: var(--theme-material) center / cover; opacity: var(--material-opacity);
 }
-:root:is([data-palette="collage"], [data-palette="gallery"]) .app { background: transparent; }
-:root:is([data-palette="collage"], [data-palette="gallery"]) .appbar { background: var(--tc-surface); border-bottom: 1px solid var(--tc-line); }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .date-title { letter-spacing: 0; }
-:root:is([data-palette="collage"], [data-palette="gallery"]) .mo-head { background: var(--tc-surface); color: var(--tc-ink2); padding: 6px 0; margin: 0; }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .cta { color: var(--tc-accent-ink); }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .cta.ghost { color: var(--tc-ink); background: var(--tc-surface); }
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .app { background: transparent; }
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .appbar { background: var(--tc-surface); border-bottom: 1px solid var(--tc-line); }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .date-title { letter-spacing: 0; }
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .mo-head { background: var(--tc-surface); color: var(--tc-ink2); padding: 6px 0; margin: 0; }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .cta { color: var(--tc-accent-ink); }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .cta.ghost { color: var(--tc-ink); background: var(--tc-surface); }
 :root[data-palette="collage"] .appbar { border-top: 7px solid var(--tc-accent); }
 :root[data-palette="collage"] .date-title { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
 :root[data-palette="collage"] .mo-cell { border: 1px solid var(--tc-line); box-shadow: 2px 2px 0 var(--tc-line); }
@@ -84,12 +84,81 @@
 :root[data-palette="gallery"] .mo-cell.is-today .dnum { color: var(--tc-accent); }
 :root[data-palette="gallery"] .daylog-card { border: 1px solid var(--tc-line); box-shadow: 5px 5px 0 var(--tc-bg), 6px 6px 0 var(--tc-line); }
 @media (min-width: 1100px) {
-  :root:is([data-palette="collage"], [data-palette="gallery"]) .mo-grid { padding: 8px; }
+  :root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .mo-grid { padding: 8px; }
 }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .mo-cell.is-today .dnum { background: transparent; color: var(--tc-accent); }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .fab { color: var(--tc-accent-ink); }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .play-btn { color: var(--tc-accent-ink); }
-:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"]) .mo-chip:not(.is-event-chip):not(.mo-chip-invert):not([style*="background"]) { color: var(--tc-accent-ink); }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .mo-cell.is-today .dnum { background: transparent; color: var(--tc-accent); }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .fab { color: var(--tc-accent-ink); }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .play-btn { color: var(--tc-accent-ink); }
+:root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .mo-chip:not(.is-event-chip):not(.mo-chip-invert):not([style*="background"]) { color: var(--tc-accent-ink); }
 .palette-card[data-material="collage"] .palette-sw { background: url('./assets/collage.png') center / cover !important; }
 .palette-card[data-material="gallery"] .palette-sw { background: url('./assets/gallery.png') center / cover !important; }
 .palette-card[data-material="letterpress"] .palette-sw { border: 3px double #232323; border-radius: 0; }
+.palette-card[data-material="aquarium"] .palette-sw { background: url('./assets/aquarium.png') center / cover !important; }
+.palette-card[data-material="woodland"] .palette-sw { background: url('./assets/woodland.png') center / cover !important; }
+.palette-card[data-material="cosmos"] .palette-sw { background: url('./assets/cosmos.png') center / cover !important; }
+:root[data-palette="aquarium"] {
+  --palette-bg-light: #dff4f1; --palette-surface-light: #f6fffd; --palette-ink-light: #103e43;
+  --palette-muted-light: #3e6468; --palette-line-light: #a6ccc7; --palette-accent-light: #126c74;
+  --palette-bg-dark: #071f25; --palette-surface-dark: #10333b; --palette-ink-dark: #effdfb;
+  --palette-muted-dark: #adcdd1; --palette-line-dark: #477880; --palette-accent-dark: #ffbf9c;
+  --palette-accent-ink-light: #ffffff; --palette-accent-ink-dark: #31241b;
+  --theme-material: url('./assets/aquarium.png');
+}
+:root[data-palette="woodland"] {
+  --palette-bg-light: #edf2e9; --palette-surface-light: #fbfef8; --palette-ink-light: #293d2c;
+  --palette-muted-light: #506b56; --palette-line-light: #b3c7ae; --palette-accent-light: #35633d;
+  --palette-bg-dark: #18231d; --palette-surface-dark: #27372c; --palette-ink-dark: #f2f8eb;
+  --palette-muted-dark: #bed0b7; --palette-line-dark: #61785f; --palette-accent-dark: #e9d399;
+  --palette-accent-ink-light: #ffffff; --palette-accent-ink-dark: #323021;
+  --theme-material: url('./assets/woodland.png');
+}
+:root[data-palette="cosmos"] {
+  --palette-bg-light: #f2eff4; --palette-surface-light: #fffafd; --palette-ink-light: #372d3c;
+  --palette-muted-light: #705d70; --palette-line-light: #cbbcc9; --palette-accent-light: #824255;
+  --palette-bg-dark: #14131a; --palette-surface-dark: #262330; --palette-ink-dark: #f9f2f7;
+  --palette-muted-dark: #c9bacb; --palette-line-dark: #65566b; --palette-accent-dark: #edbdc9;
+  --palette-accent-ink-light: #ffffff; --palette-accent-ink-dark: #3a202b;
+  --theme-material: url('./assets/cosmos.png');
+}
+:root:is([data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .mo-cell { background: color-mix(in srgb, var(--tc-surface) 94%, transparent); border: 1px solid var(--tc-line); }
+:root:is([data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .mo-cell.is-today { background: var(--tc-accent-soft); outline: 2px solid var(--tc-accent); outline-offset: -2px; }
+:root[data-palette="aquarium"] .appbar { border-bottom: 3px solid var(--tc-accent); }
+:root[data-palette="aquarium"] .mo-cell { border-radius: 7px 7px 2px 2px; }
+:root[data-palette="woodland"] .appbar { border-bottom: 4px double var(--tc-accent); }
+:root[data-palette="woodland"] .date-title { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+:root[data-palette="woodland"] .mo-head { border-bottom: 1px dashed var(--tc-accent); }
+:root[data-palette="cosmos"] .appbar { border-bottom: 1px solid var(--tc-accent); }
+:root[data-palette="cosmos"] .mo-cell { border-style: dotted; }
+:root[data-palette="cosmos"] .date-title { font-family: Georgia, 'Yu Mincho', serif; }
+@media (max-width: 767px) {
+  :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .screen { padding-left: 0; padding-right: 0; }
+  :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .screen > .appbar {
+    padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
+  }
+  :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .screen > .body {
+    padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+:root:is([data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) :is(.preview-head, .empty) { background: var(--tc-surface); padding: 12px; color: var(--tc-ink); }
+#focus[data-timer="aquarium"] { background: #082d32; color: #f5fffe; isolation: isolate; overflow: auto; }
+#focus[data-timer="aquarium"]::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: url('./assets/aquarium.png') center / cover;
+  animation: aquarium-drift 24s ease-in-out infinite alternate;
+}
+#focus[data-timer="aquarium"]::after { content: ''; position: fixed; inset: 0; z-index: -1; background: #00191f80; pointer-events: none; }
+#focus[data-timer="aquarium"].aq-paused::before { animation-play-state: paused; }
+#focus[data-timer="aquarium"] :is(#focus-close, #focus-eyebrow, #focus-clock, .fa-set, .fa-task) { color: #f5fffe; text-shadow: 0 2px 5px #00191f; }
+#focus[data-timer="aquarium"] .fa-time { font-size: 64px; color: #fff; text-shadow: 0 2px 10px #00191f; letter-spacing: 0; }
+#focus[data-timer="aquarium"] .fa-aquarium { gap: 14px; padding: 32px 0; text-align: center; }
+#focus[data-timer="aquarium"] .fa-task { max-width: 100%; overflow-wrap: anywhere; }
+#focus[data-timer="aquarium"] :is(.f-btn, .focus-plus, .focus-link) { background: #082d32e8; color: #f5fffe; border: 1px solid #a2dbd4; }
+#focus[data-timer="aquarium"] .f-main { background: #c2f5e9; color: #103d43; }
+.aq-track { width: min(240px, 100%); height: 4px; background: #ffffff55; overflow: hidden; }
+.aq-fill { display: block; width: 0; height: 100%; background: #c2f5e9; }
+@keyframes aquarium-drift { from { background-position: 45% 48%; } to { background-position: 55% 52%; } }
+@media (prefers-reduced-motion: reduce) { #focus[data-timer="aquarium"]::before { animation: none; } }
+@media (orientation: landscape) and (max-height: 640px) {
+  #focus[data-timer="aquarium"] .fa-time { font-size: 40px; }
+  #focus[data-timer="aquarium"] .fa-aquarium { padding: 0; gap: 8px; }
+}

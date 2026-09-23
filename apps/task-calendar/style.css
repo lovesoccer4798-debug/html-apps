@@ -3472,7 +3472,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .reminder-options legend { font-weight: 700; margin-bottom: 8px; }
 #a-reminders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .reminder-choice { display: flex; gap: 6px; align-items: center; min-height: 44px; font-size: 14px; }
-.reminder-choice input { width: 20px; height: 20px; accent-color: var(--tc-accent); }
+.sheet .reminder-choice input[type="checkbox"] {
+  appearance: auto; -webkit-appearance: checkbox;
+  width: 22px; height: 22px; flex: 0 0 22px; margin: 0; padding: 0;
+  border-radius: 0; accent-color: var(--tc-accent);
+}
+.reminder-choice { cursor: pointer; padding: 8px; border: 1px solid var(--tc-line); border-radius: 6px; }
+.reminder-choice:has(input:checked) { background: var(--tc-accent-soft); border-color: var(--tc-accent); color: var(--tc-ink); font-weight: 700; }
 .reminder-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .reminder-actions button { min-height: 44px; white-space: normal; }
 .reminder-connection input { width: 100%; min-width: 0; }

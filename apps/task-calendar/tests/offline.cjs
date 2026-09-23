@@ -22,13 +22,14 @@ const { chromium } = require('playwright');
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-    const count = await page.evaluate(async () => (await (await caches.open('task-calendar-v104')).keys()).length);
-    assert.ok(count >= 28);
+    const version = await page.evaluate(() => APP_VERSION);
+    const count = await page.evaluate(async (version) => (await (await caches.open('task-calendar-' + version)).keys()).length, version);
+    assert.ok(count >= 31);
     await context.setOffline(true);
     await page.reload();
-    assert.equal(await page.evaluate(() => APP_VERSION), 'v104');
+    assert.equal(await page.evaluate(() => APP_VERSION), version);
     assert.equal(await page.evaluate(async () => (await caches.match(new URL('assets/gallery.png', location.href))).status), 200);
-    console.log('PASS: Service Worker activation, 28 assets and offline reload');
+    console.log('PASS: Service Worker activation, 31 assets and offline reload');
   } finally {
     if (browser) await browser.close();
     await new Promise((resolve) => server.close(resolve));

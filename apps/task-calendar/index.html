@@ -8,19 +8,19 @@
 <!-- iPhoneのPWAでは、この色がステータスバーの帯に使われる。テーマ・配色・タイマー画面に合わせてJSで塗り替える -->
 <meta name="theme-color" content="#edf1f5" id="tc-theme-color">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=104" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=104">
-<link rel="icon" href="icons/icon-192.png?v=104" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=104">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=105" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=105">
+<link rel="icon" href="icons/icon-192.png?v=105" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=105">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=104">
-<link rel="stylesheet" href="style.css?v=104">
-<link rel="stylesheet" href="expressive-themes.css?v=104">
+<link rel="stylesheet" href="tokens.css?v=105">
+<link rel="stylesheet" href="style.css?v=105">
+<link rel="stylesheet" href="expressive-themes.css?v=105">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -130,7 +130,7 @@
         <p class="hint">「自動」は端末（OS）の設定に合わせます。</p>
       </div>
 
-      <p class="section-label">テーマ（配色）</p>
+      <p class="section-label">デザイン</p>
       <div class="card">
         <div class="palette-grid" id="palette-grid"></div>
         <p class="hint">アプリ全体の配色を着せ替えできます。「デフォルト」は今のデザインのまま。どれもライト／ダーク両対応で、上の「テーマ」（自動／ライト／ダーク）と組み合わせられます。機能や配置は変わりません。</p>
@@ -892,10 +892,10 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=104"></script>
-<script src="reminder-core.js?v=104"></script>
-<script src="reminder-client.js?v=104"></script>
-<script src="record-tools.js?v=104"></script>
-<script src="app.js?v=104"></script>
+<script src="firebase-config.js?v=105"></script>
+<script src="reminder-core.js?v=105"></script>
+<script src="reminder-client.js?v=105"></script>
+<script src="record-tools.js?v=105"></script>
+<script src="app.js?v=105"></script>
 </body>
 </html>
