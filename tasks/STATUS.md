@@ -5,7 +5,7 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-09-23
-- **更新者メモ**: TaskARE v104の実装・ローカル検証完了、[PR #88](https://github.com/lovesoccer4798-debug/html-apps/pull/88) 作成済み・未マージ。記念日通知・ノートリンク・端末内ハイライト・素材付き3テーマ。配信サーバー未設定、iPhoneで閉じた状態の受信は未確認。通知の稼働完了とは区別する。
+- **更新者メモ**: TaskARE v104のPR #88はマージ済み。v105のリマインド選択表示・スマホ余白修正、3情景デザイン・アクアリウムタイマーの実装とローカル検証完了。PR作成準備中。配信サーバー未設定、実機iPhoneの通知受信は未確認。
 
 ## ワークスペース全体の状態
 
@@ -17,14 +17,14 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。作業版v104のローカル検証完了、通知サーバー初期設定待ち |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。作業版v105のローカル検証完了、通知サーバー初期設定待ち |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v103のPR #87はマージ済み。v104の[PR #88](https://github.com/lovesoccer4798-debug/html-apps/pull/88)はレビュー待ち。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v104のPR #88はマージ済み。v105はPR作成準備中。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 

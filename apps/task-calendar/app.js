@@ -42,11 +42,12 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v104';
+const APP_VERSION = 'v105';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
 const TIMER_STYLES = [
+  { id: 'aquarium', name: 'アクアリウム', sub: 'Aquarium' },
   { id: '',          name: '標準（リング）',       sub: 'いまのデザイン' },
   { id: 'neon',      name: 'ネオンパルス',         sub: 'Neon Pulse — 発光するネオン管' },
   { id: 'sand',      name: '砂時計',               sub: 'Sandglass — 落ちていく砂の量' },
@@ -62,6 +63,7 @@ function timerStyleId() { return db.settings.timerStyle || ''; }
 
 // 各デザインの中身（見た目だけ。時間の値は updateFocusArt が毎回書き込む）
 const TIMER_ART = {
+  aquarium: `<div class="fa fa-aquarium"><span class="fa-time mono">--:--</span><span class="fa-set mono"></span><div class="aq-track" aria-hidden="true"><span class="aq-fill"></span></div><div class="fa-task"></div></div>`,
   neon: `<div class="fa fa-neon">
     <div class="fa-ring">
       <svg viewBox="0 0 296 296" aria-hidden="true">
@@ -687,6 +689,9 @@ function applyStyle() { // スタイル変更（まる/カクカク/くっきり
 }
 // 配色テーマ（着せ替え）。未指定＝デフォルト（今のデザイン）。トークンの値だけ差し替える
 const PALETTES = [
+  { id: 'aquarium', name: 'アクアリウム', sub: 'Underwater Light', bg: '#dff4f1', surface: '#ffffff', accent: '#126c74', line: '#a6ccc7' },
+  { id: 'woodland', name: '木漏れ日の森', sub: 'Forest Sanctuary', bg: '#edf2e9', surface: '#ffffff', accent: '#35633d', line: '#b3c7ae' },
+  { id: 'cosmos', name: '銀河のアトラス', sub: 'Stellar Atlas', bg: '#f2eff4', surface: '#ffffff', accent: '#824255', line: '#cbbcc9' },
   { id: 'collage', name: 'コラージュ手帳', sub: 'Paper & Memories', bg: '#e8f2ef', surface: '#fff', accent: '#b32f36', line: '#78988f' },
   { id: 'letterpress', name: '活版ポスター', sub: 'Daily Press', bg: '#efefec', surface: '#fff', accent: '#b82430', line: '#242424' },
   { id: 'gallery', name: 'ギャラリー', sub: 'Everyday Exhibition', bg: '#eeeef0', surface: '#fff', accent: '#17614d', line: '#bcb8bb' },
@@ -729,7 +734,7 @@ const PALETTE_TOP = {
 // タイマー各デザインの、画面いちばん上あたりの色
 const TIMER_TOP = {
   neon: '#1b0f2b', sand: '#fbf6ee', metro: '#f3f6fc', liquid: '#f2fbff', turntable: '#25221e', bloom: '#f6fbf3',
-  night: '#07122d', onsen: '#f7f2ea', forest: '#eef7ed',
+  night: '#07122d', onsen: '#f7f2ea', forest: '#eef7ed', aquarium: '#082d32',
 };
 function screenTopColor() {
   const pal = db.settings.palette;
@@ -4321,7 +4326,7 @@ function renderPeopleCard() {
    全項目はそのまま（IDやハンドラは維持）。既定は全部たたんだ状態＝短い一覧＋秘匿情報は一段奥に。 */
 let settingsAccordionDone = false;
 const SETTINGS_CATS = [
-  ['見た目・表示', ['テーマ', 'テーマ（配色）', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
+  ['見た目・表示', ['テーマ', 'デザイン', 'アクセントカラー', 'スタイル変更', 'フォント', '文字サイズ', '画面', '表示する項目', '月の予定のフチ・色分け（自分の画面だけ）']],
   ['カレンダー', ['マイカレンダー', 'よく会う人', '天気', 'スケジュール調整の定型文']],
   ['記録・通知', ['睡眠の記録', '日々の記録', 'タイマー終了の通知', '大切な日の通知']],
   ['連携・同期', ['アカウントと同期', '共有カレンダー', '思い出シェアカレンダー', 'Googleカレンダー連携', 'Notion連携']],
@@ -5644,6 +5649,11 @@ function updateFocusArt(progress, label) {
   if (!art || art.hidden) return;
   const r = db.running;
   const done = Math.max(0, Math.min(1, 1 - progress)); // 経過の割合
+  if (st === 'aquarium') {
+    const fill = art.querySelector('.aq-fill');
+    if (fill) fill.style.width = `${done * 100}%`;
+    $('#focus').classList.toggle('aq-paused', !!r?.paused || !!r?.finished);
+  }
   const setTxt = r ? `SET ${Math.round(r.totalMs / 60000)}分${r.time ? ` ・ ${r.time}` : ''}` : '';
   art.querySelectorAll('.fa-time').forEach((e) => { e.textContent = label; });
   art.querySelectorAll('.fa-set').forEach((e) => { e.textContent = setTxt; });
