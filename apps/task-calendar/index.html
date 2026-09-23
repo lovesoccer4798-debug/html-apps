@@ -8,19 +8,19 @@
 <!-- iPhoneのPWAでは、この色がステータスバーの帯に使われる。テーマ・配色・タイマー画面に合わせてJSで塗り替える -->
 <meta name="theme-color" content="#edf1f5" id="tc-theme-color">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=105" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=105">
-<link rel="icon" href="icons/icon-192.png?v=105" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=105">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=106" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=106">
+<link rel="icon" href="icons/icon-192.png?v=106" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=106">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=105">
-<link rel="stylesheet" href="style.css?v=105">
-<link rel="stylesheet" href="expressive-themes.css?v=105">
+<link rel="stylesheet" href="tokens.css?v=106">
+<link rel="stylesheet" href="style.css?v=106">
+<link rel="stylesheet" href="expressive-themes.css?v=106">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -734,6 +734,8 @@
     <form id="anniv-form" autocomplete="off">
       <label class="f-label" for="a-title">名前</label>
       <input type="text" id="a-title" maxlength="40" placeholder="例：つきあった日・誕生日">
+      <label class="f-label" for="a-memo">メモ</label>
+      <textarea id="a-memo" rows="3" maxlength="5000" placeholder="大切にしたい理由、やりたいこと、伝えたいこと"></textarea>
       <label class="f-label">アイコン</label>
       <div class="icon-seg" id="a-icon-seg">
         <button type="button" data-icon="sparkles" aria-label="きらきら"></button>
@@ -892,10 +894,10 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=105"></script>
-<script src="reminder-core.js?v=105"></script>
-<script src="reminder-client.js?v=105"></script>
-<script src="record-tools.js?v=105"></script>
-<script src="app.js?v=105"></script>
+<script src="firebase-config.js?v=106"></script>
+<script src="reminder-core.js?v=106"></script>
+<script src="reminder-client.js?v=106"></script>
+<script src="record-tools.js?v=106"></script>
+<script src="app.js?v=106"></script>
 </body>
 </html>
