@@ -2,6 +2,12 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [1.79.1] - 2026-10-01
+
+### Fixed
+
+- 画像デザイン全体の色被せを88%から16%へ弱め、ダーク時も背景素材が見えるよう調整。ヘッダー・時刻・見出しの読みやすさは局所的な背景で維持
+
 ## [1.79.0] - 2026-09-23
 
 ### Fixed

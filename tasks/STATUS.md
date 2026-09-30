@@ -4,8 +4,9 @@
 > どのAI・どのセッションでも、作業を終えるときに必ず更新すること（`AGENTS.md` 参照）。
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
-- **最終更新**: 2026-09-23
-- **更新者メモ**: TaskARE v105のPR #89はマージ済み。v106で背景の連続性・ノート選択中のスワイプを修正、記念日メモ・情景タイマー2種・白い明暗ボタンを実装。ローカル検証済み。ユーザーの送信承認を受け[PR #90](https://github.com/lovesoccer4798-debug/html-apps/pull/90)作成済み・未マージ。配信サーバー未設定、実機iPhoneの操作・通知受信は未確認。
+- **最終更新**: 2026-10-01
+- **最新の相談**: TaskAREの確定案内は連携Gmailから閉じたアプリでも送信、オンラインMeetと先方備考URLを並列保持する要件を確認。仕様案を記録。メール用サーバーは未実装・未公開。構成案の確認とGoogle追加認可が必要。
+- **更新者メモ**: PR #90はマージ済み。v107の背景色被せ軽減をローカル実装・検証。PR未作成。通知サーバー未設定、実機iPhoneは未確認。詳細はTask Calendar作業ログ。
 
 ## ワークスペース全体の状態
 
@@ -17,14 +18,14 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。作業版v106、通知サーバー初期設定待ち |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。作業版v107背景修正、日程案内メールは設計案 |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（v105のPR #89はマージ済み。v106の[PR #90](https://github.com/lovesoccer4798-debug/html-apps/pull/90)はレビュー待ち。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（PR #90はマージ済み。v107はローカル検証済み、日程案内はサーバー構成の確認が必要。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 
