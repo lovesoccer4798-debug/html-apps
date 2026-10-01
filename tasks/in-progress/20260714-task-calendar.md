@@ -26,6 +26,7 @@
 
 ### 2026-10-01（PR作成の依頼）
 
+- `fdbc426`をコミットしてpush、[PR #91](https://github.com/lovesoccer4798-debug/html-apps/pull/91)を作成。背景改善の既存コミットも含む。マージ・本番公開はしていない。
 - 最新依頼は「問題ないのでPRまで」。GitHub `lovesoccer4798-debug/html-apps` の既存作業ブランチをpushしてPRを作成する。本番Worker公開・Google API有効化・追加権限・マージは今回の範囲外。
 - origin/mainをfetchして既存PR重複なしを確認。サーバー単体15件とSQLite workerdテストを再実行して成功。画面/回帰/オフラインの成功記録もPRへ記載する。
 
