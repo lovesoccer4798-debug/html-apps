@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v107';
+const APP_VERSION = 'v108';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -1561,6 +1561,18 @@ function renderGrid(body) {
     linkBtn.disabled = !ui.schedSlots.length;
     linkBtn.addEventListener('click', schedIssueLink);
     row3.append(linkBtn);
+    if (!ui.schedEditCode && window.TaskareBooking?.configured()) {
+      const autoLink = el('button', 'cta sched-exit', '自動案内リンク');
+      autoLink.type = 'button'; autoLink.disabled = !ui.schedSlots.length;
+      autoLink.addEventListener('click', async () => {
+        if (ui.schedSlots.some(slotBusy)) { flashToast('重なる予定があります。候補を選び直してください'); return; }
+        try { await window.TaskareBooking.createDialog({ user: fbUser, owner: db.settings.userName || '',
+          template: db.settings.bookingTemplate, slots: ui.schedSlots.map(s => ({ ...s })),
+          created: (o) => { db.settings.bookingOffers = [...(db.settings.bookingOffers || []), { code: o.code, url: o.url }].slice(-50); persistLocal(); },
+        }); } catch (e) { flashToast(e.message); }
+      });
+      row3.append(autoLink);
+    }
     if (ui.schedEditCode) {
       const cancelEdit = el('button', 'cta ghost sched-exit', '変更をやめる');
       cancelEdit.type = 'button';
@@ -1889,6 +1901,44 @@ function buildOfferList() {
 
 // 相手が選んだら: 自分のカレンダーに予定を入れ、必要ならMeetを発行してリンクを共有
 const meetWatched = {};
+function importBookingOffers(offers) {
+  if (!fbUser) return;
+  const imported = new Set(db.settings.importedBookings || []);
+  let changed = false;
+  for (const o of offers || []) {
+    if (!o.eventId || !o.answer?.picked) continue;
+    let ev = db.events.find(e => e.bookingCode === o.code || e.gcalId === o.eventId);
+    if (!ev && !imported.has(o.code)) {
+      const s = o.answer.picked;
+      ev = { id: 'booking-' + o.code, bookingCode: o.code, gcalId: o.eventId, title: o.title,
+        date: s.key, time: tgMinToStr(s.startMin), timeEnd: tgMinToStr(s.startMin + s.durMin),
+        place: o.answer.mode === 'inperson' ? o.venue : '',
+        memo: `先方からの備考:\n${o.answer.remarks || 'なし'}`, calendarId: null, createdAt: o.createdAt,
+        by: fbUser.uid, pushGoogle: false };
+      db.events.push(ev); imported.add(o.code); changed = true;
+    }
+    if (ev && o.meetLink && !ev.hangoutLink) { ev.hangoutLink = o.meetLink; changed = true; }
+  }
+  if (changed) { db.settings.importedBookings = [...imported].slice(-500); save(); renderAll(); }
+}
+let bookingSyncBusy = false;
+async function syncBookingOffers() {
+  if (bookingSyncBusy || !window.TaskareBooking?.configured() || !fbUser || document.hidden) return;
+  const user = fbUser; bookingSyncBusy = true;
+  try {
+    const result = await window.TaskareBooking.request('/owner/offers', { user });
+    if (fbUser?.uid !== user.uid) return;
+    importBookingOffers(result.offers);
+    for (const o of result.offers || []) {
+      if (o.status !== 'open') continue;
+      const indices = o.slots.map((s, i) => slotBusy(s) && !(o.blockedSlots || []).includes(i) ? i : -1).filter(i => i >= 0);
+      if (indices.length) await window.TaskareBooking.request(`/owner/offers/${o.code}/block`, { user, data: { indices } });
+    }
+  } catch { /* Manual status refresh exposes failures without interrupting normal use. */ }
+  finally { bookingSyncBusy = false; }
+}
+setTimeout(syncBookingOffers, 10000);
+setInterval(syncBookingOffers, 60000);
 function meetWatch(code) {
   if (!fbReady || meetWatched[code]) return;
   meetWatched[code] = true;
@@ -4432,6 +4482,11 @@ function renderSettings() {
   renderAppIconList();
   const st = $('#sched-template');
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
+  if (window.TaskareBooking) window.TaskareBooking.settings($('#booking-settings'), {
+    template: db.settings.bookingTemplate, getUser: () => fbUser,
+    saveTemplate: value => { db.settings.bookingTemplate = value; persistLocal(); },
+    importOffers: importBookingOffers,
+  });
   document.querySelectorAll('#sticky-seg button').forEach((b2) => b2.classList.toggle('is-active', b2.dataset.sticky === stickyMode()));
   document.querySelectorAll('#sleep-seg button').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.sleep === (db.settings.sleepMode || 'evening'));

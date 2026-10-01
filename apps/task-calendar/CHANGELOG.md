@@ -2,6 +2,14 @@
 
 このアプリのユーザーに見える変更を記録する（[Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) 形式・[Semantic Versioning](https://semver.org/lang/ja/) 準拠）。
 
+## [Unreleased]
+
+### Added
+
+- v108: 日程確定の自動案内をローカル実装。相手のメール・オンライン/対面・備考受付、確定本文編集、Google MeetとGmail案内、Googleカレンダー追加リンク、送信結果・確認付き再試行、TaskAREへの重複しない取り込み
+- 独立した無料Workers用サーバーに認可情報の暗号化、私的な回答控え、予約/送信上限、送信結果不明時の自動再送停止を追加
+- **未公開・既定無効**。追加のGoogle認可とサーバー設定・実送信検証が必要。既存の日程リンクはそのまま利用可能
+
 ## [1.79.1] - 2026-10-01
 
 ### Fixed

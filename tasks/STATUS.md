@@ -5,8 +5,8 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-10-01
-- **最新の相談**: TaskAREの確定案内は連携Gmailから閉じたアプリでも送信、オンラインMeetと先方備考URLを並列保持する要件を確認。仕様案を記録。メール用サーバーは未実装・未公開。構成案の確認とGoogle追加認可が必要。
-- **更新者メモ**: PR #90はマージ済み。v107の背景色被せ軽減をローカル実装・検証。PR未作成。通知サーバー未設定、実機iPhoneは未確認。詳細はTask Calendar作業ログ。
+- **最新の相談**: 最新の依頼はPR作成まで。v107背景改善とv108日程確定Gmail案内をPRへまとめる。Workerは既定無効、URL空欄で未公開。Googleカレンダー連携とFirebaseログインは同じアカウントと本人回答済み。本番公開・追加権限・API有効化は今回行わない。公開前の正本: `apps/task-calendar/booking-worker/README.md`。
+- **更新者メモ**: PR #90はマージ済み。v107背景修正はコミット済み、v108は未コミット・PR未作成。単体15件、workerd、v108画面、v106回帰、オフラインテスト成功。追加API有効化/同意/秘密登録/実送信/デプロイなし。通知サーバー未設定、実機iPhone未確認。
 
 ## ワークスペース全体の状態
 
@@ -18,14 +18,14 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。作業版v107背景修正、日程案内メールは設計案 |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。作業版v108自動案内をローカル検証、公開設定待ち |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（PR #90はマージ済み。v107はローカル検証済み、日程案内はサーバー構成の確認が必要。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（PR #90はマージ済み。v108はローカル検証済み、日程案内はアカウント確認・公開設定・実送信検証が必要。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 
