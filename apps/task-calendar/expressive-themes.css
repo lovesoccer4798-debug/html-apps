@@ -36,13 +36,13 @@
 :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"])[data-theme="dark"] {
   --tc-bg: var(--palette-bg-dark); --tc-surface: var(--palette-surface-dark); --tc-ink: var(--palette-ink-dark);
   --tc-ink2: var(--palette-muted-dark); --tc-line: var(--palette-line-dark); --tc-accent: var(--palette-accent-dark);
-  --tc-accent-ink: var(--palette-accent-ink-dark); --material-opacity: .22;
+  --tc-accent-ink: var(--palette-accent-ink-dark); --material-opacity: .8;
 }
 @media (prefers-color-scheme: dark) {
   :root:is([data-palette="collage"], [data-palette="letterpress"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]):not([data-theme="light"]) {
     --tc-bg: var(--palette-bg-dark); --tc-surface: var(--palette-surface-dark); --tc-ink: var(--palette-ink-dark);
     --tc-ink2: var(--palette-muted-dark); --tc-line: var(--palette-line-dark); --tc-accent: var(--palette-accent-dark);
-    --tc-accent-ink: var(--palette-accent-ink-dark); --material-opacity: .22;
+    --tc-accent-ink: var(--palette-accent-ink-dark); --material-opacity: .8;
   }
 }
 :root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) body { background: var(--tc-bg); isolation: isolate; }
@@ -184,3 +184,15 @@
 }
 .anniv-memo { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; color: var(--tc-ink); }
 #a-memo { width: 100%; min-height: 96px; resize: vertical; padding: 12px; font: inherit; color: var(--tc-ink); background: var(--tc-bg); border: 1px solid var(--tc-line); border-radius: 6px; }
+
+/* Protect text locally instead of washing out the whole photograph. */
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) .app {
+  background: color-mix(in srgb, var(--tc-bg) 16%, transparent);
+}
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) #scr-cal .appbar {
+  background: color-mix(in srgb, var(--tc-surface) 94%, transparent);
+}
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) :is(.tl-time > span, .tl-gap, .section-label, .settings-cat, .preview-head, .empty) {
+  background: var(--tc-surface); color: var(--tc-ink); box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+:root:is([data-palette="collage"], [data-palette="gallery"], [data-palette="aquarium"], [data-palette="woodland"], [data-palette="cosmos"]) :is(.empty, .preview-head, .settings-cat) { padding: 10px; }

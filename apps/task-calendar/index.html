@@ -8,19 +8,20 @@
 <!-- iPhoneのPWAでは、この色がステータスバーの帯に使われる。テーマ・配色・タイマー画面に合わせてJSで塗り替える -->
 <meta name="theme-color" content="#edf1f5" id="tc-theme-color">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=106" id="app-favicon">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=106">
-<link rel="icon" href="icons/icon-192.png?v=106" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=106">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=108" id="app-favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=108">
+<link rel="icon" href="icons/icon-192.png?v=108" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=108">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TaskARE">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css?v=106">
-<link rel="stylesheet" href="style.css?v=106">
-<link rel="stylesheet" href="expressive-themes.css?v=106">
+<link rel="stylesheet" href="tokens.css?v=108">
+<link rel="stylesheet" href="style.css?v=108">
+<link rel="stylesheet" href="expressive-themes.css?v=108">
+<link rel="stylesheet" href="booking.css?v=108">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -335,6 +336,9 @@
         <p class="hint">メニュー →「スケジュール調整」で空き時間をコピーするときの文面です。<strong>{{候補}}</strong> の部分が選んだ日時（例：・7/21（火）10:00〜11:00）に置き換わります。自分の言い回しに自由に編集OK。</p>
         <button type="button" class="cta ghost" id="sched-template-reset">定型文を初期状態に戻す</button>
       </div>
+
+      <p class="section-label">日程確定の自動案内</p>
+      <div class="card" id="booking-settings"></div>
 
       <p class="section-label">データ</p>
       <div class="card">
@@ -894,10 +898,11 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=106"></script>
-<script src="reminder-core.js?v=106"></script>
-<script src="reminder-client.js?v=106"></script>
-<script src="record-tools.js?v=106"></script>
-<script src="app.js?v=106"></script>
+<script src="firebase-config.js?v=108"></script>
+<script src="reminder-core.js?v=108"></script>
+<script src="reminder-client.js?v=108"></script>
+<script src="record-tools.js?v=108"></script>
+<script src="booking-client.js?v=108"></script>
+<script src="app.js?v=108"></script>
 </body>
 </html>

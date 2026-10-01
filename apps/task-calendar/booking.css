@@ -1,0 +1,19 @@
+.booking-form { display: grid; gap: 16px; }
+body.booking-guest { min-width: 0; overflow: hidden; }
+body.booking-guest .app { display: none; }
+.booking-field { display: grid; gap: 8px; font-size: 14px; }
+.booking-field input, .booking-field textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px; border: 1px solid var(--tc-line, #87918a); border-radius: 6px; background: var(--tc-surface, #fff); color: var(--tc-ink, #252b28); }
+.booking-field textarea { resize: vertical; min-height: 100px; }
+.booking-form fieldset { min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--tc-line, #87918a); border-radius: 6px; }
+.booking-choice { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; font-size: 15px; overflow-wrap: anywhere; }
+.booking-choice input { flex: 0 0 20px; width: 20px; height: 20px; margin: 0; accent-color: var(--tc-accent, #28765d); }
+.booking-dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 20px; border: 1px solid var(--tc-line, #87918a); border-radius: 8px; background: var(--tc-surface, #fff); color: var(--tc-ink, #252b28); }
+.booking-dialog::backdrop { background: #0008; }
+.booking-card { margin: auto; max-height: none; }
+.booking-scrim { overflow: auto; padding: 24px 16px; width: 100%; box-sizing: border-box; z-index: 1000; }
+.booking-card h2, .booking-result h3 { font-size: 18px; overflow-wrap: anywhere; }
+.booking-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-block: 12px; }
+.booking-result { padding: 16px 0; border-top: 1px solid var(--tc-line, #87918a); display: grid; gap: 8px; }
+.booking-result p, .booking-result h3 { margin: 0; }
+.booking-status { font-weight: 700; }
+.booking-card .cta, .booking-dialog .cta { white-space: normal; min-height: 44px; }
