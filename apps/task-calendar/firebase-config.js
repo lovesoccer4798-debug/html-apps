@@ -13,5 +13,5 @@ window.TC_FIREBASE_CONFIG = {
 // 空のままだと設定画面に準備手順が表示される。公開してよい識別子（シークレットではない）。
 window.TC_GCAL_CLIENT_ID = '797466638176-2cot9cb3hcpcvj3e8ealm3cps8codnlu.apps.googleusercontent.com';
 
-// Enable only after the separate booking server has passed the deployment checklist.
-window.TC_BOOKING_API_URL = '';
+// Owner authentication and additional Google consent are required before booking.
+window.TC_BOOKING_API_URL = 'https://taskare-booking.love-soccer4798.workers.dev';

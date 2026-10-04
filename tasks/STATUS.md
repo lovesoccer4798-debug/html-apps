@@ -4,9 +4,14 @@
 > どのAI・どのセッションでも、作業を終えるときに必ず更新すること（`AGENTS.md` 参照）。
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
-- **最終更新**: 2026-10-01
-- **最新の相談**: 最新の依頼はPR作成まで。v107背景改善とv108日程確定Gmail案内をPRへまとめる。Workerは既定無効、URL空欄で未公開。Googleカレンダー連携とFirebaseログインは同じアカウントと本人回答済み。本番公開・追加権限・API有効化は今回行わない。公開前の正本: `apps/task-calendar/booking-worker/README.md`。
-- **更新者メモ**: [PR #91](https://github.com/lovesoccer4798-debug/html-apps/pull/91)作成済み（v107背景改善＋v108自動案内・既定無効）。マージなし。単体15件、workerd、v108画面、v106回帰、オフラインテスト成功。追加API有効化/同意/秘密登録/実送信/デプロイなし。通知サーバー未設定、実機iPhone未確認。
+- **最終更新**: 2026-10-04
+- **現在の正本（UID登録後）**: [PR #92](https://github.com/lovesoccer4798-debug/html-apps/pull/92)作成済み、未マージ。OWNER_UIDを含む3秘密設定の名前、GoogleリダイレクトURI、Workers Freeを確認。独立Workerの本人認証付きAPIを有効化し、未認証401・許可外Origin403を確認。単体15件・v108画面回帰成功。次はPRマージ→設定のGoogle追加連携を本人操作→本人宛実送信検証。本人UIDの正しさは実ログイン時に確認、追加同意/実送信は未完了。以下の過去の引き継ぎより本行を優先する。
+- **最新の引き継ぎ（UID待ち）**: GOOGLE_CLIENT_SECRET登録を名前のみで確認。TOKEN_KEYを暗号学的乱数32バイトから生成し、値を表示/ファイル保存せず秘密登録。2つともsecret listで保持確認。公開Firebaseキーを反映し、OWNER_UIDの空通常変数を削除（秘密に切り替えるため）。CloudflareのOWNER_UID秘密フォームとFirebase Authenticationユーザー画面を開き、本人のUIDのコピー・登録を本人へ引き継ぎ。自動送信フラグはfalseのまま。次はOWNER_UID登録確認→リダイレクトURI確認→本人限定のGoogle追加同意・本人宛テスト。
+- **最新の引き継ぎ**: 専用Google OAuthクライアント「TaskARE 自動案内」の作成を一覧で確認。クライアントIDとPUBLIC_URLを独立Workerに反映済み（両フラグfalse）。Cloudflare設定でGOOGLE_CLIENT_SECRETの名前・秘密チェックだけ準備し、値入力と「変数を追加してデプロイする」を本人へ引き継ぎ。秘密値は読み取らない。次は登録名だけで確認し、TOKEN_KEY・所有者UID・Firebase公開キー・Google追加同意・本人宛テストへ進む。
+- **認証・公開の最新状況**: 10/4、明示承認後にWrangler認証成功（account/user参照・workers_scripts更新・継続アクセスのみ、Keychainで鍵を管理）。Workers Freeを再確認し、独立`taskare-booking`を無効状態で公開。https://taskare-booking.love-soccer4798.workers.dev が503 setup_requiredを返すことを確認。既存Worker・料金プラン変更なし。次は専用Google OAuthクライアントの本人作成、秘密登録、所有者設定、追加同意と本人宛テスト。
+- **最新の費用確認**: 自動案内の公開・Google追加同意について、無料を条件に進めたいとの依頼。公式料金を再確認し、Workers Free維持・Google請求先未連携・有料化が必要なら停止の条件を説明。Gmail/Calendarは標準利用追加料金なしだが2026年後半の上限超過課金を予告しており、永久無料は保証しない。この確認では公開・認可・実送信なし。次は公開前チェックリストに沿って実契約とPR状態を再確認する。
+- **最新の相談**: 無料条件で自動案内の公開準備を開始。`codex/taskare-booking-activation`。実画面でWorkers Free / Firebase Spark / Google請求先未連携を確認済み。本人操作後、Gmail API「有効」を実画面で確認。次はWrangler認証と独立Workerの無効状態での準備。公開前の正本: `apps/task-calendar/booking-worker/README.md`。
+- **更新者メモ**: [PR #91](https://github.com/lovesoccer4798-debug/html-apps/pull/91)は10/1マージ済み、Pages成功・既存task-calendar-apiビルド失敗。単体15件再成功。Gmail API有効化済み、Google OAuthは外部・本番環境。独立Workerのみ無効状態で公開済み。Google追加同意/秘密登録/実送信なし。ローカルwrangler.jsoncのPUBLIC_URLは実URLへ更新したが、初回クラウド設定はexample.invalidのまま（無効なので動作に影響なし）。通知サーバー未設定、実機iPhone未確認。
 
 ## ワークスペース全体の状態
 
