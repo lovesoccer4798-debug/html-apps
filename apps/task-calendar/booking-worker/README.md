@@ -1,4 +1,13 @@
-# 日程確定・Gmail案内サーバー（未公開）
+# 日程確定・Gmail案内サーバー
+
+## 2026-10-04の公開状態
+
+Workers Freeを実画面で確認し、独立サーバーを公開済み。`ENABLED`と`FREE_PLAN_CONFIRMED`を有効にし、未認証401・許可外Origin403を確認した。Google追加同意・本人宛の実送信検証はまだ完了していない。アプリ接続先の反映はPR経由。既存の日程調整リンクやNotion用Workerは変更していない。
+
+- 接続先: `https://taskare-booking.love-soccer4798.workers.dev`
+- 専用OAuthクライアントを使用。リダイレクトURIは上記originの`/oauth/callback`。
+- `GOOGLE_CLIENT_SECRET`、`OWNER_UID`、`TOKEN_KEY`は秘密設定。値をチャットやリポジトリへ書かない。登録済みの`TOKEN_KEY`を再生成しない。
+- 所有者UIDは名前の存在だけ確認済み。本人のログインで`/owner/status`が成功することは追加連携時に確認する。
 
 Workers Free + **SQLite** Durable Objectの単一オーナー向け実装。ローカルのテストは外部APIをモックし、実際のメール送信・API有効化・デプロイは行わない。既存Notion Worker、通知Worker、Firestoreルールとは分離している。
 
@@ -23,7 +32,7 @@ Workers Free + **SQLite** Durable Objectの単一オーナー向け実装。ロ�
 9. 設定→日程確定の自動案内からGoogle追加連携。Googleの同意画面は本人が内容を確認して完了する。Gmail送信元表示を確認する。
 10. 本人のテスト用メールだけでオンライン/対面を検証し、アプリを閉じてもMeetと案内が届くことを確認する。終了後、実データを消す操作は本人に確認する。
 
-まだ上記のクラウド設定・追加同意・実送信は実施していない。ローカルテスト成功を本番送信成功と扱わない。
+チェックリストの完了範囲は冒頭の公開状態を参照する。ローカルテスト成功を本番送信成功と扱わない。
 
 ## 使う場所
 

@@ -24,6 +24,52 @@
 
 ## 作業ログ
 
+### 2026-10-04（本人認証付きAPI有効化・接続先PR準備）
+
+- secret listでGOOGLE_CLIENT_SECRET / OWNER_UID / TOKEN_KEYの3つを確認（値は取得せず）。Google専用クライアントの入力欄からリダイレクトURIだけを抽出して正しいWorker callbackと確認。Workers Free（0ドル・現在の計画）を再確認。
+- 両有効化フラグをtrueにして独立Workerのみ再デプロイ。Version 07ce1b18-bc53-4f95-8c6b-6ccbc073bfc9。未認証owner/statusは401、許可外Originは403。所有者UIDの値の正しさは本人ログイン時の確認が必要。
+- フロントTC_BOOKING_API_URLを実originへ設定。firebase-config資材とSWキャッシュだけ108.1へ更新。旧Googleカレンダー認証IDや他資材は変更しない。node単体15件、隔離ブラウザーv108回帰成功（外部通信モック）。実Google追加同意・実メール送信はまだなし。
+- 次は接続先PRを本人がマージ→TaskARE設定「日程確定の自動案内」→Google追加連携を本人操作。送信元一致と自分宛のテスト日程のみで実送信確認する。既存meetリンクは従来どおりで、新規自動案内リンクにのみ適用。
+
+### 2026-10-04（Google秘密確認・暗号鍵登録・UID待ち）
+
+- secret listでGOOGLE_CLIENT_SECRET登録を確認（値は取得せず）。TOKEN_KEYが存在しないことを同じ一覧で確認してから、Node crypto.randomBytes(32)をhex化してWrangler stdinへ直接渡し秘密登録。値の表示・ファイル保存なし。
+- 空のOWNER_UID通常変数をローカル専用configから除き、Firebase公開Web APIキーを既存configから反映。独立Workerへ再デプロイ成功、Version fdf005e6-bb7a-4468-bc3c-decc442eb11e。両有効化フラグfalseを維持。secret listでGOOGLE_CLIENT_SECRET/TOKEN_KEY保持を再確認。
+- UIDも秘密設定として扱う。Firebase Authenticationユーザー画面とCloudflareのOWNER_UIDフォーム（Secret ON）を開き、本人のUIDコピー・貼り付け・デプロイを本人へ依頼。UID値自体は取得/表示していない。次回はまずsecret listでOWNER_UIDの有無を確認し、既存TOKEN_KEYを再生成しない。追加Google同意・メール送信は未実施。
+
+### 2026-10-04（専用OAuthクライアント確認・シークレット登録待ち）
+
+- 本人の作成報告後、一覧で「TaskARE 自動案内」（ウェブ、10/4作成）を確認。作成ダイアログや秘密値は読み取っていない。専用ID末尾vh79qmn32vgi02u5b22fuk94vrf8on1iをローカル専用configへ反映。
+- PUBLIC_URLとGOOGLE_CLIENT_IDを無効状態の独立Workerへ反映。Version: 94047ecd-7346-408c-b4e1-5809e6698e22。ENABLED/FREE_PLAN_CONFIRMEDはfalse、所有者UID/公開Firebaseキーは空欄、TOKEN_KEY未登録。既存連携と料金プラン変更なし。
+- Cloudflare taskare-booking設定→変数追加フォームを開き、名前GOOGLE_CLIENT_SECRET、秘密チェックONまで準備。値の入力・確認・送信は本人操作へ引き継ぎ、秘密値は見ない。作業中タブを保持。次はCLIのsecret list等で名前のみ確認する。GoogleリダイレクトURIの実値もまだ未検証、追加同意と実送信は未実施。
+
+### 2026-10-04（認証成功・無効状態で公開）
+
+- 本人が無料条件でWrangler同意ボタン操作を承認。安全審査が「アカウントと請求」分類を警戒して一度拒否したため、表示を展開してAccount Readのみ、開発者権限はWorkers Scripts Writeのみと確認後、同じ操作を再試行して成功。whoamiで限定4スコープとKeychainによる暗号鍵管理を確認。権限追加なし。
+- 実画面でWorkers Free（月額0ドル・現在の計画）を再確認。独立taskare-bookingをENABLED=false / FREE_PLAN_CONFIRMED=false、Google情報空欄のまま公開。Version: dcd051d8-9cd6-4953-b942-3d35bd2755d1。URL: https://taskare-booking.love-soccer4798.workers.dev 。GETで503 setup_requiredを確認。料金・既存Worker・実データは変更なし。
+- ローカル専用wrangler.jsoncのPUBLIC_URLだけ実URLへ更新（未再デプロイ）。フロントTC_BOOKING_API_URLは空欄のまま。
+- 既存認証への影響を避けるため同じGoogleプロジェクトに専用OAuthウェブクライアント「TaskARE 自動案内」を本人に作成してもらう。認証情報作成の最終操作は行わず、Google作成画面で引き継ぎ。リダイレクトURI: https://taskare-booking.love-soccer4798.workers.dev/oauth/callback 。JSオリジン不要。シークレットはチャットへ貼らず、本人がCloudflareの秘密設定へ登録する。クライアントIDも別途Workerへ設定、フロントの既存カレンダー認証IDは変えない。
+
+### 2026-10-04（公開用認証の再試行）
+
+- 本人の「操作できる」回答でWrangler認証を再開始。通常方式はブラウザー表示待ちを含め期限切れ、device方式へ変更。
+- device方式では本人へコードと認証先を案内し、コード入力を補助して同意画面まで到達。ただし本人の承認前に5分で終了。ログイン未完了、公開/秘密登録/課金変更なし。プロセスは両方終了。
+- 次回は新規コードが必要。繰り返し期限切れを防ぐため、Wranglerに与える権限（account:read / user:read / workers_scripts:write / 自動追加のoffline_access）を具体的に説明し、同意ボタン操作の明示許可を得る。新しい資格情報の作成・変更、Google追加同意は引き続き本人操作。
+
+### 2026-10-02（Gmail API有効化確認）
+
+- 本人から完了報告後、Google CloudのGmail API詳細画面でステータス「有効」を確認。Calendar APIは前回確認済み。メール送信・追加Google同意・デプロイはまだ行っていない。
+- Wranglerログインは`--use-keyring --scopes account:read user:read workers_scripts:write`に限定して開始し、Chromeの公式同意画面で本人操作へ引き継いだ。`offline_access`はCLIが自動追加するため明示指定不可。初回の明示指定はエラーで終了し、上記の有効なスコープで開始し直した。OAuth URLや秘密値は記録しない。
+- 認証待ちがタイムアウトしプロセス終了。期限切れの作成タブは閉じた。次回、本人が操作できる時に新規ログインを開始する。未認証のまま。
+- ローカル専用`booking-worker/wrangler.jsonc`を用意（gitignore確認済み）。既知のCloudflareアカウントと公開APP_URLのみ設定、機能フラグは両方false、Google情報と所有者UIDは空欄。dry-run成功、デプロイなし。秘密値は未作成・未登録。
+
+### 2026-10-02（自動案内の無料公開準備）
+
+- オーナーが無料条件で続行を依頼。PR #91はマージ済み、origin/mainと実装差分なし。`codex/taskare-booking-activation`へ移動し、単体15件を再実行して成功。
+- 実画面でWorkers Free、Firebase Sparkを再確認。Google Auth概要にも「Cloud請求先アカウントが関連付けられていない」と表示。OAuthは外部・本番環境、Calendar API有効、Gmail API未有効。
+- Gmail API有効化ボタンの直前で承認を質問。Google追加同意・認証情報登録・公開・実送信は未実施。Wrangler whoamiは未認証。既存task-calendar-apiのPRビルド失敗は未修正、今回の独立Workerとは別。
+- 再開: Gmail API承認回答を確認。https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=task-calendar-2312e 。公開APP_URL候補は実ブラウザーで確認した https://taskare.pages.dev/ 。Google OAuth設定 https://console.cloud.google.com/auth/audience?project=task-calendar-2312e 。公開前チェックリストに従い、認証情報の新規登録は本人操作へ引き継ぐ。請求先登録や有料化は行わない。
+
 ### 2026-10-01（PR作成の依頼）
 
 - `fdbc426`をコミットしてpush、[PR #91](https://github.com/lovesoccer4798-debug/html-apps/pull/91)を作成。背景改善の既存コミットも含む。マージ・本番公開はしていない。
