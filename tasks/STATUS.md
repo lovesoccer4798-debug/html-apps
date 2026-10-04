@@ -5,7 +5,7 @@
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
 - **最終更新**: 2026-10-04
-- **現在の正本（UID登録後）**: OWNER_UIDを含む3秘密設定の名前、GoogleリダイレクトURI、Workers Freeを確認。独立Workerの本人認証付きAPIを有効化し、未認証401・許可外Origin403を確認。単体15件・v108画面回帰成功。アプリ接続先と設定キャッシュ更新をPRへまとめる。次はPRマージ→設定のGoogle追加連携を本人操作→本人宛実送信検証。本人UIDの正しさは実ログイン時に確認、追加同意/実送信は未完了。
+- **現在の正本（UID登録後）**: [PR #92](https://github.com/lovesoccer4798-debug/html-apps/pull/92)作成済み、未マージ。OWNER_UIDを含む3秘密設定の名前、GoogleリダイレクトURI、Workers Freeを確認。独立Workerの本人認証付きAPIを有効化し、未認証401・許可外Origin403を確認。単体15件・v108画面回帰成功。次はPRマージ→設定のGoogle追加連携を本人操作→本人宛実送信検証。本人UIDの正しさは実ログイン時に確認、追加同意/実送信は未完了。以下の過去の引き継ぎより本行を優先する。
 - **最新の引き継ぎ（UID待ち）**: GOOGLE_CLIENT_SECRET登録を名前のみで確認。TOKEN_KEYを暗号学的乱数32バイトから生成し、値を表示/ファイル保存せず秘密登録。2つともsecret listで保持確認。公開Firebaseキーを反映し、OWNER_UIDの空通常変数を削除（秘密に切り替えるため）。CloudflareのOWNER_UID秘密フォームとFirebase Authenticationユーザー画面を開き、本人のUIDのコピー・登録を本人へ引き継ぎ。自動送信フラグはfalseのまま。次はOWNER_UID登録確認→リダイレクトURI確認→本人限定のGoogle追加同意・本人宛テスト。
 - **最新の引き継ぎ**: 専用Google OAuthクライアント「TaskARE 自動案内」の作成を一覧で確認。クライアントIDとPUBLIC_URLを独立Workerに反映済み（両フラグfalse）。Cloudflare設定でGOOGLE_CLIENT_SECRETの名前・秘密チェックだけ準備し、値入力と「変数を追加してデプロイする」を本人へ引き継ぎ。秘密値は読み取らない。次は登録名だけで確認し、TOKEN_KEY・所有者UID・Firebase公開キー・Google追加同意・本人宛テストへ進む。
 - **認証・公開の最新状況**: 10/4、明示承認後にWrangler認証成功（account/user参照・workers_scripts更新・継続アクセスのみ、Keychainで鍵を管理）。Workers Freeを再確認し、独立`taskare-booking`を無効状態で公開。https://taskare-booking.love-soccer4798.workers.dev が503 setup_requiredを返すことを確認。既存Worker・料金プラン変更なし。次は専用Google OAuthクライアントの本人作成、秘密登録、所有者設定、追加同意と本人宛テスト。

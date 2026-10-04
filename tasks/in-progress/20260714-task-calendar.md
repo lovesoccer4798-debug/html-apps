@@ -26,6 +26,8 @@
 
 ### 2026-10-04（本人認証付きAPI有効化・接続先PR準備）
 
+- [PR #92](https://github.com/lovesoccer4798-debug/html-apps/pull/92)作成済み。コミットd2c41d2。マージは行っていない。
+
 - secret listでGOOGLE_CLIENT_SECRET / OWNER_UID / TOKEN_KEYの3つを確認（値は取得せず）。Google専用クライアントの入力欄からリダイレクトURIだけを抽出して正しいWorker callbackと確認。Workers Free（0ドル・現在の計画）を再確認。
 - 両有効化フラグをtrueにして独立Workerのみ再デプロイ。Version 07ce1b18-bc53-4f95-8c6b-6ccbc073bfc9。未認証owner/statusは401、許可外Originは403。所有者UIDの値の正しさは本人ログイン時の確認が必要。
 - フロントTC_BOOKING_API_URLを実originへ設定。firebase-config資材とSWキャッシュだけ108.1へ更新。旧Googleカレンダー認証IDや他資材は変更しない。node単体15件、隔離ブラウザーv108回帰成功（外部通信モック）。実Google追加同意・実メール送信はまだなし。
