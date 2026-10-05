@@ -21,7 +21,7 @@ export function email(value) {
 }
 export function slotTime(slot) { return Date.parse(`${slot.key}T00:00:00+09:00`) + slot.startMin * 60000; }
 export function validateOffer(data, now = Date.now()) {
-  check(data && Array.isArray(data.slots) && data.slots.length > 0 && data.slots.length <= 3);
+  check(data && Array.isArray(data.slots) && data.slots.length > 0 && data.slots.length <= 5);
   const slots = data.slots.map(s => {
     check(s && /^\d{4}-\d{2}-\d{2}$/.test(s.key) && Number.isInteger(s.startMin) && s.startMin >= 0
       && Number.isInteger(s.durMin) && s.durMin >= 15 && s.durMin <= 180 && s.startMin + s.durMin <= 1440);
