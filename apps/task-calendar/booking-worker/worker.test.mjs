@@ -60,6 +60,26 @@ test('validation rejects malformed dates, past slots, headers and unavailable in
   assert.throws(() => validateAnswer({ ...answer(), slot: 10 }, offer));
   assert.throws(() => validateAnswer({ ...answer(), mode: 'inperson' }, { ...offer, venue: '' }));
 });
+test('five hourly candidates are accepted; sixth and duplicate candidates are rejected', () => {
+  const slots = Array.from({ length: 5 }, (_, i) => ({ ...data().slots[0], startMin: 600 + i * 60 }));
+  assert.equal(validateOffer({ ...data(), slots }).slots.length, 5);
+  assert.throws(() => validateOffer({ ...data(), slots: [...slots, { ...slots[0], startMin: 1000 }] }));
+  assert.throws(() => validateOffer({ ...data(), slots: [...slots.slice(0, 4), slots[0]] }));
+  const offer = { ...validateOffer({ ...data(), slots }), status: 'open', expiresAt: Date.now() + DAY };
+  assert.equal(validateAnswer({ ...answer(), slot: 4 }, offer).picked.startMin, 840);
+  assert.throws(() => validateAnswer({ ...answer(), slot: 4 }, { ...offer, blockedSlots: [4] }), /slot_conflict/);
+});
+test('all five candidates can be blocked in one sync and stale answers are rejected', async () => {
+  const t = await setup(); try {
+    const slots = Array.from({ length: 5 }, (_, i) => ({ ...data().slots[0], startMin: 600 + i * 60 }));
+    const res = await t.api('/owner/offers', { ...data(), slots }); assert.equal(res.status, 201);
+    const o = await res.json();
+    assert.equal((await t.api(`/owner/offers/${o.code}/block`, { indices: [0, 1, 2, 3, 4] })).status, 200);
+    const visible = await (await t.api(`/public/offers/${o.code}`, undefined, false)).json();
+    assert.ok(visible.slots.every(s => s.unavailable));
+    assert.equal((await t.api(`/public/offers/${o.code}/answer`, { ...answer(), slot: 4 }, false)).status, 409);
+  } finally { t.restore(); }
+});
 test('recipient remarks are kept, Meet is separate, MIME is plain text and no Google invitation', () => {
   const o = { ...validateOffer(data()), code: randomToken(), answer: { ...answer(), picked: data().slots[0] }, meetLink: 'https://meet.google.com/abc-defg-hij' };
   const body = eventBody(o); assert.equal(body.attendees, undefined); assert.match(body.description, /Zoom/); assert.ok(body.conferenceData);
@@ -99,6 +119,16 @@ test('alarm finishes after owner closes app, stable event ID, sends exactly once
     assert.equal(t.events.size, 1); assert.equal(t.sent.length, 1); assert.ok(t.calls.some(c => c.url.includes('sendUpdates=none')));
     await t.process(o.code); assert.equal(t.sent.length, 1);
     const res = await (await t.api('/public/offers/' + o.code, undefined, false)).json(); assert.equal(res.meetLink, undefined);
+  } finally { t.restore(); }
+});
+test('a later Google conflict stops processing without creating an event or sending email', async () => {
+  const t = await setup(); try {
+    const o = await t.create(); await t.api(`/public/offers/${o.code}/answer`, answer(), false);
+    globalThis.fetch = (url, init) => String(url).includes('timeMin=')
+      ? Promise.resolve(Response.json({ items: [{ status: 'confirmed' }] })) : t.mock(url, init);
+    const result = await t.process(o.code);
+    assert.equal(result.status, 'stopped'); assert.equal(result.error, 'slot_conflict');
+    assert.equal(t.events.size, 0); assert.equal(t.sent.length, 0);
   } finally { t.restore(); }
 });
 test('Gmail timeout is unknown and never automatically resent after restart', async () => {

@@ -98,7 +98,7 @@ export class BookingStore {
         const o = this.offers.get('offer:' + match[1]); check(o, 'not_found', 404);
         if (match[2] === 'block') {
           check(o.status === 'open', 'already_answered', 409);
-          check(Array.isArray(data.indices) && data.indices.length <= 3 && data.indices.every(i => Number.isInteger(i) && o.slots[i]));
+          check(Array.isArray(data.indices) && data.indices.length <= o.slots.length && data.indices.every(i => Number.isInteger(i) && o.slots[i]));
           o.blockedSlots = [...new Set([...(o.blockedSlots || []), ...data.indices])];
         } else if (match[2] === 'cancel') {
           check(o.status === 'open', 'already_answered', 409); o.status = 'cancelled';

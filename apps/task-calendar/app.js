@@ -42,7 +42,7 @@ const APP_ACCENTS = Object.fromEntries(Object.entries(ACCENTS).filter(([, a]) =>
 const ICON_ATTRS = 'class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 /* Lucide icons, inlined per docs/design-guide.md (no CDN) */
 // アプリのバージョン（sw.js の CACHE_NAME と揃える）。設定の最下部に表示して、更新が反映されたか一目で確認できるようにする。
-const APP_VERSION = 'v108';
+const APP_VERSION = 'v109';
 
 /* タイマー（フォーカス）画面のデザイン。操作・時間の数え方は共通で、残り時間の見せ方だけが変わる。
    配色テーマとは独立した設定（settings.timerStyle）。 */
@@ -324,7 +324,7 @@ const ui = {
   tidySel: new Set(),       // 「今日の整理」で選択中の項目id
   memStampOpen: null,       // スタンプ一覧を開いている思い出のid
   schedMode: false,         // スケジュール調整モード（時間割で空き枠を選ぶ）
-  schedSlots: [],           // [{key, startMin, durMin}] 最大3つ
+  schedSlots: [],           // [{key, startMin, durMin}], up to five candidates
   schedDur: 60,             // 候補1枠の長さ（分）
   schedMeet: false,         // （旧）確定時にMeet発行するか
   schedMeetTool: 'none',    // 会議ツール: 'none' | 'meet'(Google Meet自動) | 'link'(Zoom等を貼る)
@@ -1512,7 +1512,7 @@ function renderGrid(body) {
   // スケジュール調整モードの操作バー
   if (ui.schedMode) {
     const bar = el('div', 'sched-bar');
-    bar.append(el('p', 'sched-hint', `空いている時間をタップして選択（${ui.schedSlots.length}/3）。もう一度タップで解除。`));
+    bar.append(el('p', 'sched-hint', `空いている時間をタップして選択（${ui.schedSlots.length}/5）。もう一度タップで解除。`));
     const row = el('div', 'sched-row');
     const durSeg = el('div', 'seg');
     [[30, '30分'], [60, '60分'], [90, '90分']].forEach(([v, label]) => {
@@ -1567,7 +1567,8 @@ function renderGrid(body) {
       autoLink.addEventListener('click', async () => {
         if (ui.schedSlots.some(slotBusy)) { flashToast('重なる予定があります。候補を選び直してください'); return; }
         try { await window.TaskareBooking.createDialog({ user: fbUser, owner: db.settings.userName || '',
-          template: db.settings.bookingTemplate, slots: ui.schedSlots.map(s => ({ ...s })),
+          template: db.settings.bookingTemplate, invitationTemplate: db.settings.bookingInvitationTemplate,
+          slots: ui.schedSlots.map(s => ({ ...s })),
           created: (o) => { db.settings.bookingOffers = [...(db.settings.bookingOffers || []), { code: o.code, url: o.url }].slice(-50); persistLocal(); },
         }); } catch (e) { flashToast(e.message); }
       });
@@ -1645,7 +1646,7 @@ function renderGrid(body) {
       col.append(ln);
     }
     // 空きスロットのタップ → 時間枠（下書き）を出してつまみで調整 → 予定として追加
-    // スケジュール調整モード中は、タップで「空き候補」を置く（最大3つ・もう一度タップで解除）
+    // Scheduling taps add candidates; tapping an existing candidate removes it.
     col.addEventListener('click', (e) => {
       if (e.target.closest('.tg-item') || e.target.closest('.tg-draft') || e.target.closest('.tg-sched')) return;
       const rect = col.getBoundingClientRect();
@@ -1719,7 +1720,7 @@ const SCHED_TPL_DEFAULT = `以下の日程でご都合いかがでしょうか�
 ご都合が難しければ、他の日程もお送りします！`;
 
 function schedAddSlot(key, y) {
-  if (ui.schedSlots.length >= 3) { flashToast('候補は3つまでです（タップで解除できます）'); return; }
+  if (ui.schedSlots.length >= 5) { flashToast('候補は5つまでです（タップで解除できます）'); return; }
   let startMin = Math.round((y / TG_HOUR_H) * 60 / 30) * 30; // 30分にスナップ
   startMin = Math.max(0, Math.min(24 * 60 - ui.schedDur, startMin));
   // 既存の予定・タスクと重なる枠は「空き」ではないので置けない（正直に伝える）
@@ -4484,6 +4485,8 @@ function renderSettings() {
   if (st) st.value = db.settings.schedTemplate || SCHED_TPL_DEFAULT;
   if (window.TaskareBooking) window.TaskareBooking.settings($('#booking-settings'), {
     template: db.settings.bookingTemplate, getUser: () => fbUser,
+    invitationTemplate: db.settings.bookingInvitationTemplate,
+    saveInvitationTemplate: value => { db.settings.bookingInvitationTemplate = value; persistLocal(); },
     saveTemplate: value => { db.settings.bookingTemplate = value; persistLocal(); },
     importOffers: importBookingOffers,
   });

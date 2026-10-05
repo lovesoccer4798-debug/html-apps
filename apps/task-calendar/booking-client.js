@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const DEFAULT_TEMPLATE = '日程をご調整いただき、ありがとうございます。\n以下の内容で承りました。\n\n{{詳細}}\n\n当日はどうぞよろしくお願いいたします。';
+  const DEFAULT_INVITATION = 'お世話になっております。\n「{{予定名}}」の日程について、ご都合をお聞かせいただけますでしょうか。\n\n{{候補}}\n\n以下のリンクから、ご都合のよい日時をご選択ください。\n{{リンク}}\n\n候補の日程が難しい場合は、お気軽にお知らせください。\nどうぞよろしくお願いいたします。';
   const messages = { setup_required: '自動案内サーバーは未設定です。', unauthorized: 'TaskAREにログインし直してください。',
     google_login_required: 'Googleアカウントでログインしてください。', connect_required: '設定から自動案内用のGoogle連携が必要です。',
     reconnect_required: 'Googleの追加連携をやり直してください。', invalid_email: 'メールアドレスを確認してください。',
@@ -32,6 +33,12 @@
     return body;
   }
   const slotLine = s => `${s.key} ${String(Math.floor(s.startMin / 60)).padStart(2, '0')}:${String(s.startMin % 60).padStart(2, '0')}（${s.durMin}分・日本時間）`;
+  function invitationText(template, offer, url) {
+    const values = { '予定名': offer.title, '候補': (offer.slots || []).map(s => '・' + slotLine(s)).join('\n'), 'リンク': url };
+    const source = template?.trim() || DEFAULT_INVITATION;
+    const text = source.replace(/\{\{(予定名|候補|リンク)\}\}/g, (_, key) => values[key]);
+    return source.includes('{{リンク}}') ? text : `${text}\n\n${url}`;
+  }
   function field(form, title, type, value, max) {
     const label = node('label', title, 'booking-field'); const input = node(type === 'textarea' ? 'textarea' : 'input');
     if (type !== 'textarea') input.type = type;
@@ -102,6 +109,9 @@
   }
   function settings(container, options) {
     container.replaceChildren();
+    const invitation = field(container, '日程候補を送る案内文（リンク付き）', 'textarea', options.invitationTemplate || DEFAULT_INVITATION, 2000); invitation.rows = 8;
+    invitation.addEventListener('input', () => options.saveInvitationTemplate?.(invitation.value));
+    container.append(button('案内文を初期状態に戻す', () => { invitation.value = DEFAULT_INVITATION; options.saveInvitationTemplate?.(DEFAULT_INVITATION); }));
     const template = field(container, '日程確定メールの本文', 'textarea', options.template || DEFAULT_TEMPLATE, 2000); template.rows = 6;
     template.addEventListener('input', () => options.saveTemplate(template.value));
     container.append(button('本文を初期状態に戻す', () => { template.value = DEFAULT_TEMPLATE; options.saveTemplate(DEFAULT_TEMPLATE); }));
@@ -125,9 +135,9 @@
       const r = await request('/owner/offers', { user: user() }); await options.importOffers(r.offers); results.replaceChildren();
       for (const o of r.offers.slice().reverse()) {
         const row = node('article', '', 'booking-result'); row.append(node('h3', o.title)); statusBlock(row, o);
-        row.append(button('共有リンクをコピー', run(async () => {
+        row.append(button('案内文とリンクをコピー', run(async () => {
           const url = new URL(location.href); url.search = ''; url.hash = ''; url.searchParams.set('booking', o.code);
-          await navigator.clipboard.writeText(url.href); state.textContent = '共有リンクをコピーしました';
+          await navigator.clipboard.writeText(invitationText(invitation.value, o, url.href)); state.textContent = '案内文とリンクをコピーしました';
         })));
         if (o.status === 'open') row.append(button('受付を取り消す', run(async () => { if (!confirm('このリンクの受付を取り消しますか？')) return;
           await request(`/owner/offers/${o.code}/cancel`, { user: user(), data: {} }); await refresh(); })));
@@ -159,14 +169,21 @@
         const o = await request('/owner/offers', { user: options.user, data: { title: title.value, venue: venue.value, owner: options.owner,
           template: options.template || DEFAULT_TEMPLATE, slots: options.slots } });
         const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('booking', o.code);
+        const shareText = invitationText(options.invitationTemplate, { title: title.value, slots: options.slots }, u.href);
         options.created({ ...o, url: u.href });
         form.replaceChildren(node('h2', 'リンクを作成しました'));
+        const preview = field(form, '共有する案内文', 'textarea', shareText, 5000); preview.readOnly = true; preview.rows = 10;
+        const copied = node('p', '', 'hint'); copied.setAttribute('role', 'status');
+        form.append(button('案内文とリンクをコピー', async () => {
+          try { await navigator.clipboard.writeText(shareText); copied.textContent = '案内文とリンクをコピーしました'; }
+          catch { preview.focus(); preview.select(); copied.textContent = 'コピーできませんでした。選択した案内文をコピーしてください'; }
+        }), copied);
         const output = field(form, '共有URL', 'url', u.href, 2000); output.readOnly = true;
         form.append(button('リンクをコピー', async () => { try { await navigator.clipboard.writeText(u.href); } catch { output.select(); } }));
         form.append(button('閉じる', () => { dialog.close(); dialog.remove(); }));
       } catch (e2) { note.textContent = e2.message; send.disabled = false; }
     });
   }
-  window.TaskareBooking = { configured: () => !!baseUrl(), request, settings, createDialog, DEFAULT_TEMPLATE };
+  window.TaskareBooking = { configured: () => !!baseUrl(), request, settings, createDialog, DEFAULT_TEMPLATE, invitationText };
   const code = new URLSearchParams(location.search).get('booking'); if (code) guest(code);
 })();
