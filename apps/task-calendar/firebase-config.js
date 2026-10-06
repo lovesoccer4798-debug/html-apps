@@ -15,3 +15,6 @@ window.TC_GCAL_CLIENT_ID = '797466638176-2cot9cb3hcpcvj3e8ealm3cps8codnlu.apps.g
 
 // Owner authentication and additional Google consent are required before booking.
 window.TC_BOOKING_API_URL = 'https://taskare-booking.love-soccer4798.workers.dev';
+
+// Buddy requires owner authentication and explicit per-conversation consent.
+window.TC_BUDDY_API_URL = 'https://taskare-buddy.love-soccer4798.workers.dev';

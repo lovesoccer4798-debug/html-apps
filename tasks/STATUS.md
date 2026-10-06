@@ -4,9 +4,10 @@
 > どのAI・どのセッションでも、作業を終えるときに必ず更新すること（`AGENTS.md` 参照）。
 > 詳細は書かない — このファイルは薄い索引に保ち、詳細は各タスクファイルの作業ログに書く。
 
-- **最終更新**: 2026-10-05
-- **TaskARE現在地**: PR #92マージ済み。自動案内は本人から動作成功報告あり。独立Workerの5候補対応を公開済み（Version 7452c44b-8c91-41a6-b673-62f750829e2a）。候補5件・60分維持・編集可能なリンク付き案内文の[PR #93](https://github.com/lovesoccer4798-debug/html-apps/pull/93)作成済み、未マージ。次は本人マージ・Pages反映後に画面で確認。
-- **検証**: 単体18件、SQLite runtime 1件、隔離ブラウザー回帰成功。今回のテストでは実メール/実予定の作成なし。重複防止はアプリ表示中の同期と回答後Google primary照合に依存し、常時リアルタイムではない。
+- **最終更新**: 2026-10-06
+- **TaskARE現在地**: PR #93マージ済み。承認済みBuddyの[PR #94](https://github.com/lovesoccer4798-debug/html-apps/pull/94)作成済み、未マージ。かわいい3種類・自作透過画像・移動・名前/呼ばれ方/口調・FAQ・無料限定対話。初期OFF。NEST Phaseは変更しない。
+- **公開状況**: Buddy独立WorkerをFree契約確認後に公開済み。課金設定・既存Worker・秘密情報の変更なし。フロントはPRマージ後に反映。公開先・再公開/停止手順は[運用記録](../apps/task-calendar/buddy-worker/README.md)。
+- **検証**: Buddy単体5件＋SQLite runtime 1件、320/390/1440幅・明暗・同意/ログアウト・画像・ドラッグ等の隔離ブラウザー成功。既存自動案内単体18件とv108ブラウザー回帰も成功。公開先401/403確認。実AIの日本語回答は未確認（会話テストはモック）、本人ログインで反映後に確認する。
 - **運用**: 既存の無料運用条件・料金プラン・秘密設定・送信上限は変更しない。過去の公開準備履歴は[タスクログ](in-progress/20260714-task-calendar.md)参照。通知サーバー未設定・iPhone実機未確認は継続。
 
 ## ワークスペース全体の状態
@@ -19,14 +20,14 @@ Workspace v1.0.0 リリース済み。**NEST Phase 0〜7が完了、Phase 9「�
 |---|---|---|
 | 🏠 [Portal](../apps/portal/README.md) | 🐦 そだち | NEST初のアプリ。玄関＋Dashboard（v1.5.0 — 3ホーム再定義を反映） |
 | [Creator Studio](../apps/creator-studio/README.md) | 🐦 そだち | 素材から各AIへ渡すベンダー中立プロンプトを生成（Phase 7・v1.0） |
-| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。自動案内公開済み。v109候補5件・共有案内文のPR準備 |
+| [Task Calendar](../apps/task-calendar/README.md) | 🐣 ひな | 個人用タスクカレンダー・PWA。v110 Buddy実装・無料限定サーバー公開済み、PR #94レビュー待ち |
 
 （Handbookはアプリではなく `docs/` の一部。入口は [Handbook表紙](../docs/README.md)）
 
 ## 進行中のタスク
 
 - [Handbook実証フェーズ — 開始チェックリストと終了条件](in-progress/20260714-handbook-validation.md)（主担当: オーナー。実証の正本はこのファイル）
-- [Task Calendar v1](in-progress/20260714-task-calendar.md)（PR #92マージ済み、本人から自動案内成功報告。v109追加機能PR準備中。Portal掲載の要否はオーナー判断）
+- [Task Calendar v1](in-progress/20260714-task-calendar.md)（PR #93マージ済み、v110 Buddy PR #94レビュー待ち。Portal掲載の要否はオーナー判断）
 
 ## 次にやるべきこと
 

@@ -1,0 +1,45 @@
+.buddy-launcher { position: fixed; z-index: 90; width: 72px; height: 80px; padding: 0; border: 0; background: transparent; touch-action: none; cursor: grab; }
+.buddy-launcher[hidden] { display: none; }
+.buddy-launcher img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 3px 3px #0003); }
+.buddy-launcher[data-motion="true"] img { animation: buddy-float 5s ease-in-out infinite; }
+.buddy-launcher:active { cursor: grabbing; }
+.buddy-launcher:focus-visible { outline: 2px solid var(--tc-accent); border-radius: 8px; }
+@keyframes buddy-float { 50% { transform: translateY(-4px) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .buddy-launcher img { animation: none !important; } }
+.buddy-dialog { box-sizing: border-box; margin: auto; width: min(460px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: 20px; border: 1px solid var(--tc-line); border-radius: 8px; color: var(--tc-ink); background: var(--tc-surface, #fff); overflow: auto; overscroll-behavior: contain; }
+.buddy-dialog .hint, .buddy-dialog small { color: var(--tc-ink2, var(--tc-ink)); }
+.buddy-dialog::backdrop { background: #0006; }
+.buddy-header { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+.buddy-header img { width: 60px; height: 68px; object-fit: contain; }
+.buddy-header h2 { flex: 1; min-width: 0; font-size: 20px; margin: 0; overflow-wrap: anywhere; letter-spacing: 0; }
+.buddy-header .cta { flex: 0 0 44px; width: 44px; height: 44px; padding: 10px; margin: 0; display: grid; place-items: center; }
+.buddy-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--tc-line); padding-bottom: 12px; margin-bottom: 16px; }
+.buddy-tabs button { flex: 1; font-size: 14px; }
+.buddy-tabs button[aria-pressed="true"] { background: var(--tc-accent); color: var(--tc-on-accent, #fff); }
+.buddy-dialog input[type="search"], .buddy-dialog textarea, .buddy-field input:not([type="checkbox"]), .buddy-field select { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--tc-line); padding: 10px; border-radius: 6px; font: inherit; font-size: 16px; color: var(--tc-ink); background: var(--tc-bg, #f6f7f8); }
+.buddy-dialog textarea { resize: vertical; }
+.buddy-dialog .cta { min-height: 44px; white-space: normal; border-radius: 8px; }
+.buddy-tabs .cta { width: auto; min-width: 0; margin: 0; padding: 8px; }
+.buddy-chat form .cta { width: auto; padding: 8px 16px; margin: 0; }
+.buddy-answers details { border-bottom: 1px solid var(--tc-line); padding: 14px 0; line-height: 1.7; }
+.buddy-answers summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.buddy-answers p { margin: 8px 0; }
+.buddy-answers small, .buddy-message small { color: var(--tc-ink3); font-size: 12px; }
+.buddy-field { display: grid; gap: 8px; margin-bottom: 16px; font-size: 14px; }
+.buddy-check { display: flex; align-items: center; gap: 12px; font-size: 14px; line-height: 1.5; }
+.buddy-check input { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--tc-accent); }
+.buddy-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border: 0; padding: 0; margin: 16px 0 24px; }
+.buddy-presets legend { margin-bottom: 10px; font-size: 14px; }
+.buddy-presets label { display: grid; justify-items: center; gap: 4px; padding: 8px 2px; border: 1px solid var(--tc-line); border-radius: 8px; cursor: pointer; text-align: center; }
+.buddy-presets label:has(input:checked) { border-color: var(--tc-accent); outline: 1px solid var(--tc-accent); }
+.buddy-presets input { accent-color: var(--tc-accent); }
+.buddy-presets img { width: 100%; height: 92px; object-fit: contain; }
+.buddy-presets strong { font-size: 14px; }
+.buddy-presets small { font-size: 11px; color: var(--tc-ink3); }
+.buddy-log { max-height: 260px; overflow: auto; overscroll-behavior: contain; }
+.buddy-message { padding: 12px 0; border-bottom: 1px solid var(--tc-line); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.7; }
+.buddy-message small { display: block; margin-bottom: 4px; }
+.buddy-message.user { border-left: 3px solid var(--tc-accent); padding-left: 12px; }
+.buddy-chat form { display: flex; flex-wrap: wrap; gap: 8px; }
+.buddy-chat form textarea { flex-basis: 100%; }
+#buddy-settings > button { margin: 0 6px 10px 0; }
