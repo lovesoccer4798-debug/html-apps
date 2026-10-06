@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="style.css?v=108">
 <link rel="stylesheet" href="expressive-themes.css?v=108">
 <link rel="stylesheet" href="booking.css?v=108">
+<link rel="stylesheet" href="buddy.css?v=110">
 <style>
   /* 起動スプラッシュ（横型ロゴが一瞬出てフェードアウト→アプリへ）。app.js を待たず即表示できるよう head に直書き */
   #tc-splash{position:fixed;inset:0;z-index:9999;background:#faf6ef;display:flex;align-items:center;justify-content:center;gap:20px;padding:24px;animation:tc-splash-out 1.25s ease forwards}
@@ -339,6 +340,9 @@
 
       <p class="section-label">日程確定の自動案内</p>
       <div class="card" id="booking-settings"></div>
+
+      <p class="section-label">Buddy</p>
+      <div class="card" id="buddy-settings"></div>
 
       <p class="section-label">データ</p>
       <div class="card">
@@ -898,11 +902,12 @@
   <button id="toast-undo">元に戻す</button>
 </div>
 
-<script src="firebase-config.js?v=108.1"></script>
+<script src="firebase-config.js?v=110"></script>
 <script src="reminder-core.js?v=108"></script>
 <script src="reminder-client.js?v=108"></script>
 <script src="record-tools.js?v=108"></script>
 <script src="booking-client.js?v=109"></script>
-<script src="app.js?v=109"></script>
+<script src="buddy.js?v=110"></script>
+<script src="app.js?v=110"></script>
 </body>
 </html>
